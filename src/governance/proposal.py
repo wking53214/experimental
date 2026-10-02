@@ -98,7 +98,6 @@ class ProposalStore:
         return updated
 
     def mark_pending_review(self, proposal_id: str) -> AdaptationProposal:
-        """Mark a proposal as awaiting human review (LOOSEN/DISABLE path)."""
         proposal = self.get_proposal(proposal_id)
         if proposal.status not in (ProposalStatus.PENDING, ProposalStatus.PENDING_REVIEW):
             raise ValueError(
@@ -228,7 +227,13 @@ class ProposalGenerator:
             direction=direction,
             status=ProposalStatus.PENDING,
             created_at=time.time(),
-            notes={"anomaly_score": anomaly_score, "severity": severity},
+            notes={
+                "anomaly_score": anomaly_score,
+                "gaming_detected": gaming_detected,
+                "anomaly_count": anomaly_count,
+                "severity": severity,
+                "recent_anomalies": recent_anomalies,
+            },
         )
 
     def get_sustained_pattern(self):
@@ -237,8 +242,16 @@ class ProposalGenerator:
         recent = self.anomaly_history[-5:]
         avg_score = sum(a["score"] for a in recent) / len(recent)
         gaming_count = sum(1 for a in recent if a["gaming"])
+        avg_anomalies = sum(a["count"] for a in recent) / len(recent)
         if avg_score > 0.7 or gaming_count >= 2:
-            return {"pattern": "sustained_anomalies", "avg_score": avg_score}
+            return {
+                "pattern": "sustained_anomalies",
+                "recent_count": len(recent),
+                "avg_score": avg_score,
+                "gaming_incidents": gaming_count,
+                "avg_anomalous_metrics": avg_anomalies,
+                "severity": min(1.0, avg_score * 1.2),
+            }
         return None
 
     def reset_history(self):
