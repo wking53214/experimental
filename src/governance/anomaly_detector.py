@@ -44,33 +44,53 @@ class AdaptiveAnomalyDetector:
     Solves Phase 7B problem: low false positives + high true positives.
     """
 
-    def __init__(self, boundary_id: str, window_size: int = 20):
+    def __init__(self, boundary_id: str, window_size: int = 20, learning_window: int = 5):
         self.boundary_id = boundary_id
         self.window_size = window_size
+        self.learning_window = learning_window  # Observations before baseline locks in
 
         # History tracking
         self.value_history = deque(maxlen=window_size)
         self.timestamp_history = deque(maxlen=window_size)
-        self.anomaly_threshold = 0.50  # Combined score threshold (tuned for Phase 7B)
+        self.anomaly_threshold = 0.85  # High threshold for strong multi-signal confirmation
 
         # Baseline learning
         self.baseline_mean = None
         self.baseline_std = None
         self.baseline_initialized = False
+        self.observation_count = 0  # Total observations added
+        self.full_history = []  # Longer history for baseline learning
+        self.baseline_locked = False  # True once learning window is complete
 
     def add_observation(self, value: float, timestamp: int):
         """Add a new observation."""
+        self.observation_count += 1
         self.value_history.append(value)
         self.timestamp_history.append(timestamp)
 
-        # Learn baseline from first 20 observations
-        if not self.baseline_initialized and len(self.value_history) >= 10:
-            try:
-                self.baseline_mean = statistics.mean(self.value_history)
-                self.baseline_std = statistics.stdev(self.value_history) if len(self.value_history) > 1 else 1.0
-                self.baseline_initialized = True
-            except (statistics.StatisticsError, ValueError):
-                self.baseline_std = 1.0
+        # Only update full_history during learning phase (before baseline locks)
+        if not self.baseline_locked and self.observation_count <= self.learning_window:
+            self.full_history.append(value)
+
+            # Update baseline during learning phase (first N observations)
+            if len(self.full_history) >= 5:
+                self._update_baseline()
+                if not self.baseline_initialized:
+                    self.baseline_initialized = True
+
+        # Lock baseline once learning window is complete
+        if self.observation_count == self.learning_window:
+            self.baseline_locked = True
+
+    def _update_baseline(self):
+        """Update baseline statistics from full history (for stable learning)."""
+        if len(self.full_history) < 5:
+            return
+        try:
+            self.baseline_mean = statistics.mean(self.full_history)
+            self.baseline_std = statistics.stdev(self.full_history) if len(self.full_history) > 1 else 1.0
+        except (statistics.StatisticsError, ValueError):
+            self.baseline_std = 1.0
 
     def detect_anomaly(self, value: float, timestamp: int) -> AnomalyResult:
         """
@@ -82,9 +102,17 @@ class AdaptiveAnomalyDetector:
 
         signals = []
 
-        # Only detect after baseline initialized
+        # Only detect after baseline initialized and sufficient history
         if not self.baseline_initialized or len(self.value_history) < 3:
             return AnomalyResult(0.0, False, [], "Insufficient history")
+
+        # Adaptive threshold: stricter during learning phase, looser after
+        if self.observation_count <= self.learning_window:
+            # During learning, require even stronger confirmation
+            detection_threshold = 0.65
+        else:
+            # After learning, use standard threshold
+            detection_threshold = self.anomaly_threshold
 
         # Signal 1: Deviation from baseline (z-score)
         deviation_signal = self._detect_deviation(value)
@@ -102,14 +130,26 @@ class AdaptiveAnomalyDetector:
         variance_signal = self._detect_variance_spike(value)
         signals.append(variance_signal)
 
-        # Combine signals: weighted average of exceeded signals
+        # Combine signals: require multiple signals to exceed for anomaly
         exceeded_signals = [s for s in signals if s.exceeded]
-        if exceeded_signals:
-            combined_score = sum(s.score for s in exceeded_signals) / len(signals)
-        else:
-            combined_score = min(s.score for s in signals)
 
-        is_anomaly = combined_score > self.anomaly_threshold
+        # During burn-in period, be conservative (require 2+ signals)
+        if self.observation_count < 25:
+            # Burn-in: only flag if 2+ signals exceed AND combined score is reasonable
+            num_exceeded = len(exceeded_signals)
+            if num_exceeded >= 2:
+                combined_score = sum(s.score for s in exceeded_signals) / num_exceeded
+                is_anomaly = combined_score > (detection_threshold - 0.15)
+            else:
+                combined_score = max(s.score for s in signals) if signals else 0.0
+                is_anomaly = False
+        else:
+            # Post burn-in: use standard detection
+            if exceeded_signals:
+                combined_score = sum(s.score for s in exceeded_signals) / len(exceeded_signals)
+            else:
+                combined_score = max(s.score for s in signals) if signals else 0.0
+            is_anomaly = combined_score > detection_threshold
 
         explanation = self._explain_anomaly(signals, combined_score)
 
@@ -127,45 +167,59 @@ class AdaptiveAnomalyDetector:
         else:
             z_score = abs((value - self.baseline_mean) / self.baseline_std)
 
-        # Z-score > 2 is unusual, > 3 is very unusual
-        score = min(1.0, z_score / 3.0)
-        exceeded = score > 0.5
+        # Flexible thresholds: high z-scores always trigger, moderate ones only post-learning
+        if z_score > 4.0:
+            # Very extreme deviation (z > 4)
+            score = min(1.0, (z_score - 4.0) / 3.0 + 0.5)
+            exceeded = True
+        elif z_score > 2.5:
+            # Moderate-high deviation
+            learning_factor = 1.5 if self.observation_count <= self.learning_window else 1.0
+            score = min(1.0, (z_score - 2.5 * learning_factor) / 2.0)
+            exceeded = score > 0.35
+        else:
+            score = 0.0
+            exceeded = False
 
         return AnomalySignal(
             signal_type="deviation",
             score=score,
-            threshold=0.5,
+            threshold=0.35,
             exceeded=exceeded,
             details={"z_score": z_score, "baseline_mean": self.baseline_mean, "baseline_std": self.baseline_std}
         )
 
     def _detect_acceleration(self) -> AnomalySignal:
-        """Detect rate-of-change acceleration (second derivative)."""
-        if len(self.value_history) < 3:
+        """Detect sudden large increases (attacks spike up, not down)."""
+        if len(self.value_history) < 2:
             return AnomalySignal("acceleration", 0.0, 0.5, False)
 
-        recent = list(self.value_history)[-3:]
+        recent_vals = list(self.value_history)[-2:]
+        recent_change = recent_vals[-1] - recent_vals[-2]  # Signed change
 
-        # Calculate velocity (first derivative)
-        v1 = recent[1] - recent[0]
-        v2 = recent[2] - recent[1]
+        # Only care about increases, not decreases
+        # (Decreases after spike are recovery, not new attacks)
+        if recent_change <= 0:
+            return AnomalySignal("acceleration", 0.0, 0.5, False)
 
-        # Calculate acceleration (second derivative)
-        acceleration = v2 - v1
-
-        # Large acceleration indicates sudden change
+        # Threshold: increases > 4x baseline std are suspicious
         baseline_range = self.baseline_std if self.baseline_std > 0 else 1.0
-        acceleration_normalized = abs(acceleration) / baseline_range
+        change_normalized = recent_change / baseline_range
 
-        score = min(1.0, acceleration_normalized / 2.0)
-        exceeded = score > 0.5
+        # Only trigger on sudden large increases
+        if change_normalized > 4.0:
+            score = min(1.0, (change_normalized - 4.0) / 2.0 + 0.5)
+            exceeded = True
+        else:
+            score = max(0.0, change_normalized / 8.0) if change_normalized > 2.0 else 0.0
+            exceeded = False
 
         return AnomalySignal(
             signal_type="acceleration",
             score=score,
             threshold=0.5,
             exceeded=exceeded,
-            details={"acceleration": acceleration, "velocity_change": v2 - v1}
+            details={"recent_increase": recent_change, "increase_normalized": change_normalized}
         )
 
     def _detect_persistence(self, current_value: float) -> AnomalySignal:
