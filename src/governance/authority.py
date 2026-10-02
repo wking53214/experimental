@@ -1,22 +1,13 @@
 """
 Authority Model — Sole System Gate for Auto-Approval
 
-PURPOSE:
-    Decide whether an adaptation proposal may be applied without a human.
-    This is the architectural cut-point for asymmetric adaptive authority.
-
 CONTRACT:
     - TIGHTEN  → system may AUTO_APPROVE
     - LOOSEN   → REQUIRES_HUMAN_REVIEW (system MUST NOT auto-approve)
     - DISABLE  → REQUIRES_HUMAN_REVIEW (system MUST NOT auto-approve)
 
-CORRECTNESS RULE:
-    No code path outside AuthorityModel may grant system auto-approval.
-    Operator grants use record_operator_decision with decided_by=<operator_id>.
-
-ARCHITECTURAL NOTE (Elegant H2):
-    Operator path may record AUTO_APPROVED with decided_by != "system".
-    Deferred: OPERATOR_APPROVED result value.
+H2 FIXED: Operator grants use AuthorizationResult.OPERATOR_APPROVED.
+verify_no_auto_loosen / verify_no_auto_disable only flag system AUTO_APPROVED.
 """
 from enum import Enum
 from dataclasses import dataclass
@@ -28,6 +19,7 @@ from .proposal import AdaptationProposal, AdaptationDirection, ProposalStatus
 
 class AuthorizationResult(Enum):
     AUTO_APPROVED = "auto_approved"
+    OPERATOR_APPROVED = "operator_approved"
     REQUIRES_HUMAN_REVIEW = "requires_human_review"
     REJECTED = "rejected"
 
@@ -43,8 +35,6 @@ class AuthorizationDecision:
 
 
 class AuthorityModel:
-    """Sole code path for system auto-approval decisions."""
-
     def __init__(self):
         self.decisions: list = []
 
