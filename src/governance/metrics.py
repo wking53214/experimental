@@ -18,6 +18,8 @@ class MetricType(Enum):
     THROUGHPUT = "throughput"
     LATENCY_P99 = "latency_p99"
     ERROR_RATE = "error_rate"
+    EFFICIENCY = "efficiency"  # throughput / violation_rate
+    RATE_OF_CHANGE = "rate_of_change"  # sudden metric swings
     CUSTOM = "custom"
 
 
@@ -320,6 +322,21 @@ class EffectivenessOracle:
                         f"System trading performance for nominal compliance."
                     )
                 }
+
+        # GOODHART PATTERN 4: Rate-of-change anomaly (sudden metrics swings)
+        # Detect when multiple metrics change dramatically in same direction
+        large_changes = sum(
+            1 for m in metric_changes.values()
+            if abs(m["change"]) > 0.3  # >30% change is suspicious
+        )
+
+        if large_changes >= 3:
+            return {
+                "reasoning": (
+                    f"Rate-of-change anomaly: {large_changes} metrics swung >30% simultaneously. "
+                    f"Suggests system under stress or adversarial attack."
+                )
+            }
 
         return None
 
