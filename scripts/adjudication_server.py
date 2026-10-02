@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Phase 11D: Thin HTTP façade over Governor adjudication API.
-
-Demo-only. No authentication. Not for production.
-"""
+"""Phase 11D HTTP adjudication demo. M3: loopback default + optional token."""
 from __future__ import annotations
 
 import json
+import os
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -18,6 +16,7 @@ from src.governance.governor import Governor
 from src.governance.proposal import AdaptationDirection
 
 GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True)
+ADJUDICATION_TOKEN = os.environ.get("ADJUDICATION_TOKEN", "").strip()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -35,13 +34,28 @@ class Handler(BaseHTTPRequestHandler):
             return {}
         return json.loads(self.rfile.read(n).decode("utf-8"))
 
+    def _check_token(self) -> bool:
+        if not ADJUDICATION_TOKEN:
+            return True
+        auth = self.headers.get("Authorization", "")
+        if auth == f"Bearer {ADJUDICATION_TOKEN}":
+            return True
+        if self.headers.get("X-Adjudication-Token", "") == ADJUDICATION_TOKEN:
+            return True
+        return False
+
     def log_message(self, fmt, *args):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
     def do_GET(self):
         path = urlparse(self.path).path
         if path == "/health":
-            return self._json(200, {"status": "ok", **GOV.get_status()})
+            return self._json(200, {
+                "status": "ok",
+                "auth_required": bool(ADJUDICATION_TOKEN),
+                "demo": True,
+                **GOV.get_status(),
+            })
         if path == "/proposals/pending":
             pending = GOV.list_pending_review()
             return self._json(200, {
@@ -64,6 +78,11 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(404, {"error": "not found"})
 
     def do_POST(self):
+        if not self._check_token():
+            return self._json(401, {
+                "error": "unauthorized",
+                "hint": "Authorization: Bearer <ADJUDICATION_TOKEN> or X-Adjudication-Token",
+            })
         path = urlparse(self.path).path
         data = self._read_json()
         if path == "/boundaries":
@@ -83,26 +102,19 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 return self._json(400, {"error": "boundary not found"})
             prop = GOV.proposals.create_proposal(
-                boundary_id=bid,
-                source_evidence=[],
-                current_value=current,
+                boundary_id=bid, source_evidence=[], current_value=current,
                 proposed_value=proposed,
                 reason=data.get("reason", "operator-requested loosen"),
                 direction=AdaptationDirection.LOOSEN,
             )
             updated = GOV.submit_for_review(prop)
-            return self._json(200, {
-                "proposal_id": updated.proposal_id,
-                "status": updated.status.value,
-            })
+            return self._json(200, {"proposal_id": updated.proposal_id, "status": updated.status.value})
         if path.startswith("/proposals/") and path.endswith("/decide"):
             pid = path[len("/proposals/"):-len("/decide")].strip("/")
             try:
                 result = GOV.apply_operator_decision(
-                    pid,
-                    data.get("decision", "reject"),
-                    data.get("operator_id", "anonymous"),
-                    data.get("rationale", ""),
+                    pid, data.get("decision", "reject"),
+                    data.get("operator_id", "anonymous"), data.get("rationale", ""),
                 )
                 prop = result[0]
                 return self._json(200, {
@@ -116,11 +128,18 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    host, port = "127.0.0.1", 8765
-    if len(sys.argv) > 1:
-        port = int(sys.argv[1])
+    host = os.environ.get("ADJUDICATION_HOST", "127.0.0.1")
+    port = int(os.environ.get("ADJUDICATION_PORT", sys.argv[1] if len(sys.argv) > 1 else "8765"))
+    public = host in ("0.0.0.0", "::", "[::]")
+    if public and os.environ.get("ALLOW_PUBLIC_BIND", "") != "1":
+        print("REFUSING public bind to %s. Use 127.0.0.1 or ALLOW_PUBLIC_BIND=1." % host, file=sys.stderr)
+        sys.exit(2)
+    if public:
+        print("WARNING: public bind %s — set ADJUDICATION_TOKEN." % host, file=sys.stderr)
+    if not ADJUDICATION_TOKEN:
+        print("WARNING: ADJUDICATION_TOKEN unset — POSTs unauthenticated (loopback only).", file=sys.stderr)
     httpd = HTTPServer((host, port), Handler)
-    print(f"Phase 11D adjudication server on http://{host}:{port}")
+    print("Phase 11D on http://%s:%s (auth_required=%s)" % (host, port, bool(ADJUDICATION_TOKEN)))
     httpd.serve_forever()
 
 
