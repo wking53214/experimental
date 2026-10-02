@@ -37,7 +37,7 @@ from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
 from .metrics import (
     MetricsTracker, EffectivenessOutcome, MetricStream,
-    BaselineEstablisher, CorrelationAnalyzer
+    BaselineEstablisher, CorrelationAnalyzer, DetectorPipeline
 )
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
@@ -92,8 +92,81 @@ class Governor:
         self.baseline_establishers = {}  # Per-boundary baseline learners
         self.correlation_analyzers = {}  # Per-boundary correlation detectors
 
+        # Phase 8C: Detector pipeline (integrated metrics + detection)
+        self.detector_pipelines = {}  # Per-boundary detector pipelines
+
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
+
+    def ingest_metrics(
+        self,
+        boundary_id: str,
+        timestamp: float,
+        metrics: dict[str, float],
+    ) -> tuple[dict, Optional[list[dict]]]:
+        """
+        Phase 8C: Ingest metrics through detector pipeline.
+
+        Args:
+            boundary_id: The boundary identifier
+            timestamp: Unix timestamp of observation
+            metrics: Dict of {metric_name: value}
+
+        Returns:
+            (detection_result, violations_or_none)
+
+        Detection result contains anomaly_score, gaming_detected, etc.
+        Violations list contains events if anomalies triggered violations.
+        """
+        # Initialize pipeline if needed
+        if boundary_id not in self.detector_pipelines:
+            self.detector_pipelines[boundary_id] = DetectorPipeline(boundary_id)
+
+        pipeline = self.detector_pipelines[boundary_id]
+
+        # Ingest metrics
+        pipeline.ingest_metrics(timestamp, metrics)
+
+        # Run detection
+        detection_result = pipeline.detect_anomalies()
+
+        # Generate violations if anomalies detected
+        violations = []
+        if detection_result["anomaly_detected"]:
+            try:
+                boundary = self.boundaries.get_boundary(boundary_id)
+
+                # Create execution event
+                execution = self.events.record_execution(
+                    boundary_id=boundary_id,
+                    boundary_version=boundary.version,
+                    observed_value=detection_result["anomaly_score"],
+                    context={"detection_type": "multi_metric", "signals": detection_result["signals"]},
+                )
+
+                # Create violation event
+                violation = self.events.record_violation(
+                    execution_id=execution.execution_id,
+                    boundary_id=boundary_id,
+                    boundary_version=boundary.version,
+                    observed_value=detection_result["anomaly_score"],
+                    limit_value=self.anomaly_detectors.get(boundary_id, {}).anomaly_threshold if boundary_id in self.anomaly_detectors else 0.85,
+                    context=detection_result,
+                )
+
+                violations.append({
+                    "violation_id": violation.violation_id,
+                    "boundary_id": boundary_id,
+                    "anomaly_score": detection_result["anomaly_score"],
+                    "gaming_detected": detection_result["gaming_detected"],
+                    "signals": detection_result["signals"],
+                    "explanation": detection_result["explanation"],
+                })
+            except Exception as e:
+                # Log but don't fail
+                pass
+
+        return detection_result, violations if violations else None
 
     def execute_against_boundary(
         self,

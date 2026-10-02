@@ -859,3 +859,205 @@ class CorrelationAnalyzer:
                 count += 1
 
         return count
+
+
+class DetectorPipeline:
+    """
+    Phase 8C: Complete detector pipeline integrating metrics with anomaly detection.
+
+    Orchestrates:
+    1. Metric stream ingestion
+    2. Baseline establishment
+    3. Correlation analysis
+    4. Multi-metric anomaly detection
+    5. Violation event generation
+    """
+
+    def __init__(self, boundary_id: str, history_window: int = 100):
+        """
+        Initialize detector pipeline for a boundary.
+
+        Args:
+            boundary_id: The boundary being monitored
+            history_window: Size of metric history buffer
+        """
+        self.boundary_id = boundary_id
+        self.stream = MetricStream(boundary_id, history_window=history_window)
+        self.baseline_establisher = BaselineEstablisher(min_observations=15)
+        self.correlation_analyzer = CorrelationAnalyzer()
+
+        self.baseline = {}
+        self.baseline_locked = False
+        self.observation_count = 0
+
+        # Detection state
+        self.last_anomaly_result = None
+        self.anomaly_threshold = 0.85
+        self.gaming_threshold = 0.5
+
+    def ingest_metrics(self, timestamp: float, metrics: dict[str, float]) -> None:
+        """
+        Ingest new metric observation into the pipeline.
+
+        Args:
+            timestamp: Unix timestamp of observation
+            metrics: Dict of {metric_name: value}
+        """
+        self.observation_count += 1
+        self.stream.add_observation(timestamp, metrics)
+
+        # Auto-establish baseline after learning window
+        if not self.baseline_locked and self.stream.size() >= 15:
+            self.baseline = self.baseline_establisher.learn_baseline(self.stream)
+            if self.baseline:
+                self.baseline_locked = True
+
+    def detect_anomalies(self) -> dict:
+        """
+        Run multi-metric anomaly detection on current stream.
+
+        Returns dict with:
+        - anomaly_detected: bool
+        - anomaly_score: float (0-1)
+        - gaming_detected: bool
+        - gaming_score: float (0-1)
+        - anomaly_count: int (metrics >2σ from baseline)
+        - explanation: str
+        - signals: list of individual anomalies
+        """
+        if not self.baseline_locked or not self.baseline:
+            return {
+                "anomaly_detected": False,
+                "anomaly_score": 0.0,
+                "gaming_detected": False,
+                "gaming_score": 0.0,
+                "anomaly_count": 0,
+                "explanation": "Baseline not yet established",
+                "signals": [],
+            }
+
+        # Run correlation analysis
+        results = self.correlation_analyzer.analyze_stream(self.stream, self.baseline)
+
+        latest_metrics = self.stream.get_latest()
+        if not latest_metrics:
+            return {
+                "anomaly_detected": False,
+                "anomaly_score": 0.0,
+                "gaming_detected": False,
+                "gaming_score": 0.0,
+                "anomaly_count": 0,
+                "explanation": "No metrics available",
+                "signals": [],
+            }
+
+        timestamp, current_metrics = latest_metrics
+
+        # Combine signals
+        anomaly_count = self._count_anomalies_from_baseline(current_metrics)
+        gaming_score = results["pareto_gaming_score"]
+        anomaly_score = self._calculate_combined_anomaly_score(
+            anomaly_count, gaming_score
+        )
+
+        # Generate signals
+        signals = []
+
+        if anomaly_count >= 2:
+            signals.append({
+                "type": "multi_metric_anomaly",
+                "count": anomaly_count,
+                "severity": min(1.0, anomaly_count / len(self.baseline)),
+            })
+
+        if results["gaming_detected"]:
+            signals.append({
+                "type": "pareto_gaming",
+                "score": gaming_score,
+                "severity": gaming_score,
+            })
+
+        anomaly_detected = anomaly_score > self.anomaly_threshold
+
+        return {
+            "anomaly_detected": anomaly_detected,
+            "anomaly_score": anomaly_score,
+            "gaming_detected": results["gaming_detected"],
+            "gaming_score": gaming_score,
+            "anomaly_count": anomaly_count,
+            "explanation": "; ".join(results["explanations"]) if results["explanations"] else "Within normal parameters",
+            "signals": signals,
+        }
+
+    def _count_anomalies_from_baseline(self, metrics: dict) -> int:
+        """Count metrics deviating >2σ from baseline."""
+        count = 0
+        for metric_name, value in metrics.items():
+            if metric_name not in self.baseline:
+                continue
+
+            baseline_stats = self.baseline[metric_name]
+            baseline_mean = baseline_stats.get("mean", 0.0)
+            baseline_std = baseline_stats.get("std", 1.0)
+
+            if baseline_std == 0:
+                baseline_std = 1.0
+
+            z_score = abs((value - baseline_mean) / baseline_std)
+            if z_score > 2.0:
+                count += 1
+
+        return count
+
+    def _calculate_combined_anomaly_score(self, anomaly_count: int, gaming_score: float) -> float:
+        """
+        Combine anomaly and gaming signals into single score.
+
+        Accounts for:
+        - Number of anomalous metrics
+        - Pareto gaming pattern
+        """
+        # Normalize anomaly count to 0-1
+        if not self.baseline:
+            anomaly_signal = 0.0
+        else:
+            total_metrics = len(self.baseline)
+            # Boosted scaling: multiple anomalies are a strong signal
+            if anomaly_count >= 2:
+                # 2 anomalies: 0.6, 3: 0.8, 4: 1.0
+                anomaly_signal = min(1.0, 0.5 + (anomaly_count * 0.2))
+            else:
+                anomaly_signal = anomaly_count / max(1, total_metrics * 2)
+
+        # Combine: gaming is a strong signal, anomalies are supporting
+        if gaming_score > 0.5:
+            # Gaming detected: high confidence
+            combined = gaming_score * 0.7 + anomaly_signal * 0.3
+        else:
+            # Use anomalies: need multiple metrics to be confident
+            # With 2+ anomalies, significantly boost the score
+            if anomaly_count >= 2:
+                combined = anomaly_signal * 0.9 + gaming_score * 0.1
+            else:
+                combined = anomaly_signal * 0.6 + gaming_score * 0.4
+
+        return min(1.0, combined)
+
+    def get_baseline_stats(self, metric_name: Optional[str] = None) -> Optional[dict]:
+        """Get baseline statistics for a metric or all metrics."""
+        if metric_name is None:
+            return self.baseline
+        return self.baseline.get(metric_name)
+
+    def get_stream_size(self) -> int:
+        """Get number of observations in stream."""
+        return self.stream.size()
+
+    def get_metric_names(self) -> set[str]:
+        """Get all metric names in the stream."""
+        return self.stream.get_metric_names()
+
+    def refresh_baseline(self) -> bool:
+        """Refresh baseline with latest data."""
+        self.baseline = self.baseline_establisher.learn_baseline(self.stream)
+        return len(self.baseline) > 0
