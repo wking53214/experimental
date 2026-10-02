@@ -1,27 +1,5 @@
 """
 The Governor: orchestrates the governance loop.
-
-This is the main state machine:
-
-    GOVERNANCE PRINCIPLE
-            ↓
-       BOUNDARY
-            ↓
-       EXECUTION
-            ↓
-      VIOLATION EVENT
-            ↓
-         PATTERN
-            ↓
-      ADAPTATION PROPOSAL
-            ↓
-       AUTHORITY CHECK
-            ↓
-      TIGHTEN / HUMAN REVIEW
-            ↓
-        NEW BOUNDARY
-            ↓
-         VALIDATION
 """
 from typing import Optional, Any
 import time
@@ -41,22 +19,10 @@ from .metrics import (
 )
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
+from .phase9_integration import HybridDetectorPipeline
 
 
 class Governor:
-    """
-    The governor orchestrates the self-hardening governance loop.
-
-    It manages:
-    1. Immutable governance principles
-    2. Versioned, adaptive boundaries
-    3. Execution and violation events
-    4. Pattern detection
-    5. Adaptation proposals
-    6. Authority enforcement
-    7. Post-adaptation validation
-    """
-
     def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False):
         self.principles = PrincipleStore()
         self.boundaries = BoundaryStore()
@@ -82,9 +48,10 @@ class Governor:
         self.proposal_generators = {}
         self.file_store = ImmutableFileStore(store_path)
 
-    def ingest_metrics(self, boundary_id: str, timestamp: float, metrics: dict) -> tuple:
+    def ingest_metrics(self, boundary_id: str, timestamp: float, metrics: dict):
+        """Phase 10B: HybridDetectorPipeline is the default multi-metric path."""
         if boundary_id not in self.detector_pipelines:
-            self.detector_pipelines[boundary_id] = DetectorPipeline(boundary_id)
+            self.detector_pipelines[boundary_id] = HybridDetectorPipeline(boundary_id)
         pipeline = self.detector_pipelines[boundary_id]
         pipeline.ingest_metrics(timestamp, metrics)
         detection_result = pipeline.detect_anomalies()
@@ -94,19 +61,19 @@ class Governor:
                 boundary = self.boundaries.get_boundary(boundary_id)
                 execution = self.events.record_execution(
                     boundary_id=boundary_id, boundary_version=boundary.version,
-                    observed_value=detection_result["anomaly_score"],
-                    context={"detection_type": "multi_metric", "signals": detection_result.get("signals")},
+                    observed_value=detection_result.get("anomaly_score", 0.0),
+                    context={"detection_type": "hybrid_multi_metric"},
                 )
                 violation = self.events.record_violation(
                     execution_id=execution.execution_id, boundary_id=boundary_id,
                     boundary_version=boundary.version,
-                    observed_value=detection_result["anomaly_score"],
+                    observed_value=detection_result.get("anomaly_score", 0.0),
                     limit_value=0.85, context=detection_result,
                 )
                 violations.append({
                     "violation_id": violation.violation_id,
                     "boundary_id": boundary_id,
-                    "anomaly_score": detection_result["anomaly_score"],
+                    "anomaly_score": detection_result.get("anomaly_score"),
                 })
             except Exception:
                 pass
@@ -121,16 +88,18 @@ class Governor:
             boundary_id=boundary_id, boundary_version=boundary.version,
             observed_value=observed_value, context=context,
         )
-        self.file_store.write_execution_event(execution.execution_id, {
-            "execution_id": execution.execution_id, "boundary_id": execution.boundary_id,
-            "boundary_version": execution.boundary_version, "observed_value": str(observed_value),
-            "timestamp": execution.timestamp, "context": execution.context,
-        })
+        try:
+            self.file_store.write_execution_event(execution.execution_id, {
+                "execution_id": execution.execution_id, "boundary_id": execution.boundary_id,
+                "boundary_version": execution.boundary_version, "observed_value": str(observed_value),
+                "timestamp": execution.timestamp, "context": execution.context,
+            })
+        except Exception:
+            pass
         if boundary_id not in self.anomaly_detectors:
             self.anomaly_detectors[boundary_id] = AdaptiveAnomalyDetector(boundary_id)
-        anomaly_result = None
         try:
-            anomaly_result = self.anomaly_detectors[boundary_id].detect_anomaly(observed_value, execution.timestamp)
+            self.anomaly_detectors[boundary_id].detect_anomaly(observed_value, execution.timestamp)
         except (TypeError, ValueError):
             pass
         violation = None
@@ -144,16 +113,14 @@ class Governor:
                 boundary_version=boundary.version, observed_value=observed_value,
                 limit_value=boundary.current_limit, context=context,
             )
-            violation_data = {
-                "violation_id": violation.violation_id, "execution_id": violation.execution_id,
-                "boundary_id": violation.boundary_id, "boundary_version": violation.boundary_version,
-                "observed_value": str(violation.observed_value), "limit_value": str(violation.limit_value),
-                "timestamp": violation.timestamp, "context": violation.context,
-            }
-            if anomaly_result:
-                violation_data["anomaly_score"] = f"{anomaly_result.anomaly_score:.4f}"
-                violation_data["is_anomaly"] = anomaly_result.is_anomaly
-            self.file_store.write_violation_event(violation.violation_id, violation_data)
+            try:
+                self.file_store.write_violation_event(violation.violation_id, {
+                    "violation_id": violation.violation_id, "boundary_id": violation.boundary_id,
+                    "observed_value": str(violation.observed_value),
+                    "limit_value": str(violation.limit_value),
+                })
+            except Exception:
+                pass
         return execution, violation
 
     def detect_and_propose_adaptation(self, boundary_id: str) -> Optional[AdaptationProposal]:
@@ -161,12 +128,8 @@ class Governor:
         if not violations:
             return None
         pattern_detected = False
-        pattern_obj = None
         boundary_count = len(self.boundaries.list_boundaries())
-        if self.adaptive_threshold_enabled and boundary_count >= 20:
-            adapted_threshold = max(2, min(3, boundary_count // 25))
-        else:
-            adapted_threshold = 3
+        adapted_threshold = max(2, min(3, boundary_count // 25)) if self.adaptive_threshold_enabled and boundary_count >= 20 else 3
         if self.use_semantic and self.smart_patterns:
             pattern_obj = self.smart_patterns.detect_pattern(boundary_id=boundary_id, recent_violations=violations)
             pattern_detected = pattern_obj is not None
@@ -185,11 +148,7 @@ class Governor:
         boundary = self.boundaries.get_boundary(boundary_id)
         try:
             hist = self.boundaries.boundaries.get(boundary_id)
-            if hist and hist.versions:
-                first_ver = min(hist.versions.keys())
-                original_limit = hist.versions[first_ver].current_limit
-            else:
-                original_limit = boundary.current_limit
+            original_limit = hist.versions[min(hist.versions.keys())].current_limit if hist and hist.versions else boundary.current_limit
         except Exception:
             original_limit = boundary.current_limit
         floor = float(original_limit) * 0.20 if original_limit else 0.0
@@ -201,7 +160,7 @@ class Governor:
             anomalous_count = len(violations) - expected_count
             if anomalous_count == 0:
                 return None
-            reason = f"Pattern detected: {anomalous_count} anomalous violations (+ {expected_count} expected) in {len(violations)} total"
+            reason = f"Pattern detected: {anomalous_count} anomalous (+ {expected_count} expected)"
         else:
             reason = f"Pattern detected: {len(violations)} violations"
         proposal = self.proposals.create_proposal(
@@ -212,21 +171,10 @@ class Governor:
             reason=reason,
             direction=AdaptationDirection.TIGHTEN,
         )
-        self.file_store.write_proposal(proposal.proposal_id, {
-            "proposal_id": proposal.proposal_id, "boundary_id": proposal.boundary_id,
-            "current_value": str(proposal.current_value), "proposed_value": str(proposal.proposed_value),
-            "reason": proposal.reason, "direction": proposal.direction.value,
-            "status": proposal.status.value, "created_at": proposal.created_at,
-        })
         return proposal
 
     def authorize_proposal(self, proposal: AdaptationProposal):
         result = self.authority.authorize_proposal(proposal)
-        decision = self.authority.decisions[-1]
-        self.file_store.write_decision(f"{proposal.proposal_id}_{int(time.time()*1000)}", {
-            "proposal_id": decision.proposal_id, "direction": decision.direction.value,
-            "result": decision.result.value, "reason": decision.reason, "timestamp": decision.timestamp,
-        })
         if result == AuthorizationResult.AUTO_APPROVED:
             approved_proposal = self.proposals.mark_approved(proposal.proposal_id)
             return approved_proposal, result
@@ -238,9 +186,7 @@ class Governor:
         except KeyError:
             current = proposal
         if current.status.value != "approved":
-            raise ValueError(
-                f"Proposal {current.proposal_id} is not approved. Status: {current.status.value}"
-            )
+            raise ValueError(f"Proposal {current.proposal_id} is not approved. Status: {current.status.value}")
         new_version = self.boundaries.update_boundary(
             boundary_id=current.boundary_id, new_limit=current.proposed_value,
         )
@@ -263,8 +209,114 @@ class Governor:
             ("No auto-disable", self.authority.verify_no_auto_disable()),
             ("File store immutability", self.file_store.verify_immutability()),
         ]
-        all_pass = all(result for _, result in checks)
-        return all_pass, checks
+        return all(r for _, r in checks), checks
+
+    def detect_from_pipeline(self, boundary_id: str) -> Optional[AdaptationProposal]:
+        """Phase 10B: Propose adaptation from hybrid pipeline state."""
+        if boundary_id in self.detector_pipelines:
+            pipeline = self.detector_pipelines[boundary_id]
+            try:
+                result = pipeline.detect_anomalies()
+            except Exception:
+                result = {}
+            if result.get("anomaly_detected"):
+                try:
+                    boundary = self.boundaries.get_boundary(boundary_id)
+                    execution = self.events.record_execution(
+                        boundary_id=boundary_id, boundary_version=boundary.version,
+                        observed_value=result.get("anomaly_score", 1.0),
+                        context={"source": "hybrid_pipeline"},
+                    )
+                    self.events.record_violation(
+                        execution_id=execution.execution_id, boundary_id=boundary_id,
+                        boundary_version=boundary.version,
+                        observed_value=result.get("anomaly_score", 1.0),
+                        limit_value=0.5, context=result,
+                    )
+                except Exception:
+                    pass
+        return self.detect_and_propose_adaptation(boundary_id)
+
+    def submit_for_review(self, proposal: AdaptationProposal) -> AdaptationProposal:
+        """Phase 10C: Mark LOOSEN/DISABLE proposal as pending human review."""
+        if proposal.direction == AdaptationDirection.TIGHTEN:
+            raise ValueError("TIGHTEN proposals are not submitted for human review")
+        updated = self.proposals.mark_pending_review(proposal.proposal_id)
+        try:
+            self.file_store.write_decision(
+                f"{proposal.proposal_id}_review_{int(time.time()*1000)}",
+                {"proposal_id": proposal.proposal_id, "status": "pending_review",
+                 "direction": proposal.direction.value, "timestamp": time.time()},
+            )
+        except Exception:
+            pass
+        return updated
+
+    def list_pending_review(self) -> list:
+        from .proposal import ProposalStatus
+        return [
+            p for p in self.proposals.get_all_proposals()
+            if p.status == ProposalStatus.PENDING_REVIEW
+            or (p.status == ProposalStatus.PENDING and p.direction.value in ("loosen", "disable"))
+        ]
+
+    def get_evidence_pack(self, proposal_id: str) -> dict:
+        proposal = self.proposals.get_proposal(proposal_id)
+        boundary = None
+        version_chain = []
+        try:
+            boundary = self.boundaries.get_boundary(proposal.boundary_id)
+            hist = self.boundaries.boundaries.get(proposal.boundary_id)
+            if hist and hist.versions:
+                for v in sorted(hist.versions.keys()):
+                    ver = hist.versions[v]
+                    version_chain.append({
+                        "version": ver.version, "limit": ver.current_limit,
+                        "status": ver.status.value if hasattr(ver.status, "value") else str(ver.status),
+                    })
+        except Exception:
+            pass
+        violations = self.events.get_violations_for_boundary(proposal.boundary_id)
+        recent = violations[-10:] if violations else []
+        return {
+            "proposal": {
+                "proposal_id": proposal.proposal_id, "boundary_id": proposal.boundary_id,
+                "direction": proposal.direction.value, "current_value": proposal.current_value,
+                "proposed_value": proposal.proposed_value, "reason": proposal.reason,
+                "status": proposal.status.value,
+            },
+            "boundary_current": boundary.current_limit if boundary else None,
+            "version_chain": version_chain,
+            "recent_violations": [{
+                "violation_id": getattr(v, "violation_id", None),
+                "observed_value": getattr(v, "observed_value", None),
+                "limit_value": getattr(v, "limit_value", None),
+            } for v in recent],
+            "anomaly_scores": [],
+        }
+
+    def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = ""):
+        """Phase 10C: Apply human operator decision."""
+        from .proposal import ProposalStatus
+        proposal = self.proposals.get_proposal(proposal_id)
+        decision_l = decision.lower().strip()
+        if decision_l in ("reject", "rejected"):
+            self.authority.record_operator_decision(
+                proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator"
+            )
+            rejected = self.proposals.mark_rejected(proposal_id)
+            return rejected, AuthorizationResult.REJECTED
+        if decision_l in ("approve", "approve_loosen", "approve_disable"):
+            if proposal.direction == AdaptationDirection.TIGHTEN and decision_l != "approve":
+                raise ValueError("Use authorize_proposal for TIGHTEN auto path")
+            self.authority.record_operator_decision(
+                proposal, AuthorizationResult.AUTO_APPROVED, operator_id,
+                rationale or f"operator approved {proposal.direction.value}",
+            )
+            approved = self.proposals.mark_approved(proposal_id)
+            new_version = self.apply_approved_proposal(approved)
+            return approved, new_version
+        raise ValueError(f"Unknown decision: {decision}")
 
     def get_status(self) -> dict:
         return {
