@@ -36,6 +36,7 @@ from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
 from .metrics import MetricsTracker, EffectivenessOutcome
+from .baseline import BaselineComparator
 
 
 class Governor:
@@ -70,6 +71,9 @@ class Governor:
 
         # Phase 2 Sprint 2: Metrics tracking
         self.metrics_tracker = MetricsTracker()
+
+        # Phase 2.5: Baseline reasoning (defend against semantic poisoning)
+        self.baseline = BaselineComparator()
 
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
