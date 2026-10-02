@@ -67,7 +67,7 @@ class Governor:
         # Phase 2: Semantic understanding layer
         self.use_semantic = use_semantic
         self.classifier = WorkloadClassifier() if use_semantic else None
-        self.smart_patterns = SmartPatternDetector(self.classifier) if use_semantic else None
+        self.smart_patterns = SmartPatternDetector(self.classifier, self.patterns) if use_semantic else None
 
         # Phase 2 Sprint 2: Metrics tracking
         self.metrics_tracker = MetricsTracker()

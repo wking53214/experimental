@@ -187,55 +187,58 @@ class WorkloadClassifier:
 
 
 class SmartPatternDetector:
-    """Enhanced pattern detector using violation classification."""
-    
-    def __init__(self, classifier: WorkloadClassifier):
+    """Enhanced pattern detector using violation classification.
+
+    Delegates to regular PatternDetector but filters for anomalous violations.
+    This prevents false positives from expected load (maintenance, backups, etc)
+    while still catching real attacks.
+    """
+
+    def __init__(self, classifier: WorkloadClassifier, regular_detector=None):
         self.classifier = classifier
-        self.patterns: dict[str, dict] = {}
-    
-    def create_pattern(
-        self,
-        pattern_id: str,
-        boundary_id: str,
-        violation_threshold: int,
-        time_window_seconds: int,
-    ) -> None:
-        """Create a pattern detector for a boundary."""
-        self.patterns[pattern_id] = {
-            "boundary_id": boundary_id,
-            "violation_threshold": violation_threshold,
-            "time_window_seconds": time_window_seconds,
-        }
-    
+        self.regular_detector = regular_detector
+
+    def set_regular_detector(self, detector):
+        """Set reference to the regular PatternDetector."""
+        self.regular_detector = detector
+
     def detect_pattern(
         self,
         boundary_id: str,
         recent_violations: list,
         current_time: Optional[float] = None,
-    ) -> bool:
-        """Detect pattern for anomalous violations only."""
-        if current_time is None:
-            current_time = time.time()
-        
-        anomalous_violations = [
-            v for v in recent_violations
-            if not self.classifier.is_expected_violation(v)
-        ]
-        
-        for pattern_id, pattern_def in self.patterns.items():
-            if pattern_def["boundary_id"] != boundary_id:
-                continue
-            
-            window_start = current_time - pattern_def["time_window_seconds"]
-            anomalous_in_window = [
-                v for v in anomalous_violations
-                if v.timestamp >= window_start
+    ):
+        """Detect pattern using regular detector, but filter for anomalous violations.
+
+        Falls back to regular detector if patterns aren't registered here.
+        Returns the pattern object if detected (like regular detector).
+        """
+        if not recent_violations:
+            return None
+
+        # First, try regular detector (which has the authoritative pattern registry)
+        if self.regular_detector:
+            regular_pattern = self.regular_detector.detect_pattern(boundary_id, recent_violations)
+            if not regular_pattern:
+                return None
+
+            # Pattern exists in regular detector - now check if violations are anomalous
+            # This prevents false positives from expected load patterns
+            anomalous_violations = [
+                v for v in recent_violations
+                if not self.classifier.is_expected_violation(v)
             ]
-            
-            if len(anomalous_in_window) >= pattern_def["violation_threshold"]:
-                return True
-        
-        return False
+
+            # If we have anomalous violations matching the threshold, pattern is real
+            if len(anomalous_violations) >= regular_pattern.violation_threshold:
+                return regular_pattern
+            else:
+                # Violations exist but are all expected (maintenance, backups, etc)
+                # No pattern to adapt to
+                return None
+
+        # Fallback: if no regular detector set, can't detect anything
+        return None
 
 
 class SemanticAdaptationProposal:
