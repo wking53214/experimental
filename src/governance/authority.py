@@ -1,13 +1,11 @@
 """
-Authority enforcement.
+Authority Model: enforces asymmetric adaptive authority.
 
-This is the critical control point.
-
-TIGHTEN → automatic approval permitted
+TIGHTEN  → can be auto-approved
 LOOSEN  → human review required (MUST NOT auto-approve)
 DISABLE → human review required (MUST NOT auto-approve)
 
-This logic is separate from boundary update logic and cannot be bypassed.
+This separation is deliberate and separate from boundary update logic and cannot be bypassed.
 """
 from enum import Enum
 from dataclasses import dataclass
@@ -47,45 +45,26 @@ class AuthorityModel:
         self.decisions: list[AuthorizationDecision] = []
 
     def evaluate_proposal(self, proposal: AdaptationProposal) -> AuthorizationResult:
-        """
-        Evaluate a proposal according to authority rules.
-
-        CRITICAL: This is the only place that auto-approval can be granted.
-        """
-
-        # TIGHTEN: can be auto-approved
+        """Evaluate a proposal according to authority rules."""
         if proposal.direction == AdaptationDirection.TIGHTEN:
             return AuthorizationResult.AUTO_APPROVED
 
-        # LOOSEN: MUST require human review (cannot auto-approve)
         if proposal.direction == AdaptationDirection.LOOSEN:
             return AuthorizationResult.REQUIRES_HUMAN_REVIEW
 
-        # DISABLE: MUST require human review (cannot auto-approve)
         if proposal.direction == AdaptationDirection.DISABLE:
             return AuthorizationResult.REQUIRES_HUMAN_REVIEW
 
-        # Unknown direction: reject
         return AuthorizationResult.REJECTED
 
-    def authorize_proposal(
-        self,
-        proposal: AdaptationProposal,
-    ) -> AuthorizationResult:
-        """
-        Authorize a proposal based on direction.
-
-        Records the decision for audit.
-        """
+    def authorize_proposal(self, proposal: AdaptationProposal) -> AuthorizationResult:
+        """Authorize a proposal and record the decision."""
         result = self.evaluate_proposal(proposal)
-
-        reason = ""
-        if result == AuthorizationResult.AUTO_APPROVED:
-            reason = f"TIGHTEN direction allows automatic approval"
-        elif result == AuthorizationResult.REQUIRES_HUMAN_REVIEW:
-            reason = f"{proposal.direction.value} direction requires human review"
-        else:
-            reason = f"Unknown direction: {proposal.direction}"
+        reason = {
+            AuthorizationResult.AUTO_APPROVED: "TIGHTEN auto-approved by authority model",
+            AuthorizationResult.REQUIRES_HUMAN_REVIEW: f"{proposal.direction.value} requires human review",
+            AuthorizationResult.REJECTED: "Proposal rejected by authority model",
+        }.get(result, "unknown")
 
         decision = AuthorizationDecision(
             proposal_id=proposal.proposal_id,
@@ -93,43 +72,51 @@ class AuthorityModel:
             result=result,
             reason=reason,
             timestamp=time.time(),
+            decided_by="system",
         )
         self.decisions.append(decision)
-
         return result
 
-    def can_auto_approve(self, proposal: AdaptationProposal) -> bool:
-        """
-        Check if a proposal can be automatically approved.
-
-        This is the only question that matters.
-        """
-        return self.evaluate_proposal(proposal) == AuthorizationResult.AUTO_APPROVED
-
-    def get_decisions(self) -> list[AuthorizationDecision]:
-        """Get all authorization decisions."""
-        return list(self.decisions)
+    def record_operator_decision(
+        self,
+        proposal: AdaptationProposal,
+        result: AuthorizationResult,
+        operator_id: str,
+        rationale: str = "",
+    ) -> AuthorizationDecision:
+        """Record a human operator decision for LOOSEN/DISABLE."""
+        decision = AuthorizationDecision(
+            proposal_id=proposal.proposal_id,
+            direction=proposal.direction,
+            result=result,
+            reason=rationale or f"operator {operator_id} decided {result.value}",
+            timestamp=time.time(),
+            decided_by=operator_id,
+        )
+        self.decisions.append(decision)
+        return decision
 
     def verify_no_auto_loosen(self) -> bool:
-        """
-        Verify that LOOSEN operations were never auto-approved.
-
-        This is a critical invariant check.
-        """
+        """Verify that LOOSEN operations were never system auto-approved."""
         for decision in self.decisions:
             if decision.direction == AdaptationDirection.LOOSEN:
-                if decision.result == AuthorizationResult.AUTO_APPROVED:
+                if (
+                    decision.result == AuthorizationResult.AUTO_APPROVED
+                    and decision.decided_by == "system"
+                ):
                     return False
         return True
 
     def verify_no_auto_disable(self) -> bool:
-        """
-        Verify that DISABLE operations were never auto-approved.
-
-        This is a critical invariant check.
-        """
+        """Verify that DISABLE operations were never system auto-approved."""
         for decision in self.decisions:
             if decision.direction == AdaptationDirection.DISABLE:
-                if decision.result == AuthorizationResult.AUTO_APPROVED:
+                if (
+                    decision.result == AuthorizationResult.AUTO_APPROVED
+                    and decision.decided_by == "system"
+                ):
                     return False
         return True
+
+    def get_decisions(self) -> list:
+        return list(self.decisions)
