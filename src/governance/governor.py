@@ -35,6 +35,7 @@ from .authority import AuthorityModel, AuthorizationResult
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
+from .metrics import MetricsTracker, EffectivenessOutcome
 
 
 class Governor:
@@ -66,6 +67,9 @@ class Governor:
         self.use_semantic = use_semantic
         self.classifier = WorkloadClassifier() if use_semantic else None
         self.smart_patterns = SmartPatternDetector(self.classifier) if use_semantic else None
+
+        # Phase 2 Sprint 2: Metrics tracking
+        self.metrics_tracker = MetricsTracker()
 
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
