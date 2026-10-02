@@ -125,6 +125,18 @@ class Governor:
             }
         )
 
+        # Feed to anomaly detector for this boundary
+        anomaly_result = None
+        if boundary_id not in self.anomaly_detectors:
+            self.anomaly_detectors[boundary_id] = AdaptiveAnomalyDetector(boundary_id)
+        try:
+            anomaly_result = self.anomaly_detectors[boundary_id].detect_anomaly(
+                observed_value, execution.timestamp
+            )
+        except (TypeError, ValueError):
+            # If anomaly detection fails, continue with normal flow
+            pass
+
         # Check for violation
         violation = None
         try:
@@ -143,19 +155,23 @@ class Governor:
             )
 
             # Serialize violation to file
-            self.file_store.write_violation_event(
-                violation.violation_id,
-                {
-                    "violation_id": violation.violation_id,
-                    "execution_id": violation.execution_id,
-                    "boundary_id": violation.boundary_id,
-                    "boundary_version": violation.boundary_version,
-                    "observed_value": str(violation.observed_value),
-                    "limit_value": str(violation.limit_value),
-                    "timestamp": violation.timestamp,
-                    "context": violation.context,
-                }
-            )
+            violation_data = {
+                "violation_id": violation.violation_id,
+                "execution_id": violation.execution_id,
+                "boundary_id": violation.boundary_id,
+                "boundary_version": violation.boundary_version,
+                "observed_value": str(violation.observed_value),
+                "limit_value": str(violation.limit_value),
+                "timestamp": violation.timestamp,
+                "context": violation.context,
+            }
+
+            # Add anomaly score if available
+            if anomaly_result:
+                violation_data["anomaly_score"] = f"{anomaly_result.anomaly_score:.4f}"
+                violation_data["is_anomaly"] = anomaly_result.is_anomaly
+
+            self.file_store.write_violation_event(violation.violation_id, violation_data)
 
         return execution, violation
 
@@ -179,6 +195,15 @@ class Governor:
 
         if not violations:
             return None
+
+        # Phase 7C: Use anomaly detector to identify high-confidence anomalies
+        anomaly_count = 0
+        if boundary_id in self.anomaly_detectors:
+            detector = self.anomaly_detectors[boundary_id]
+            for v in violations:
+                # Check if detector thinks this was an anomaly
+                # (Note: violations are already recorded, we're just using detector scores)
+                anomaly_count += 1 if getattr(v, 'is_anomaly', False) else 0
 
         # Phase 4: Check global anomaly first (scale-aware detection)
         pattern_detected = False
