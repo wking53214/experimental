@@ -1,14 +1,17 @@
 openapi: 3.0.3
 info:
   title: Self-Hardening Governance — Adjudication API (Demo)
-  description: Demo-only HTTP façade. No authentication. LOOSEN/DISABLE never auto-approve.
+  description: |
+    Phase 11D/12B thin HTTP façade over the Governor adjudication path.
+    **Demo only — no authentication.** LOOSEN/DISABLE never auto-approve.
   version: "0.1.0"
 servers:
   - url: http://127.0.0.1:8765
+    description: Local demo server (`python scripts/adjudication_server.py`)
 paths:
   /health:
     get:
-      summary: Health and status counters
+      summary: Health and governor status counters
       responses:
         "200":
           description: OK
@@ -18,22 +21,24 @@ paths:
       responses:
         "200":
           description: Pending proposals
-  /proposals/{proposal_id}/evidence:
+  /proposals/{id}/evidence:
     get:
-      summary: Evidence pack for audit
+      summary: Evidence pack for offline audit
       parameters:
-        - name: proposal_id
+        - name: id
           in: path
           required: true
           schema: { type: string }
       responses:
         "200":
           description: Evidence pack
-  /proposals/{proposal_id}/decide:
+        "404":
+          description: Unknown proposal
+  /proposals/{id}/decide:
     post:
       summary: Operator decision
       parameters:
-        - name: proposal_id
+        - name: id
           in: path
           required: true
           schema: { type: string }
@@ -45,21 +50,44 @@ paths:
               type: object
               required: [decision, operator_id]
               properties:
-                decision: { type: string }
+                decision:
+                  type: string
+                  enum: [approve_loosen, approve_disable, reject, approve]
                 operator_id: { type: string }
                 rationale: { type: string }
       responses:
         "200":
           description: Decision applied
+        "400":
+          description: Invalid decision or state
   /boundaries:
     post:
       summary: Create boundary (demo)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boundary_id: { type: string }
+                initial_limit: { type: number }
+                resource: { type: string }
       responses:
         "200":
           description: Created
   /proposals/loosen:
     post:
       summary: Create LOOSEN proposal and submit for review
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [boundary_id, proposed_value]
+              properties:
+                boundary_id: { type: string }
+                proposed_value: { type: number }
+                reason: { type: string }
       responses:
         "200":
-          description: Pending review
+          description: Proposal id and pending_review status
