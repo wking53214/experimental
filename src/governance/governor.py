@@ -37,6 +37,7 @@ from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
 from .metrics import MetricsTracker, EffectivenessOutcome
 from .baseline import BaselineComparator
+from .anomaly_detector import AdaptiveAnomalyDetector
 
 
 class Governor:
@@ -78,6 +79,10 @@ class Governor:
         # Phase 4: Adaptive scaling
         self.global_violation_count = 0
         self.adaptive_threshold_enabled = True
+
+        # Phase 7C: Anomaly scoring (multi-signal detection)
+        self.anomaly_detectors = {}  # Per-boundary anomaly detectors
+        self.use_anomaly_scoring = True
 
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
