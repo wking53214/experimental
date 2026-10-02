@@ -75,6 +75,10 @@ class Governor:
         # Phase 2.5: Baseline reasoning (defend against semantic poisoning)
         self.baseline = BaselineComparator()
 
+        # Phase 4: Adaptive scaling
+        self.global_violation_count = 0
+        self.adaptive_threshold_enabled = True
+
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
 
@@ -161,6 +165,8 @@ class Governor:
         Phase 2: Uses semantic understanding to filter expected violations,
         avoiding false positives on legitimate high-load scenarios.
 
+        Phase 4: Includes adaptive thresholds for scale and global anomaly detection.
+
         Returns: proposal or None
         """
         # Get recent violations
@@ -169,13 +175,24 @@ class Governor:
         if not violations:
             return None
 
+        # Phase 4: Check global anomaly first (scale-aware detection)
+        pattern_detected = False
+        if self.adaptive_threshold_enabled and len(violations) >= 2:
+            # At scale, even 2 violations can indicate an anomaly
+            # if they occur in a rapid burst (adapted threshold)
+            boundary_count = len(self.boundaries.list_boundaries())
+            adapted_threshold = max(2, boundary_count // 25)  # Threshold scales with # of boundaries
+
+            if len(violations) >= adapted_threshold:
+                pattern_detected = True
+
         # Phase 2: Use smart pattern detection if semantic layer enabled
-        if self.use_semantic and self.smart_patterns:
+        if not pattern_detected and self.use_semantic and self.smart_patterns:
             pattern_detected = self.smart_patterns.detect_pattern(
                 boundary_id=boundary_id,
                 recent_violations=violations,
             )
-        else:
+        elif not pattern_detected:
             # Phase 1: Original blind pattern detection
             pattern = self.patterns.detect_pattern(
                 boundary_id=boundary_id,
