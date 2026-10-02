@@ -1,22 +1,22 @@
 """
-The Governor: orchestrates the governance loop.
+Governor — Orchestration of the Self-Hardening Governance Loop
+
+H1 FIXED: Telemetry/store failures append to self.telemetry_errors.
+H2 FIXED: Operator path uses AuthorizationResult.OPERATOR_APPROVED.
 """
 from typing import Optional, Any
 import time
 
-from .principle import PrincipleStore, GovernancePrinciple, PrincipleType
+from .principle import PrincipleStore
 from .boundary import BoundaryStore, BoundaryVersion
-from .event import EventStore, ExecutionEvent, ViolationEvent, ExecutionOutcome
-from .pattern import PatternDetector, PatternDefinition
-from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection, ProposalGenerator
+from .event import EventStore
+from .pattern import PatternDetector
+from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
 from .authority import AuthorityModel, AuthorizationResult
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
-from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
-from .metrics import (
-    MetricsTracker, EffectivenessOutcome, MetricStream,
-    BaselineEstablisher, CorrelationAnalyzer, DetectorPipeline
-)
+from .workload import WorkloadClassifier, SmartPatternDetector
+from .metrics import MetricsTracker, DetectorPipeline
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
 from .phase9_integration import HybridDetectorPipeline
@@ -47,9 +47,14 @@ class Governor:
         self.detector_pipelines = {}
         self.proposal_generators = {}
         self.file_store = ImmutableFileStore(store_path)
+        self.telemetry_errors: list = []
+
+    def _record_telemetry_error(self, where: str, exc: Exception) -> None:
+        self.telemetry_errors.append({
+            "where": where, "type": type(exc).__name__, "message": str(exc)[:200],
+        })
 
     def ingest_metrics(self, boundary_id: str, timestamp: float, metrics: dict):
-        """Phase 10B: HybridDetectorPipeline is the default multi-metric path."""
         if boundary_id not in self.detector_pipelines:
             self.detector_pipelines[boundary_id] = HybridDetectorPipeline(boundary_id)
         pipeline = self.detector_pipelines[boundary_id]
@@ -75,8 +80,8 @@ class Governor:
                     "boundary_id": boundary_id,
                     "anomaly_score": detection_result.get("anomaly_score"),
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                self._record_telemetry_error("ingest_metrics", e)
         return detection_result, violations if violations else None
 
     def execute_against_boundary(self, boundary_id: str, observed_value: Any, context: Optional[dict] = None):
@@ -94,8 +99,8 @@ class Governor:
                 "boundary_version": execution.boundary_version, "observed_value": str(observed_value),
                 "timestamp": execution.timestamp, "context": execution.context,
             })
-        except Exception:
-            pass
+        except Exception as e:
+            self._record_telemetry_error("write_execution", e)
         if boundary_id not in self.anomaly_detectors:
             self.anomaly_detectors[boundary_id] = AdaptiveAnomalyDetector(boundary_id)
         try:
@@ -119,8 +124,8 @@ class Governor:
                     "observed_value": str(violation.observed_value),
                     "limit_value": str(violation.limit_value),
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                self._record_telemetry_error("write_violation", e)
         return execution, violation
 
     def detect_and_propose_adaptation(self, boundary_id: str) -> Optional[AdaptationProposal]:
@@ -149,7 +154,8 @@ class Governor:
         try:
             hist = self.boundaries.boundaries.get(boundary_id)
             original_limit = hist.versions[min(hist.versions.keys())].current_limit if hist and hist.versions else boundary.current_limit
-        except Exception:
+        except Exception as e:
+            self._record_telemetry_error("original_limit", e)
             original_limit = boundary.current_limit
         floor = float(original_limit) * 0.20 if original_limit else 0.0
         new_limit = float(boundary.current_limit) * 0.9
@@ -163,7 +169,7 @@ class Governor:
             reason = f"Pattern detected: {anomalous_count} anomalous (+ {expected_count} expected)"
         else:
             reason = f"Pattern detected: {len(violations)} violations"
-        proposal = self.proposals.create_proposal(
+        return self.proposals.create_proposal(
             boundary_id=boundary_id,
             source_evidence=[v.violation_id for v in violations[-3:]],
             current_value=boundary.current_limit,
@@ -171,13 +177,11 @@ class Governor:
             reason=reason,
             direction=AdaptationDirection.TIGHTEN,
         )
-        return proposal
 
     def authorize_proposal(self, proposal: AdaptationProposal):
         result = self.authority.authorize_proposal(proposal)
         if result == AuthorizationResult.AUTO_APPROVED:
-            approved_proposal = self.proposals.mark_approved(proposal.proposal_id)
-            return approved_proposal, result
+            return self.proposals.mark_approved(proposal.proposal_id), result
         return proposal, result
 
     def apply_approved_proposal(self, proposal: AdaptationProposal) -> BoundaryVersion:
@@ -193,7 +197,7 @@ class Governor:
         self.proposals.mark_applied(current.proposal_id)
         return new_version
 
-    def validate_adaptation(self, proposal: AdaptationProposal, observed_state: Any) -> ValidationOutcome:
+    def validate_adaptation(self, proposal, observed_state):
         outcome = self.validators.validate(proposal.boundary_id, observed_state)
         self.validations.record_validation(
             proposal_id=proposal.proposal_id, boundary_id=proposal.boundary_id,
@@ -211,13 +215,13 @@ class Governor:
         ]
         return all(r for _, r in checks), checks
 
-    def detect_from_pipeline(self, boundary_id: str) -> Optional[AdaptationProposal]:
-        """Phase 10B: Propose adaptation from hybrid pipeline state."""
+    def detect_from_pipeline(self, boundary_id: str):
         if boundary_id in self.detector_pipelines:
             pipeline = self.detector_pipelines[boundary_id]
             try:
                 result = pipeline.detect_anomalies()
-            except Exception:
+            except Exception as e:
+                self._record_telemetry_error("detect_from_pipeline", e)
                 result = {}
             if result.get("anomaly_detected"):
                 try:
@@ -233,12 +237,11 @@ class Governor:
                         observed_value=result.get("anomaly_score", 1.0),
                         limit_value=0.5, context=result,
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    self._record_telemetry_error("detect_from_pipeline_record", e)
         return self.detect_and_propose_adaptation(boundary_id)
 
-    def submit_for_review(self, proposal: AdaptationProposal) -> AdaptationProposal:
-        """Phase 10C: Mark LOOSEN/DISABLE proposal as pending human review."""
+    def submit_for_review(self, proposal):
         if proposal.direction == AdaptationDirection.TIGHTEN:
             raise ValueError("TIGHTEN proposals are not submitted for human review")
         updated = self.proposals.mark_pending_review(proposal.proposal_id)
@@ -248,11 +251,11 @@ class Governor:
                 {"proposal_id": proposal.proposal_id, "status": "pending_review",
                  "direction": proposal.direction.value, "timestamp": time.time()},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            self._record_telemetry_error("submit_for_review", e)
         return updated
 
-    def list_pending_review(self) -> list:
+    def list_pending_review(self):
         from .proposal import ProposalStatus
         return [
             p for p in self.proposals.get_all_proposals()
@@ -274,8 +277,8 @@ class Governor:
                         "version": ver.version, "limit": ver.current_limit,
                         "status": ver.status.value if hasattr(ver.status, "value") else str(ver.status),
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            self._record_telemetry_error("evidence_pack", e)
         violations = self.events.get_violations_for_boundary(proposal.boundary_id)
         recent = violations[-10:] if violations else []
         return {
@@ -296,26 +299,22 @@ class Governor:
         }
 
     def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = ""):
-        """Phase 10C: Apply human operator decision."""
-        from .proposal import ProposalStatus
         proposal = self.proposals.get_proposal(proposal_id)
         decision_l = decision.lower().strip()
         if decision_l in ("reject", "rejected"):
             self.authority.record_operator_decision(
                 proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator"
             )
-            rejected = self.proposals.mark_rejected(proposal_id)
-            return rejected, AuthorizationResult.REJECTED
+            return self.proposals.mark_rejected(proposal_id), AuthorizationResult.REJECTED
         if decision_l in ("approve", "approve_loosen", "approve_disable"):
             if proposal.direction == AdaptationDirection.TIGHTEN and decision_l != "approve":
                 raise ValueError("Use authorize_proposal for TIGHTEN auto path")
             self.authority.record_operator_decision(
-                proposal, AuthorizationResult.AUTO_APPROVED, operator_id,
+                proposal, AuthorizationResult.OPERATOR_APPROVED, operator_id,
                 rationale or f"operator approved {proposal.direction.value}",
             )
             approved = self.proposals.mark_approved(proposal_id)
-            new_version = self.apply_approved_proposal(approved)
-            return approved, new_version
+            return approved, self.apply_approved_proposal(approved)
         raise ValueError(f"Unknown decision: {decision}")
 
     def get_status(self) -> dict:
@@ -326,4 +325,5 @@ class Governor:
             "proposals": len(self.proposals.get_all_proposals()),
             "validations": len(self.validations.get_all_validations()),
             "principles": len(self.principles.list_principles()),
+            "telemetry_errors": len(self.telemetry_errors),
         }
