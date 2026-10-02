@@ -420,11 +420,12 @@ class TestGoodhart:
         # Metrics oracle sees: violation_rate improved (good!)
         # But ignores: throughput collapsed (bad!)
 
-        assert outcome == EffectivenessOutcome.IMPROVED, \
-            "Oracle says improved despite throughput collapse"
+        assert outcome == EffectivenessOutcome.DEGRADED, \
+            "Oracle correctly detects Goodhart pattern"
 
-        # This is the smoking gun.
-        # The oracle is Goodhart-vulnerable.
+        # With the fix: oracle recognizes violation_rate improvement
+        # is offset by throughput collapse, and flags as DEGRADED
+        assert confidence > 0.9, "High confidence in Goodhart detection"
 
 
 class TestPrimitiveVulnerability:

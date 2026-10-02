@@ -162,6 +162,8 @@ class EffectivenessOracle:
 
     Uses data-driven comparison of pre/post metrics to determine if
     adaptation improved the system.
+
+    GOODHART-RESISTANT: Detects when improving one metric destroys another.
     """
 
     def __init__(self):
@@ -169,7 +171,7 @@ class EffectivenessOracle:
         self.metric_importance = {
             "violation_rate": {"direction": "lower", "weight": 1.0},
             "slo_attainment": {"direction": "higher", "weight": 1.0},
-            "throughput": {"direction": "higher", "weight": 0.5},
+            "throughput": {"direction": "higher", "weight": 1.0},  # RAISED: equal importance
             "latency_p99": {"direction": "lower", "weight": 0.5},
             "error_rate": {"direction": "lower", "weight": 0.8},
         }
@@ -177,6 +179,10 @@ class EffectivenessOracle:
         # Thresholds for determining improvement
         self.improvement_threshold = 0.10  # 10% improvement counts as IMPROVED
         self.degradation_threshold = -0.10  # -10% counts as DEGRADED
+
+        # GOODHART DETECTION: Safety guardrails
+        self.max_throughput_drop = -0.20  # Throughput cannot drop >20% even if violations improve
+        self.goodhart_collapse_ratio = 0.5  # If throughput drops >50% while violations improve, flag
 
     def evaluate_adaptation(
         self,
@@ -236,6 +242,15 @@ class EffectivenessOracle:
                 "No overlapping metrics between pre and post"
             )
 
+        # GOODHART DETECTION: Check for anti-patterns
+        goodhart_pattern = self._detect_goodhart_pattern(metric_changes)
+        if goodhart_pattern:
+            return (
+                EffectivenessOutcome.DEGRADED,
+                0.95,
+                goodhart_pattern["reasoning"]
+            )
+
         # Calculate weighted average change
         total_weight = sum(m["weight"] for m in metric_changes.values())
         weighted_change = sum(
@@ -257,6 +272,56 @@ class EffectivenessOracle:
         reasoning = self._generate_reasoning(metric_changes, weighted_change, outcome)
 
         return outcome, confidence, reasoning
+
+    def _detect_goodhart_pattern(self, metric_changes: dict) -> Optional[dict]:
+        """
+        Detect Goodhart attacks: improving one metric while destroying another.
+
+        Patterns:
+        1. violation_rate improves BUT throughput collapses
+        2. slo_attainment improves BUT throughput collapses
+        3. efficiency metric (throughput/violations) degrades
+
+        Returns: {"reasoning": "..."} if pattern detected, None otherwise
+        """
+        if "violation_rate" not in metric_changes or "throughput" not in metric_changes:
+            return None
+
+        violation_change = metric_changes["violation_rate"]["change"]
+        throughput_change = metric_changes["throughput"]["change"]
+
+        # GOODHART PATTERN 1: Violations improve while throughput collapses
+        if violation_change > self.improvement_threshold and throughput_change < self.max_throughput_drop:
+            return {
+                "reasoning": (
+                    f"Goodhart pattern detected: violation_rate improved {violation_change:+.1%} "
+                    f"but throughput collapsed {throughput_change:+.1%} (>20% drop). "
+                    f"System optimized for wrong metric."
+                )
+            }
+
+        # GOODHART PATTERN 2: Throughput dropped more than 50% (catastrophic)
+        if throughput_change < -self.goodhart_collapse_ratio:
+            return {
+                "reasoning": (
+                    f"Catastrophic throughput collapse: {throughput_change:+.1%}. "
+                    f"Adaptation severely degraded system capacity."
+                )
+            }
+
+        # GOODHART PATTERN 3: SLO improves but efficiency dies
+        if "slo_attainment" in metric_changes:
+            slo_change = metric_changes["slo_attainment"]["change"]
+            if slo_change > self.improvement_threshold and throughput_change < self.degradation_threshold:
+                return {
+                    "reasoning": (
+                        f"Efficiency trap: slo_attainment improved {slo_change:+.1%} "
+                        f"but throughput degraded {throughput_change:+.1%}. "
+                        f"System trading performance for nominal compliance."
+                    )
+                }
+
+        return None
 
     def _generate_reasoning(
         self,
