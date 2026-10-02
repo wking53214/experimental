@@ -8,9 +8,24 @@ Experimental research prototype for **asymmetric adaptive authority** in adaptiv
 
 Systems can autonomously *increase* constraints when evidence of boundary pressure emerges, but **no observation generated inside the adaptive loop may grant authority to reduce or disable constraints**.
 
+## Design Analogy
+
+Modeled after **asymmetric building codes**: the system may *tighten* limits when stress is evidenced; only a human may *loosen* them.
+
+| Code | Meaning |
+|------|---------|
+| `AuthorityModel` | Sole gate for system auto-approval |
+| `TIGHTEN` | Auto-approve allowed |
+| `LOOSEN` / `DISABLE` | Human review required |
+| `AdaptiveAnomalyDetector` | Multi-signal stress scoring |
+| Registered expected patterns | Work permits (anti-spoof) |
+| 20% usability floor | Minimum operable capacity |
+
+See [ELEGANT_AUDIT.md](ELEGANT_AUDIT.md) for architectural defects and beautification notes (Elegant framework).
+
 ## Status
 
-- **375 tests passing** (Phases 1–12)
+- **375 tests passing** (Phases 1–12); CI green on `main`
 - Multi-seed validation (N=10): diurnal FP ≈ 1%, attack detection ≈ 96%, endurance floor held
 - Hybrid multi-metric detection default; operator LOOSEN adjudication + HTTP demo
 - Draft manuscript under `docs/PAPER_DRAFT.md`
@@ -39,13 +54,12 @@ python scripts/adjudication_server.py   # http://127.0.0.1:8765
 
 | Doc | Description |
 |-----|-------------|
+| [ELEGANT_AUDIT.md](ELEGANT_AUDIT.md) | Elegant framework audit + defects |
 | [PHASE_12_COMPLETION_REPORT.md](PHASE_12_COMPLETION_REPORT.md) | Latest phase report |
 | [docs/PAPER_DRAFT.md](docs/PAPER_DRAFT.md) | Draft manuscript prose |
-| [docs/PAPER_OUTLINE.md](docs/PAPER_OUTLINE.md) | Section outline |
 | [docs/FIGURES.md](docs/FIGURES.md) | Mermaid architecture diagrams |
 | [docs/openapi-adjudication.yaml](docs/openapi-adjudication.yaml) | OpenAPI for demo HTTP API |
 | [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | Environment and commands |
-| [docs/references.bib](docs/references.bib) | BibTeX stubs |
 
 ## Phase index
 
