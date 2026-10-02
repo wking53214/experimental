@@ -51,7 +51,7 @@ class AdaptiveAnomalyDetector:
         # History tracking
         self.value_history = deque(maxlen=window_size)
         self.timestamp_history = deque(maxlen=window_size)
-        self.anomaly_threshold = 0.6  # Combined score threshold
+        self.anomaly_threshold = 0.50  # Combined score threshold (tuned for Phase 7B)
 
         # Baseline learning
         self.baseline_mean = None
