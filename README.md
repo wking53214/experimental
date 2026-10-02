@@ -20,28 +20,45 @@ Systems can autonomously *increase* constraints when evidence of boundary pressu
 ```bash
 pip install -r requirements.txt
 ./scripts/run_all_tests.sh
+
 python scripts/run_multiseed.py --seeds 10
 python scripts/adjudication_server.py   # http://127.0.0.1:8765
 ```
+
+## Key modules
+
+| Path | Role |
+|------|------|
+| `src/governance/governor.py` | Main loop, hybrid ingest, adjudication API |
+| `src/governance/anomaly_detector.py` | Multi-signal adaptive anomaly detection |
+| `src/governance/workload.py` | Anti-spoof semantic classification |
+| `src/governance/phase9_integration.py` | HybridDetectorPipeline |
+| `src/governance/authority.py` | TIGHTEN auto / LOOSEN human-gated |
 
 ## Documentation
 
 | Doc | Description |
 |-----|-------------|
-| [docs/PAPER_DRAFT.md](docs/PAPER_DRAFT.md) | Draft manuscript |
-| [docs/PAPER_OUTLINE.md](docs/PAPER_OUTLINE.md) | Section outline |
-| [docs/FIGURES.md](docs/FIGURES.md) | Mermaid diagrams |
-| [docs/openapi-adjudication.yaml](docs/openapi-adjudication.yaml) | OpenAPI |
-| [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | Reproducibility |
 | [PHASE_12_COMPLETION_REPORT.md](PHASE_12_COMPLETION_REPORT.md) | Latest phase report |
+| [docs/PAPER_DRAFT.md](docs/PAPER_DRAFT.md) | Draft manuscript prose |
+| [docs/PAPER_OUTLINE.md](docs/PAPER_OUTLINE.md) | Section outline |
+| [docs/FIGURES.md](docs/FIGURES.md) | Mermaid architecture diagrams |
+| [docs/openapi-adjudication.yaml](docs/openapi-adjudication.yaml) | OpenAPI for demo HTTP API |
+| [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | Environment and commands |
+| [docs/references.bib](docs/references.bib) | BibTeX stubs |
 
 ## Phase index
 
 | Phase | Focus |
 |-------|--------|
-| 1–9 | Core loop through full suite green |
+| 1–2 | Core loop, immutability, semantic layer |
+| 3 | Adaptive adversary, closed-loop containment |
+| 4–5 | Scale, cascade, endurance |
+| 6 | Semantic evasion |
+| 7–8 | Generative adversary, anomaly scoring, metrics pipeline |
+| 9 | Hardening to full suite green |
 | 10 | Multi-seed, hybrid default, adjudication, reproducibility |
-| 11 | Outline, CI, stochastic seeds, HTTP demo |
+| 11 | Paper outline, CI, stochastic seeds, HTTP demo |
 | 12 | Draft prose, OpenAPI, figures, README polish |
 
 ## License
