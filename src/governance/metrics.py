@@ -4,11 +4,14 @@ Metrics collection and effectiveness measurement.
 Phase 2 Sprint 2: Replace categorical validation with data-driven effectiveness
 measurement. Track key metrics before/after adaptation and determine whether
 the adaptation actually improved the system.
+
+Phase 8B: Metric collection infrastructure for end-to-end governance workflows.
 """
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Callable, Any
 import time
+import statistics
 
 
 class MetricType(Enum):
@@ -472,3 +475,387 @@ class MetricsTracker:
             "degraded": degraded_count,
             "success_rate": success_rate,
         }
+
+
+class MetricDatapoint:
+    """
+    Single timestamped metric observation for a boundary.
+
+    Supports multiple metrics per boundary with efficient lookup.
+    """
+
+    def __init__(self, timestamp: float, boundary_id: str):
+        self.timestamp = timestamp
+        self.boundary_id = boundary_id
+        self.metrics: dict[str, float] = {}
+
+    def set_metric(self, name: str, value: float) -> None:
+        """Set a metric value."""
+        self.metrics[name] = value
+
+    def get_metric(self, name: str) -> Optional[float]:
+        """Retrieve a metric value."""
+        return self.metrics.get(name)
+
+    def get_all_metrics(self) -> dict[str, float]:
+        """Get all metrics in this datapoint."""
+        return self.metrics.copy()
+
+
+class MetricStream:
+    """
+    Time-series metric ingestion for boundaries.
+
+    Enables:
+    - Multiple metrics per boundary
+    - History buffering with configurable window
+    - Timestamp tracking
+    - Baseline establishment
+    - Multi-metric correlation analysis
+
+    Phase 8B: Core infrastructure for end-to-end governance workflows.
+    """
+
+    def __init__(self, boundary_id: str, history_window: int = 100):
+        """
+        Initialize metric stream for a boundary.
+
+        Args:
+            boundary_id: Identifier for the boundary this stream tracks
+            history_window: Number of datapoints to buffer in memory
+        """
+        self.boundary_id = boundary_id
+        self.history_window = history_window
+        self.history: list[MetricDatapoint] = []
+        self.baseline: Optional[dict[str, dict]] = None
+        self.baseline_established = False
+        self.correlation_matrix: Optional[dict] = None
+
+    def add_observation(self, timestamp: float, metrics: dict[str, float]) -> MetricDatapoint:
+        """
+        Add a new observation to the stream.
+
+        Args:
+            timestamp: Unix timestamp of observation
+            metrics: Dict of {metric_name: value}
+
+        Returns:
+            The created MetricDatapoint
+        """
+        datapoint = MetricDatapoint(timestamp, self.boundary_id)
+        for name, value in metrics.items():
+            datapoint.set_metric(name, value)
+
+        self.history.append(datapoint)
+
+        # Trim history to window size
+        if len(self.history) > self.history_window:
+            self.history = self.history[-self.history_window:]
+
+        return datapoint
+
+    def get_history(self, metric_name: Optional[str] = None) -> list:
+        """
+        Get metric history.
+
+        Args:
+            metric_name: If provided, return only this metric's values
+                        If None, return all datapoints
+
+        Returns:
+            List of tuples (timestamp, value) or list of datapoints
+        """
+        if metric_name is None:
+            return self.history.copy()
+
+        return [
+            (dp.timestamp, dp.get_metric(metric_name))
+            for dp in self.history
+            if dp.get_metric(metric_name) is not None
+        ]
+
+    def get_latest(self, metric_name: Optional[str] = None) -> Optional[tuple]:
+        """
+        Get the most recent observation.
+
+        Returns:
+            (timestamp, value) for a metric or latest datapoint
+        """
+        if not self.history:
+            return None
+
+        latest_dp = self.history[-1]
+
+        if metric_name is None:
+            return (latest_dp.timestamp, latest_dp.get_all_metrics())
+
+        value = latest_dp.get_metric(metric_name)
+        if value is not None:
+            return (latest_dp.timestamp, value)
+        return None
+
+    def get_metric_names(self) -> set[str]:
+        """Get all metric names in this stream."""
+        names = set()
+        for dp in self.history:
+            names.update(dp.metrics.keys())
+        return names
+
+    def get_time_range(self) -> Optional[tuple[float, float]]:
+        """Get min and max timestamps in history."""
+        if not self.history:
+            return None
+        return (self.history[0].timestamp, self.history[-1].timestamp)
+
+    def size(self) -> int:
+        """Get number of observations in history."""
+        return len(self.history)
+
+
+class BaselineEstablisher:
+    """
+    Learns and maintains baseline metrics for attack detection.
+
+    Handles:
+    - Automatic baseline learning from metric history
+    - Handling of startup transients
+    - Baseline refresh strategies
+    """
+
+    def __init__(self,
+                 min_observations: int = 10,
+                 learning_buffer_size: int = 50):
+        """
+        Initialize baseline establisher.
+
+        Args:
+            min_observations: Minimum datapoints needed before baseline is valid
+            learning_buffer_size: Size of buffer for learning phase
+        """
+        self.min_observations = min_observations
+        self.learning_buffer_size = learning_buffer_size
+        self.baselines: dict[str, dict] = {}  # {metric_name: baseline_stats}
+        self.established_at: dict[str, float] = {}  # {metric_name: timestamp}
+
+    def learn_baseline(self, stream: MetricStream) -> dict[str, dict]:
+        """
+        Establish baseline from a metric stream.
+
+        Returns dict of {metric_name: {mean, std, min, max, percentile_5, percentile_95}}
+        """
+        if stream.size() < self.min_observations:
+            return {}
+
+        baselines = {}
+        metric_names = stream.get_metric_names()
+
+        for metric_name in metric_names:
+            history = stream.get_history(metric_name)
+            if not history:
+                continue
+
+            values = [v for _, v in history]
+
+            if len(values) < self.min_observations:
+                continue
+
+            # Use only recent data for learning (trim oldest to handle startup)
+            learning_data = values[-self.learning_buffer_size:]
+
+            try:
+                mean = statistics.mean(learning_data)
+                stdev = statistics.stdev(learning_data) if len(learning_data) > 1 else 1.0
+
+                # Percentiles
+                sorted_data = sorted(learning_data)
+                n = len(sorted_data)
+                p5_idx = max(0, int(n * 0.05))
+                p95_idx = min(n - 1, int(n * 0.95))
+
+                baselines[metric_name] = {
+                    "mean": mean,
+                    "std": stdev,
+                    "min": min(learning_data),
+                    "max": max(learning_data),
+                    "percentile_5": sorted_data[p5_idx],
+                    "percentile_95": sorted_data[p95_idx],
+                    "count": len(learning_data),
+                }
+
+                self.established_at[metric_name] = time.time()
+            except (statistics.StatisticsError, ValueError):
+                continue
+
+        self.baselines = baselines
+        return baselines
+
+    def get_baseline(self, metric_name: str) -> Optional[dict]:
+        """Get baseline stats for a metric."""
+        return self.baselines.get(metric_name)
+
+    def is_established(self, metric_name: Optional[str] = None) -> bool:
+        """Check if baseline is established (for a specific metric or any)."""
+        if metric_name is None:
+            return len(self.baselines) > 0
+        return metric_name in self.baselines
+
+    def refresh_baseline(self, stream: MetricStream) -> bool:
+        """
+        Refresh baseline with latest data.
+
+        Returns True if baseline was updated.
+        """
+        new_baseline = self.learn_baseline(stream)
+        return len(new_baseline) > 0
+
+
+class CorrelationAnalyzer:
+    """
+    Detects multi-metric attacks and gaming patterns.
+
+    Identifies:
+    - Pareto gaming (optimize one metric at expense of others)
+    - Cross-metric anomalies
+    - Coordinated metric attacks
+    """
+
+    def __init__(self, correlation_threshold: float = 0.7):
+        """
+        Initialize correlation analyzer.
+
+        Args:
+            correlation_threshold: Threshold for detecting correlated changes
+        """
+        self.correlation_threshold = correlation_threshold
+        self.metric_correlations: dict[str, dict] = {}  # Pairwise correlations
+
+    def analyze_stream(self, stream: MetricStream, baseline: dict) -> dict:
+        """
+        Analyze metric correlations and detect gaming patterns.
+
+        Returns dict with:
+        - anomalies: list of detected multi-metric anomalies
+        - gaming_detected: bool indicating Pareto gaming
+        - explanations: list of explanations
+        """
+        results = {
+            "anomalies": [],
+            "gaming_detected": False,
+            "pareto_gaming_score": 0.0,
+            "explanations": [],
+        }
+
+        if not baseline or stream.size() < 2:
+            return results
+
+        latest = stream.get_latest()
+        if not latest:
+            return results
+
+        _, latest_metrics = latest
+
+        # Check for Pareto gaming: one metric improves while critical ones degrade
+        gaming_score = self._detect_pareto_gaming(latest_metrics, baseline)
+
+        if gaming_score > 0.5:
+            results["gaming_detected"] = True
+            results["pareto_gaming_score"] = gaming_score
+            results["explanations"].append(
+                f"Pareto gaming detected: improved non-critical metrics at expense of critical ones (score: {gaming_score:.2f})"
+            )
+
+        # Detect coordinated multi-metric anomalies
+        anomaly_count = self._count_anomalies(latest_metrics, baseline)
+
+        if anomaly_count >= 2:
+            results["anomalies"].append({
+                "type": "multi_metric_anomaly",
+                "count": anomaly_count,
+                "severity": min(1.0, anomaly_count / len(baseline)),
+            })
+            results["explanations"].append(
+                f"Multi-metric anomaly: {anomaly_count} metrics deviate from baseline simultaneously"
+            )
+
+        return results
+
+    def _detect_pareto_gaming(self, current: dict, baseline: dict) -> float:
+        """
+        Detect Pareto gaming pattern.
+
+        Score from 0 (no gaming) to 1.0 (definite gaming).
+
+        Gaming occurs when one set of metrics improves while another degrades,
+        suggesting optimization of wrong metrics at expense of critical ones.
+        """
+        if not current or not baseline:
+            return 0.0
+
+        # Define critical metrics that should not degrade
+        # For lower-is-better metrics: negative change = improvement
+        # For higher-is-better metrics: positive change = improvement
+        critical_lower_is_better = {"violation_rate", "error_rate", "latency_p99"}
+        critical_higher_is_better = {"slo_attainment", "throughput"}
+
+        critical_improvements = []  # How much critical metrics improved
+        critical_degradations = []  # How much critical metrics degraded
+
+        for metric_name, value in current.items():
+            if metric_name not in baseline:
+                continue
+
+            baseline_stats = baseline[metric_name]
+            baseline_mean = baseline_stats.get("mean", 1.0)
+
+            if baseline_mean == 0:
+                continue
+
+            change = (value - baseline_mean) / abs(baseline_mean)
+
+            # Determine if this change is improvement or degradation
+            if metric_name in critical_lower_is_better:
+                # Lower is better: negative change = improvement
+                if change < -0.05:  # Significant improvement
+                    critical_improvements.append(-change)
+                elif change > 0.05:  # Significant degradation
+                    critical_degradations.append(change)
+            elif metric_name in critical_higher_is_better:
+                # Higher is better: positive change = improvement
+                if change > 0.05:  # Significant improvement
+                    critical_improvements.append(change)
+                elif change < -0.05:  # Significant degradation
+                    critical_degradations.append(-change)
+
+        # Pareto gaming: critical metrics improve significantly while some degrade significantly
+        # This suggests gaming of one critical metric at expense of another
+        if critical_improvements and critical_degradations:
+            avg_improvement = sum(critical_improvements) / len(critical_improvements)
+            avg_degradation = sum(critical_degradations) / len(critical_degradations)
+
+            # Both significant: strong signal of Pareto gaming
+            if avg_improvement > 0.1 and avg_degradation > 0.1:
+                return min(1.0, avg_improvement + avg_degradation)
+
+        return 0.0
+
+    def _count_anomalies(self, current: dict, baseline: dict) -> int:
+        """Count how many metrics are anomalous (>2 std devs from baseline)."""
+        count = 0
+
+        for metric_name, value in current.items():
+            if metric_name not in baseline:
+                continue
+
+            baseline_stats = baseline[metric_name]
+            baseline_mean = baseline_stats.get("mean", 0.0)
+            baseline_std = baseline_stats.get("std", 1.0)
+
+            if baseline_std == 0:
+                baseline_std = 1.0
+
+            z_score = abs((value - baseline_mean) / baseline_std)
+
+            if z_score > 2.0:  # 2 standard deviations
+                count += 1
+
+        return count

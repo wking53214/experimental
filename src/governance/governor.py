@@ -35,7 +35,10 @@ from .authority import AuthorityModel, AuthorizationResult
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
-from .metrics import MetricsTracker, EffectivenessOutcome
+from .metrics import (
+    MetricsTracker, EffectivenessOutcome, MetricStream,
+    BaselineEstablisher, CorrelationAnalyzer
+)
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
 
@@ -83,6 +86,11 @@ class Governor:
         # Phase 7C: Anomaly scoring (multi-signal detection)
         self.anomaly_detectors = {}  # Per-boundary anomaly detectors
         self.use_anomaly_scoring = True
+
+        # Phase 8B: Metric collection infrastructure
+        self.metric_streams = {}  # Per-boundary metric streams
+        self.baseline_establishers = {}  # Per-boundary baseline learners
+        self.correlation_analyzers = {}  # Per-boundary correlation detectors
 
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
