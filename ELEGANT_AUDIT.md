@@ -12,8 +12,8 @@
 | M1 | MEDIUM | **Fixed** | empty observation/array guards in multivariate |
 | M2 | MEDIUM | Open | Historical sync drift (process) |
 | M3 | MEDIUM | **Fixed** | loopback default, optional ADJUDICATION_TOKEN, refuse public bind |
-| L1 | LOW | Open | Throughput env sensitivity |
-| L2 | LOW | Open | Containment bound wording |
+| L1 | LOW | **Fixed** | wall-clock budget (<5s/1000 events) instead of absolute EPS |
+| L2 | LOW | **Fixed** | test/docs aligned to horizon ≤20 |
 
 ## Invariants
 
@@ -23,8 +23,8 @@
 4. Usability floor 20%.
 5. LOOSEN requires human decision; recorded as OPERATOR_APPROVED.
 
-## Next
+## Remaining
 
-L1/L2 optional. M2 is process hygiene only.
+M2 is process hygiene only (remote/local sync discipline).
 
-Tests after M1/M3: **379 passed**.
+Tests after L1/L2: **379 passed**.
