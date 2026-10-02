@@ -166,28 +166,31 @@ class TestFileStoreImmutability:
     
     def test_cannot_overwrite_event_file(self):
         """Attempting to write same event twice fails."""
-        governor = Governor(store_path="/tmp/test_file_immutable_1")
-        
-        # Create and store an event
+        governor = Governor(store_path=f"/tmp/test_file_immutable_{int(time.time()*1000)}")
+
+        # Create and store an event with unique ID
+        unique_id = f"test_{int(time.time()*1000000)}"
         event_data = {
-            "event_id": "test_123",
+            "event_id": unique_id,
             "data": "original",
         }
-        governor.file_store.write_violation_event("test_123", event_data)
-        
+        governor.file_store.write_violation_event(unique_id, event_data)
+
         # Attempt to overwrite
         with pytest.raises(ValueError):
-            governor.file_store.write_violation_event("test_123", {"data": "modified"})
+            governor.file_store.write_violation_event(unique_id, {"data": "modified"})
     
     def test_file_store_preserves_history(self):
         """File store maintains chronological history."""
-        governor = Governor(store_path="/tmp/test_file_history_1")
-        
+        governor = Governor(store_path=f"/tmp/test_file_history_{int(time.time()*1000)}")
+
         # Write multiple violations with unique IDs
+        base_id = int(time.time()*1000000)
         for i in range(3):
+            unique_id = f"violation_{base_id}_{i}"
             governor.file_store.write_violation_event(
-                f"violation_{i}_test",
-                {"violation_id": f"violation_{i}", "timestamp": time.time() + i}
+                unique_id,
+                {"violation_id": unique_id, "timestamp": time.time() + i}
             )
         
         # List violations should be in order

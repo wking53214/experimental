@@ -34,6 +34,7 @@ from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
 from .authority import AuthorityModel, AuthorizationResult
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
+from .workload import WorkloadClassifier, SmartPatternDetector, ViolationContext
 
 
 class Governor:
@@ -50,7 +51,7 @@ class Governor:
     7. Post-adaptation validation
     """
 
-    def __init__(self, store_path: str = "/tmp/governance_events"):
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False):
         # Core components
         self.principles = PrincipleStore()
         self.boundaries = BoundaryStore()
@@ -60,6 +61,11 @@ class Governor:
         self.authority = AuthorityModel()
         self.validators = ValidatorOracle()
         self.validations = ValidationStore()
+
+        # Phase 2: Semantic understanding layer
+        self.use_semantic = use_semantic
+        self.classifier = WorkloadClassifier() if use_semantic else None
+        self.smart_patterns = SmartPatternDetector(self.classifier) if use_semantic else None
 
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)
@@ -144,6 +150,9 @@ class Governor:
         Detect if a pattern has emerged for a boundary.
         If so, propose an adaptation.
 
+        Phase 2: Uses semantic understanding to filter expected violations,
+        avoiding false positives on legitimate high-load scenarios.
+
         Returns: proposal or None
         """
         # Get recent violations
@@ -152,13 +161,21 @@ class Governor:
         if not violations:
             return None
 
-        # Check if pattern is detected
-        pattern = self.patterns.detect_pattern(
-            boundary_id=boundary_id,
-            recent_violations=violations,
-        )
+        # Phase 2: Use smart pattern detection if semantic layer enabled
+        if self.use_semantic and self.smart_patterns:
+            pattern_detected = self.smart_patterns.detect_pattern(
+                boundary_id=boundary_id,
+                recent_violations=violations,
+            )
+        else:
+            # Phase 1: Original blind pattern detection
+            pattern = self.patterns.detect_pattern(
+                boundary_id=boundary_id,
+                recent_violations=violations,
+            )
+            pattern_detected = pattern is not None
 
-        if not pattern:
+        if not pattern_detected:
             return None
 
         # Pattern detected: propose tightening
@@ -168,12 +185,23 @@ class Governor:
         # (In real system, this would be more sophisticated)
         new_limit = boundary.current_limit * 0.9  # Tighten by 10%
 
+        # Phase 2: Count expected vs anomalous violations for reasoning
+        if self.use_semantic and self.classifier:
+            expected_count = sum(
+                1 for v in violations
+                if self.classifier.is_expected_violation(v)
+            )
+            anomalous_count = len(violations) - expected_count
+            reason = f"Pattern detected: {anomalous_count} anomalous violations (+ {expected_count} expected) in {len(violations)} total"
+        else:
+            reason = f"Pattern detected: {len(violations)} violations"
+
         proposal = self.proposals.create_proposal(
             boundary_id=boundary_id,
-            source_evidence=[v.violation_id for v in violations[-pattern.violation_threshold:]],
+            source_evidence=[v.violation_id for v in violations[-3:]],
             current_value=boundary.current_limit,
             proposed_value=new_limit,
-            reason=f"Pattern detected: {pattern.violation_threshold} violations in {pattern.time_window_seconds}s",
+            reason=reason,
             direction=AdaptationDirection.TIGHTEN,
         )
 
