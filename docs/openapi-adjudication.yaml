@@ -1,0 +1,65 @@
+openapi: 3.0.3
+info:
+  title: Self-Hardening Governance — Adjudication API (Demo)
+  description: Demo-only HTTP façade. No authentication. LOOSEN/DISABLE never auto-approve.
+  version: "0.1.0"
+servers:
+  - url: http://127.0.0.1:8765
+paths:
+  /health:
+    get:
+      summary: Health and status counters
+      responses:
+        "200":
+          description: OK
+  /proposals/pending:
+    get:
+      summary: List proposals awaiting operator decision
+      responses:
+        "200":
+          description: Pending proposals
+  /proposals/{proposal_id}/evidence:
+    get:
+      summary: Evidence pack for audit
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Evidence pack
+  /proposals/{proposal_id}/decide:
+    post:
+      summary: Operator decision
+      parameters:
+        - name: proposal_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, operator_id]
+              properties:
+                decision: { type: string }
+                operator_id: { type: string }
+                rationale: { type: string }
+      responses:
+        "200":
+          description: Decision applied
+  /boundaries:
+    post:
+      summary: Create boundary (demo)
+      responses:
+        "200":
+          description: Created
+  /proposals/loosen:
+    post:
+      summary: Create LOOSEN proposal and submit for review
+      responses:
+        "200":
+          description: Pending review
