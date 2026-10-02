@@ -30,7 +30,7 @@ from .principle import PrincipleStore, GovernancePrinciple, PrincipleType
 from .boundary import BoundaryStore, BoundaryVersion
 from .event import EventStore, ExecutionEvent, ViolationEvent, ExecutionOutcome
 from .pattern import PatternDetector, PatternDefinition
-from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
+from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection, ProposalGenerator
 from .authority import AuthorityModel, AuthorizationResult
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
@@ -94,6 +94,9 @@ class Governor:
 
         # Phase 8C: Detector pipeline (integrated metrics + detection)
         self.detector_pipelines = {}  # Per-boundary detector pipelines
+
+        # Phase 8D: Proposal generation from detector output
+        self.proposal_generators = {}  # Per-boundary proposal generators
 
         # File-based immutable store
         self.file_store = ImmutableFileStore(store_path)

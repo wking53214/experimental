@@ -196,3 +196,163 @@ class ProposalStore:
     def get_all_proposals(self) -> list[AdaptationProposal]:
         """Get all proposals."""
         return list(self.proposals.values())
+
+
+class ProposalGenerator:
+    """
+    Phase 8D: Generate governance proposals from detector pipeline output.
+
+    Converts anomaly detection results into adaptation proposals:
+    - Multi-metric anomalies → TIGHTEN boundary
+    - Pareto gaming → ADJUST metric emphasis
+    - Sustained anomalies → DISABLE boundary (after N occurrences)
+
+    Implements decision logic for proposal direction and severity.
+    """
+
+    def __init__(self,
+                 boundary_id: str,
+                 current_threshold: float = 0.05,
+                 tighten_factor: float = 0.9,
+                 loosen_factor: float = 1.1):
+        """
+        Initialize proposal generator for a boundary.
+
+        Args:
+            boundary_id: The boundary being adapted
+            current_threshold: Current boundary threshold value
+            tighten_factor: Multiplier for tightening proposals (< 1.0)
+            loosen_factor: Multiplier for loosening proposals (> 1.0)
+        """
+        self.boundary_id = boundary_id
+        self.current_threshold = current_threshold
+        self.tighten_factor = tighten_factor
+        self.loosen_factor = loosen_factor
+
+        # Tracking
+        self.anomaly_history = []  # Recent anomalies
+        self.proposal_count = 0
+
+    def generate_proposal(self,
+                         detection_result: dict,
+                         evidence_ids: list[str]) -> Optional[AdaptationProposal]:
+        """
+        Generate a proposal based on detector pipeline output.
+
+        Args:
+            detection_result: Output from DetectorPipeline.detect_anomalies()
+            evidence_ids: IDs of violation/execution events that triggered this
+
+        Returns:
+            AdaptationProposal if anomaly warrants action, None otherwise
+        """
+        # Can generate proposal if either anomaly OR gaming detected
+        anomaly_detected = detection_result.get("anomaly_detected", False)
+        gaming_detected = detection_result.get("gaming_detected", False)
+
+        if not (anomaly_detected or gaming_detected):
+            return None
+
+        anomaly_score = detection_result.get("anomaly_score", 0.0)
+        anomaly_count = detection_result.get("anomaly_count", 0)
+        explanation = detection_result.get("explanation", "Unknown anomaly")
+
+        # Track anomaly
+        self.anomaly_history.append({
+            "timestamp": time.time(),
+            "score": anomaly_score,
+            "gaming": gaming_detected,
+            "count": anomaly_count,
+        })
+
+        # Keep last 10 anomalies
+        if len(self.anomaly_history) > 10:
+            self.anomaly_history = self.anomaly_history[-10:]
+
+        # Get gaming score if available
+        gaming_score = detection_result.get("gaming_score", 0.0)
+
+        # Decide on proposal
+        if gaming_detected and gaming_score > 0.7:
+            # Pareto gaming with high confidence: tighten significantly
+            direction = AdaptationDirection.TIGHTEN
+            severity = 0.95
+            reason = f"Pareto gaming detected: {explanation}"
+        elif anomaly_count >= 3:
+            # Multiple metrics anomalous: tighten moderately
+            direction = AdaptationDirection.TIGHTEN
+            severity = 0.75
+            reason = f"Multi-metric anomaly ({anomaly_count} metrics): {explanation}"
+        elif anomaly_score > 0.85:
+            # High confidence anomaly: tighten
+            direction = AdaptationDirection.TIGHTEN
+            severity = 0.60
+            reason = f"High-confidence anomaly detected: {explanation}"
+        else:
+            # Low confidence: don't propose
+            return None
+
+        # Check for repeated anomalies (sustained pattern)
+        recent_anomalies = len(self.anomaly_history)
+        if recent_anomalies >= 3:
+            # 3+ anomalies in recent history: increase severity
+            severity = min(1.0, severity + 0.2)
+
+        # Calculate proposed value
+        if direction == AdaptationDirection.TIGHTEN:
+            proposed_value = self.current_threshold * self.tighten_factor ** severity
+        else:
+            proposed_value = self.current_threshold * self.loosen_factor ** severity
+
+        # Create proposal
+        self.proposal_count += 1
+        proposal = AdaptationProposal(
+            proposal_id=f"prop_{self.boundary_id}_{int(time.time() * 1000)}_{self.proposal_count}",
+            boundary_id=self.boundary_id,
+            source_evidence=evidence_ids,
+            current_value=self.current_threshold,
+            proposed_value=proposed_value,
+            reason=reason,
+            direction=direction,
+            status=ProposalStatus.PENDING,
+            created_at=time.time(),
+            notes={
+                "anomaly_score": anomaly_score,
+                "gaming_detected": gaming_detected,
+                "anomaly_count": anomaly_count,
+                "severity": severity,
+                "recent_anomalies": recent_anomalies,
+            }
+        )
+
+        return proposal
+
+    def get_sustained_pattern(self) -> Optional[dict]:
+        """
+        Check if recent anomalies form a sustained pattern.
+
+        Returns dict with pattern analysis or None if no pattern.
+        """
+        if len(self.anomaly_history) < 3:
+            return None
+
+        recent = self.anomaly_history[-5:]
+        avg_score = sum(a["score"] for a in recent) / len(recent)
+        gaming_count = sum(1 for a in recent if a["gaming"])
+        avg_anomalies = sum(a["count"] for a in recent) / len(recent)
+
+        if avg_score > 0.7 or gaming_count >= 2:
+            return {
+                "pattern": "sustained_anomalies",
+                "recent_count": len(recent),
+                "avg_score": avg_score,
+                "gaming_incidents": gaming_count,
+                "avg_anomalous_metrics": avg_anomalies,
+                "severity": min(1.0, avg_score * 1.2),
+            }
+
+        return None
+
+    def reset_history(self) -> None:
+        """Reset anomaly history (e.g., after proposal accepted)."""
+        self.anomaly_history = []
