@@ -27,7 +27,12 @@ class AuthorizationResult(Enum):
 @dataclass
 class AuthorizationDecision:
     proposal_id: str
+    boundary_id: str
+    boundary_version: int
     direction: AdaptationDirection
+    current_value: object
+    proposed_value: object
+    source_evidence: list
     result: AuthorizationResult
     reason: str
     timestamp: float
@@ -47,27 +52,53 @@ class AuthorityModel:
             return AuthorizationResult.REQUIRES_HUMAN_REVIEW
         return AuthorizationResult.REJECTED
 
-    def authorize_proposal(self, proposal: AdaptationProposal) -> AuthorizationResult:
+    def authorize_proposal(
+        self,
+        proposal: AdaptationProposal,
+        boundary_version: int,
+    ) -> AuthorizationResult:
         result = self.evaluate_proposal(proposal)
         reason = {
             AuthorizationResult.AUTO_APPROVED: "TIGHTEN auto-approved by authority model",
-            AuthorizationResult.REQUIRES_HUMAN_REVIEW: f"{proposal.direction.value} requires human review",
+            AuthorizationResult.REQUIRES_HUMAN_REVIEW: (
+                f"{proposal.direction.value} requires human review"
+            ),
             AuthorizationResult.REJECTED: "Proposal rejected by authority model",
         }.get(result, "unknown")
-        self.decisions.append(AuthorizationDecision(
-            proposal_id=proposal.proposal_id,
-            direction=proposal.direction,
-            result=result,
-            reason=reason,
-            timestamp=time.time(),
-            decided_by="system",
-        ))
+
+        self.decisions.append(
+            AuthorizationDecision(
+                proposal_id=proposal.proposal_id,
+                boundary_id=proposal.boundary_id,
+                boundary_version=boundary_version,
+                direction=proposal.direction,
+                current_value=proposal.current_value,
+                proposed_value=proposal.proposed_value,
+                source_evidence=list(proposal.source_evidence),
+                result=result,
+                reason=reason,
+                timestamp=time.time(),
+                decided_by="system",
+            )
+        )
         return result
 
-    def record_operator_decision(self, proposal, result, operator_id, rationale=""):
+    def record_operator_decision(
+        self,
+        proposal,
+        result,
+        operator_id,
+        rationale="",
+        boundary_version=None,
+    ):
         decision = AuthorizationDecision(
             proposal_id=proposal.proposal_id,
+            boundary_id=proposal.boundary_id,
+            boundary_version=boundary_version,
             direction=proposal.direction,
+            current_value=proposal.current_value,
+            proposed_value=proposal.proposed_value,
+            source_evidence=list(proposal.source_evidence),
             result=result,
             reason=rationale or f"operator {operator_id} decided {result.value}",
             timestamp=time.time(),

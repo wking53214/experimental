@@ -246,7 +246,7 @@ class TestAuthorityInvariance:
             direction=AdaptationDirection.TIGHTEN,
         )
 
-        result = governor.authority.authorize_proposal(proposal)
+        result = governor.authority.authorize_proposal(proposal, boundary_version=1)
         assert result == AuthorizationResult.AUTO_APPROVED
 
     def test_loosen_never_auto_approves(self, governor):
@@ -260,7 +260,7 @@ class TestAuthorityInvariance:
             direction=AdaptationDirection.LOOSEN,
         )
 
-        result = governor.authority.authorize_proposal(proposal)
+        result = governor.authority.authorize_proposal(proposal, boundary_version=1)
         assert result == AuthorizationResult.REQUIRES_HUMAN_REVIEW
 
     def test_disable_never_auto_approves(self, governor):
@@ -274,5 +274,5 @@ class TestAuthorityInvariance:
             direction=AdaptationDirection.DISABLE,
         )
 
-        result = governor.authority.authorize_proposal(proposal)
+        result = governor.authority.authorize_proposal(proposal, boundary_version=1)
         assert result == AuthorizationResult.REQUIRES_HUMAN_REVIEW

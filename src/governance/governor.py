@@ -179,10 +179,21 @@ class Governor:
         )
 
     def authorize_proposal(self, proposal: AdaptationProposal):
-        result = self.authority.authorize_proposal(proposal)
+        boundary = self.boundaries.get_boundary(proposal.boundary_id)
+        result = self.authority.authorize_proposal(
+            proposal,
+            boundary_version=boundary.version,
+        )
         if result == AuthorizationResult.AUTO_APPROVED:
             return self.proposals.mark_approved(proposal.proposal_id), result
         return proposal, result
+
+    def _latest_authorization(self, proposal_id: str):
+        latest = None
+        for decision in self.authority.decisions:
+            if decision.proposal_id == proposal_id:
+                latest = decision
+        return latest
 
     def apply_approved_proposal(self, proposal: AdaptationProposal) -> BoundaryVersion:
         try:
@@ -191,8 +202,45 @@ class Governor:
             current = proposal
         if current.status.value != "approved":
             raise ValueError(f"Proposal {current.proposal_id} is not approved. Status: {current.status.value}")
+        decision = self._latest_authorization(current.proposal_id)
+        if decision is None:
+            raise ValueError(
+                "Authorization invalidated: material state changed (no authorization decision)"
+            )
+        if decision.result not in (
+            AuthorizationResult.AUTO_APPROVED,
+            AuthorizationResult.OPERATOR_APPROVED,
+        ):
+            raise ValueError(
+                "Authorization invalidated: material state changed "
+                f"(result={decision.result.value})"
+            )
+        try:
+            boundary = self.boundaries.get_boundary(current.boundary_id)
+            live_version = boundary.version
+        except KeyError:
+            live_version = None
+        mismatched = []
+        if current.boundary_id != decision.boundary_id:
+            mismatched.append("boundary_id")
+        if current.direction != decision.direction:
+            mismatched.append("direction")
+        if current.current_value != decision.current_value:
+            mismatched.append("current_value")
+        if current.proposed_value != decision.proposed_value:
+            mismatched.append("proposed_value")
+        if list(current.source_evidence) != list(decision.source_evidence):
+            mismatched.append("source_evidence")
+        if live_version != decision.boundary_version:
+            mismatched.append("boundary_version")
+        if mismatched:
+            raise ValueError(
+                "Authorization invalidated: material state changed ("
+                + ", ".join(mismatched)
+                + ")"
+            )
         new_version = self.boundaries.update_boundary(
-            boundary_id=current.boundary_id, new_limit=current.proposed_value,
+            boundary_id=decision.boundary_id, new_limit=decision.proposed_value,
         )
         self.proposals.mark_applied(current.proposal_id)
         return new_version
@@ -300,10 +348,13 @@ class Governor:
 
     def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = ""):
         proposal = self.proposals.get_proposal(proposal_id)
+        boundary = self.boundaries.get_boundary(proposal.boundary_id)
         decision_l = decision.lower().strip()
         if decision_l in ("reject", "rejected"):
             self.authority.record_operator_decision(
-                proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator"
+                proposal, AuthorizationResult.REJECTED, operator_id,
+                rationale or "rejected by operator",
+                boundary_version=boundary.version,
             )
             return self.proposals.mark_rejected(proposal_id), AuthorizationResult.REJECTED
         if decision_l in ("approve", "approve_loosen", "approve_disable"):
@@ -312,6 +363,7 @@ class Governor:
             self.authority.record_operator_decision(
                 proposal, AuthorizationResult.OPERATOR_APPROVED, operator_id,
                 rationale or f"operator approved {proposal.direction.value}",
+                boundary_version=boundary.version,
             )
             approved = self.proposals.mark_approved(proposal_id)
             return approved, self.apply_approved_proposal(approved)
