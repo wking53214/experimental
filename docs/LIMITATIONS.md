@@ -359,3 +359,21 @@ Phase 2 should focus on:
 5. Human-in-loop integration
 
 The core governance architecture is sound. The challenge is in making adaptations that are actually beneficial.
+
+
+## Issues found by running the code (October 2026)
+
+**Core invariant (`authority.py`, `proposal.py`, `boundary.py`)**
+- The invariant holds against an attacker who controls only observations (fuzzed, never violated), but it is enforced by convention, not by construction. Four ways to raise a limit without a human are documented as strict expected failures in `tests/test_invariant_attacks.py`: a proposal labelled `TIGHTEN` whose value is larger than the current limit is auto-approved and applied (the gate trusts the label); `BoundaryRegistry.update_boundary` has no direction guard; `ProposalStore.mark_approved` approves any pending proposal with no authority decision; and `verify_governance_integrity()` cannot detect any of these because it only reads the authority's own decision log, not the boundary version history.
+- Consequence of the thesis, not a bug: an attacker who can generate violations can drive limits to the 20% floor, and only a human can restore them (the endurance experiment ends every seed at 20.6% usability).
+
+**HTTP adjudication demo (`scripts/adjudication_server.py`)**
+- Malformed JSON or a missing required field (for example `boundary_id` on `/proposals/loosen`) raises an uncaught exception in the handler; the client gets a dropped connection instead of a 400. The server keeps running.
+- `"proposed_value": "nan"` is accepted into the review queue (not tested: what happens if it is then approved).
+- GET endpoints (`/health`, `/proposals/pending`, `/proposals/<id>/evidence`) are not covered by the token check; only POSTs are.
+- The token comparison is not constant-time, and `operator_id` is whatever the caller sends (default `anonymous`), so approvals are not attributable to an individual.
+
+**Multi-seed protocol (`scripts/run_multiseed.py`)**
+- The "attack" in `7c_attack_detection` is one spike of 100 to 150 against a baseline near 40 with noise near 1.5, tested on the single-metric detector, so 95-100% detection says little about realistic or adaptive attackers.
+- The endurance experiments (`5_endurance_*`) and `3_late_succeeded` give identical results on every seed, so the extra seeds add no information for them.
+- Confidence intervals use a normal approximation that is invalid for rates (the detection interval ran above 1.0), and the pass criteria test only the mean, so a target can be reported as met while its interval includes values below the target.

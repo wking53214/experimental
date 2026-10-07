@@ -25,9 +25,10 @@ See [ELEGANT_AUDIT.md](ELEGANT_AUDIT.md) for architectural defects and beautific
 
 ## Status
 
-- **375 tests passing** (Phases 1–12); CI green on `main`
-- Multi-seed validation (N=10): diurnal FP ≈ 1%, attack detection ≈ 96%, endurance floor held
-- Hybrid multi-metric detection default; operator LOOSEN adjudication + HTTP demo
+- **422 tests passing, 4 documented expected failures** (Phases 1-12 plus the Phase 9 detection research); CI runs on Python 3.11 and 3.12.
+- Multi-seed run (`scripts/run_multiseed.py --seeds 10`): diurnal false positives about 1%, attack detection about 96% (mean 0.955, 95% interval [0.90, 1.01] from a normal approximation that is invalid for rates; the lower end is below the 0.95 target). The "attack" in that run is a single large spike against the single-metric detector, so it is not evidence about adaptive attackers. See [PHASE9_EXPERIMENT_RESULTS.md](PHASE9_EXPERIMENT_RESULTS.md) for evolved-attacker results on the multi-metric detector (partial detection).
+- Core invariant: an attacker who controls only observations never raised a limit in fuzzing (3,000 steps in `tests/test_invariant_attacks.py`; 18,000 in a larger exploratory run). The invariant is enforced by convention, not by construction: four ways to raise a limit through the code's own API are documented there as expected failures, and `verify_governance_integrity()` cannot detect them because it only reads the authority's own decision log.
+- Hybrid multi-metric detection is the default; operator LOOSEN adjudication + HTTP demo (see known issues in `docs/LIMITATIONS.md`).
 - Draft manuscript under `docs/PAPER_DRAFT.md`
 
 ## Quick start
