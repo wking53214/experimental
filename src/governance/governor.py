@@ -24,7 +24,25 @@ from .phase9_integration import HybridDetectorPipeline
 
 
 class Governor:
-    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False):
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False,
+                 require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
+                 max_auto_tightenings: Optional[int] = None, clock=time.time):
+        """Optional limits on automatic tightening (all off by default; see docs/THREAT_MODEL.md).
+
+        require_fresh_evidence: a new tightening needs a pattern in violations recorded since
+            the last change to that boundary, not just the old ones again.
+        tighten_cooldown_s: minimum seconds between automatic tightenings of one boundary.
+        max_auto_tightenings: at most this many automatic tightenings per boundary until an
+            operator calls acknowledge_tightening(); further ones are held, not applied.
+        """
+        self.require_fresh_evidence = require_fresh_evidence
+        self.tighten_cooldown_s = tighten_cooldown_s
+        self.max_auto_tightenings = max_auto_tightenings
+        self.clock = clock
+        self._evidence_cursor: dict = {}
+        self._last_auto_tighten_at: dict = {}
+        self._auto_tightenings: dict = {}
+        self.tightening_holds: list = []
         self.principles = PrincipleStore()
         self.boundaries = BoundaryStore()
         self.events = EventStore()
@@ -131,7 +149,14 @@ class Governor:
 
     def detect_and_propose_adaptation(self, boundary_id: str) -> Optional[AdaptationProposal]:
         violations = self.events.get_violations_for_boundary(boundary_id)
+        if self.require_fresh_evidence:
+            violations = violations[self._evidence_cursor.get(boundary_id, 0):]
         if not violations:
+            return None
+        hold = self._tightening_hold(boundary_id)
+        if hold:
+            self.tightening_holds.append({"boundary_id": boundary_id, "reason": hold,
+                                          "timestamp": self.clock()})
             return None
         pattern_detected = False
         boundary_count = len(self.boundaries.list_boundaries())
@@ -179,6 +204,22 @@ class Governor:
             direction=AdaptationDirection.TIGHTEN,
         )
 
+    def _tightening_hold(self, boundary_id: str) -> Optional[str]:
+        if (self.max_auto_tightenings is not None
+                and self._auto_tightenings.get(boundary_id, 0) >= self.max_auto_tightenings):
+            return (f"{self._auto_tightenings[boundary_id]} automatic tightenings since the last "
+                    f"operator acknowledgement; a human must review before more")
+        last = self._last_auto_tighten_at.get(boundary_id)
+        if self.tighten_cooldown_s and last is not None and self.clock() - last < self.tighten_cooldown_s:
+            return f"cooldown: {self.tighten_cooldown_s - (self.clock() - last):.0f}s remaining"
+        return None
+
+    def acknowledge_tightening(self, boundary_id: str, operator_id: str) -> None:
+        """An operator reviewed the automatic tightenings; allow the system to continue."""
+        if not operator_id or not str(operator_id).strip():
+            raise ValueError("operator_id is required")
+        self._auto_tightenings[boundary_id] = 0
+
     def authorize_proposal(self, proposal: AdaptationProposal):
         result = self.authority.authorize_proposal(proposal)
         if result == AuthorizationResult.AUTO_APPROVED:
@@ -212,7 +253,12 @@ class Governor:
         new_version = self.boundaries.update_boundary(
             boundary_id=current.boundary_id, new_limit=current.proposed_value, grant=grant,
         )
+        if decision.result == AuthorizationResult.AUTO_APPROVED:
+            self._auto_tightenings[current.boundary_id] = self._auto_tightenings.get(current.boundary_id, 0) + 1
+            self._last_auto_tighten_at[current.boundary_id] = self.clock()
         self.proposals.mark_applied(current.proposal_id)
+        self._evidence_cursor[current.boundary_id] = len(
+            self.events.get_violations_for_boundary(current.boundary_id))
         return new_version
 
     def _enforce_usability_floor(self, boundary_id: str, new_limit) -> None:

@@ -1,0 +1,78 @@
+# Threat Model
+
+Scope: the claim this project makes and who it holds against. Each row says what is **tested**, what is only **argued**, and what is **not covered**. If a claim is not backed by a test or a measurement, it is listed as not covered.
+
+## The claim
+
+1. **Asymmetry.** The system may tighten a constraint on its own. Only a human may loosen or disable one.
+2. **Usability floor.** Automatic tightening never takes a boundary below 20% of its original limit.
+3. **Detection.** Anomalous metric behaviour is flagged, with a measured false-positive rate and measured evasion rates.
+4. **Auditability.** Every limit change, who authorized it, and why, can be reconstructed.
+
+## Assets
+
+| Asset | Why it matters |
+|---|---|
+| No-auto-loosen invariant | The core thesis. |
+| Boundary availability | Tightening is the safe direction for security but costs availability. Legitimate users hit the limit. |
+| Detector quality | Missed attacks, or alarms that cause tightening. |
+| Decision log and version history | The evidence that 1 and 4 held. |
+| Operator identity | Who may loosen. |
+
+## Attacker classes
+
+| Class | Capability | Considered |
+|---|---|---|
+| **A1** Observation-only | Controls the values and metrics fed to the system. Cannot call the API. | Yes, tested and measured |
+| **A2** API caller without operator rights | Calls governor/authority/rollback methods, forges or mislabels proposals. Models bugs and API misuse. | Yes, tested |
+| **A3** Holder of the adjudication-server token | Can call the HTTP endpoints, and can claim any `operator_id`. | Partly (see T9) |
+| **A4** Same-process code, or write access to stored state | Can edit memory, the version history and the decision log directly. | **No. Out of scope.** |
+| **A5** Network observer or middlebox | Reads or alters HTTP traffic. | **No.** The server has no TLS. |
+| **A6** Malicious or mistaken operator | Holds legitimate approval power. | **No.** Decisions are logged, not constrained. |
+
+## Threats
+
+| # | Threat | Attacker | Status | Evidence |
+|---|---|---|---|---|
+| T1 | **Evasion**: stay under the detectors | A1 | Partly mitigated. Evolved attacks still evade at weak strengths. A temporal layer roughly halves the weakest detectable shift, at the cost of absorbing slow attacks as drift (T5). | `PHASE9_EXPERIMENT_RESULTS.md`, `experiments/phase9_power_curves.py` |
+| T2 | **Baseline poisoning**: attacker is present while the baseline is learned | A1 | **Not evaluated.** The baseline is assumed clean. | none |
+| T3 | **Tightening as denial of service**: feed over-limit values so the system tightens itself to the floor | A1 | **Real, now measured.** Opt-in mitigation reduces it. See below. | `experiments/dos_tightening.py`, `tests/test_tightening_limits.py` |
+| T4 | **Spoofing "expected" load** so that real violations are excused | A2 | **Weak.** Patterns marked untrusted are ignored, but registration defaults to `trusted=True`, so any caller who can register a pattern is trusted. Only tests in `tests/test_sprint1_semantic.py`. Semantic classification is off by default. | `src/governance/workload.py` |
+| T5 | **Slow attack absorbed as drift** | A1 | **Open trade-off.** A change slower than the drift window is indistinguishable from legitimate drift. The temporal layer is off by default for this reason. | `PHASE_9F_REPORT.md` |
+| T6 | **Mislabelled direction** (a proposal says TIGHTEN but raises the limit) | A2 | Fixed. The implied direction from the values is checked too. | `tests/test_invariant_attacks.py` |
+| T7 | **Loosening through the side door** (rollback, direct store update, replayed grant) | A2 | Fixed. A loosening update needs a single-use grant that only the authority model can issue. | `tests/test_invariant_attacks.py`, `src/governance/grant.py` |
+| T8 | **Tampering with history or the decision log** | A4 | **Not covered.** `unauthorized_loosenings()` audits stored history, but code that can write history can rewrite the audit too. A hash-chained log would make edits detectable; not built. | none |
+| T9 | **Operator impersonation** | A3 | **Not covered.** One shared token authenticates every caller, so `operator_id` is a claim, not a verified identity. The response says `identity_verified: false`. | `tests/test_adjudication_server_hardening.py` |
+| T10 | **Traffic interception or tampering** | A5 | **Not covered.** No TLS; the token travels in clear. | none |
+| T11 | **Unbounded memory growth** from event stores | A1 | **Not evaluated.** Event lists are append-only and unbounded by design. | none |
+
+Scope caveat on T6 and T7: the grant mechanism stops bugs and API misuse. Python offers no real isolation inside one process, so it does not stop A4.
+
+## T3 in detail: the denial-of-service lever
+
+Setup: one boundary with limit 100. Legitimate traffic is roughly N(50, 5). The attacker sends values 5% above the current limit and nothing else. Each value is a genuine violation, so the pattern detector tightens by 10% as designed. Results from `experiments/dos_tightening.py`:
+
+| Defence | Fast attacker (1 value/min) | Patient attacker (1 value/hour) | Legit traffic blocked at end |
+|---|---|---|---|
+| None (default) | floor in 16 values, 0.01 days | floor in 16 values, 0.6 days | 100% |
+| Fresh evidence only | floor in 42 values, 0.03 days | floor in 42 values, 1.7 days | 100% |
+| Fresh evidence + 1 h cooldown | floor in 783 values, 0.5 days | floor in 42 values, 1.7 days | 100% |
+| Fresh evidence + breaker (max 3) | limit stays 72.9 | limit stays 72.9 | 0% |
+
+What this says:
+
+- **Every governance invariant check passed throughout**, even as the system was driven to the floor. The thesis holds and the system is still being denied service. The invariant protects against loosening; it does not protect availability.
+- **Before the fix**, the pattern detector re-fired on old violations, so every new violation after the third tightened again. "Fresh evidence" makes each tightening need new evidence. It makes the attack roughly 3x more expensive.
+- **A cooldown only buys time.** A patient attacker reaches the floor either way.
+- **The breaker bounds the damage.** After `max_auto_tightenings` automatic tightenings on a boundary, further ones are held and logged in `tightening_holds` until an operator calls `acknowledge_tightening`. This keeps the asymmetry: it removes autonomy only in the tightening direction, and loosening still needs a human.
+- **The breaker's cost is real.** A genuine, sustained attack is also held after the cap. With a cap of 3, the most the system can lose without a human is about 27% of the limit. Whether that is harmless depends on headroom: here legitimate traffic sits at half the limit, so a 27% loss is harmless. A boundary with less than 27% headroom would still be hurt.
+- All three options are **off by default**, so existing behavior is unchanged. Turning the breaker on is a policy decision about how much autonomy to give up.
+
+## Not covered, in priority order
+
+1. T9 operator identity: per-operator credentials.
+2. T8 tamper evidence: hash-chained decision log.
+3. T2 baseline poisoning: measure how much a short attacker presence during training shifts later detection.
+4. T4: require operator approval to register an expected-load pattern.
+5. T10 TLS, T11 memory bounds.
+6. A6: a rule that high-impact loosenings need two operators.
