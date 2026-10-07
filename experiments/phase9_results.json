@@ -52,7 +52,7 @@
       "best_fitness": 0.9328063500087056
     },
     "hybrid+temporal": {
-      "step_fpr": 0.039,
+      "step_fpr": 0.0395,
       "episode_fpr": 0.72,
       "det_rate_gen0": 0.8899999999999999,
       "det_rate_last": 0.8299999999999998,
@@ -79,7 +79,7 @@
       "step_fpr_under_drift": 0.195
     },
     "hybrid+temporal": {
-      "step_fpr_under_drift": 0.72
+      "step_fpr_under_drift": 0.64
     },
     "9D": {
       "acceptance_rate": 0.985,
@@ -106,5 +106,5 @@
       "false_alarm_rate_quiet_steps": 0.01875
     }
   },
-  "runtime_s": 38.404640913009644
+  "runtime_s": 47.879395961761475
 }

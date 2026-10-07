@@ -90,7 +90,18 @@ What the numbers do and do not show:
 - Almost all of the gain comes from adding the temporal layer. Tuning the smoothing value with the evolved attacks matters little: 0.2 and 0.3 score within a few points of each other.
 - What still evades is mostly very small shifts: in round 2, 82% of the remaining evasive attacks were under 1 sigma. The adversary can still win by being weak enough.
 
-**Cost: legitimate drift.** The reference is frozen, so a real long-term change eventually looks like an attack. On the +20% drift scenario the hybrid with the temporal layer alarms on 72% of steps (19.5% without it). `TemporalShiftDetector.reanchor()` exists, but nothing calls it yet; wiring it to the 9D drift detector's re-anchoring is the main open item, and it is why the layer is off by default.
+**Cost: legitimate drift, and the wiring to 9D.** The temporal layer's reference is frozen, so a real long-term change eventually looks like an attack. `HybridDetectorPipeline(temporal_shift=True)` now runs a `ConceptDriftDetector` alongside it: when the drift detector judges a change gradual and re-anchors, the temporal layer rebuilds its reference from the most recent 100 observations (no blind period). An abrupt shift is held, so the layer keeps alarming, until `acknowledge_shift()` is called. `reanchor_on_drift=False` gives a strict frozen reference. Measured over 10 seeds (temporal layer's own alarm rate):
+
+| Scenario | frozen reference | wired to drift detector |
+|---|---|---|
+| legitimate +20% drift, ramp over 200 steps, then plateau: steps 100-200 / 200-300 | 100% / 100% | 67% / 35% |
+| slow attack, +1 sigma for 300 steps: steps 0-100 / 100-200 / 200-300 | 91% / 93% / 96% | 70% / 44% / 48% |
+| abrupt +3 sigma shift, alarm rate before / after `acknowledge_shift()` | n/a | 89% / 6% |
+| clean data, step FPR (whole hybrid) | 2.6% | 2.6% |
+
+The two middle rows are the trade-off, and it is fundamental, not a bug: a slow shift lasting longer than the drift window cannot be told apart from legitimate drift using the data alone. Wiring cuts false alarms on real drift but lets about half of a very long slow attack get absorbed. The 40-step attack episodes behind the headline numbers are unaffected (detection at the last generation 83%, best undetected damage 0.68). On the 200-step drift ramp the whole hybrid alarms on 64% of steps with the layer on (72% frozen, 19.5% without the layer).
+
+I left `temporal_shift` off by default because of this. It is the right choice when evasion by subtle attacks is the main concern and a person can acknowledge flagged shifts. It is the wrong one for environments where metrics legitimately drift a lot and nobody is watching.
 
 **Limits of the evidence.** 9C's attack model is only constant-size shifts on chosen metrics, which is exactly what a mean-shift detector is built for. Attacks that change variance, break correlations while keeping means, or oscillate are not generated here, so this result says nothing about them. Data is synthetic Gaussian.
 

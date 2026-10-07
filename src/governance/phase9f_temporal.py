@@ -48,11 +48,22 @@ class TemporalShiftDetector:
         self._z: Optional[np.ndarray] = None
         self.observation_count = 0
 
-    def reanchor(self) -> None:
-        """Discard the reference and relearn it from the next min_observations."""
+    def reanchor(self, observations: Optional[List[Dict[str, float]]] = None) -> None:
+        """Replace the frozen reference.
+
+        With at least min_observations recent observations, the reference is rebuilt
+        from them immediately (no blind period). Otherwise it is discarded and relearned
+        from the next min_observations, during which nothing alarms.
+        """
+        self._z = None
+        if observations is not None and len(observations) >= self.min_observations:
+            names = self.metric_names or list(observations[-1].keys())
+            self._buffer = [np.array([o.get(m, 0.0) for m in names], dtype=float)
+                            for o in observations[-self.min_observations:]]
+            self._lock()
+            return
         self._buffer = []
         self.locked = False
-        self._z = None
 
     def update(self, observation: Dict[str, float]) -> Dict:
         """Ingest one observation; return the detection result for it."""

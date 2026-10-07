@@ -9,9 +9,11 @@ creating a two-tier detection system:
 Both signals feed into a composite anomaly score.
 """
 
+from collections import deque
 from typing import Dict, Optional
 from src.governance.metrics import DetectorPipeline as BaseDetectorPipeline
 from src.governance.multivariate import GenerativeAnomalyDetector
+from src.governance.phase9d_concept_drift import ConceptDriftDetector
 from src.governance.phase9f_temporal import TemporalShiftDetector
 
 
@@ -25,7 +27,8 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
 
     def __init__(self, boundary_id: str, history_window: int = 100,
                  mahalanobis_threshold: Optional[float] = None,
-                 temporal_shift: bool = False, temporal_smoothing: float = 0.2):
+                 temporal_shift: bool = False, temporal_smoothing: float = 0.2,
+                 reanchor_on_drift: bool = True):
         """Initialize hybrid detector."""
         super().__init__(boundary_id, history_window)
         self.generative_detector = GenerativeAnomalyDetector(
@@ -37,6 +40,16 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
         # the per-step layers miss. Off by default.
         self.temporal_detector = (
             TemporalShiftDetector(smoothing=temporal_smoothing) if temporal_shift else None)
+        # The temporal layer's reference is frozen, so legitimate long-term drift would
+        # eventually look like an attack. The drift detector re-anchors it when it judges
+        # a change gradual; abrupt shifts are held (the layer keeps alarming) until a
+        # person calls acknowledge_shift().
+        self.drift_detector = ConceptDriftDetector() if temporal_shift else None
+        # True: follow gradual drift (fewer false alarms on legitimate change, but a slow
+        # attack longer than the drift window can be absorbed). False: strict frozen reference.
+        self.reanchor_on_drift = reanchor_on_drift
+        self._recent = deque(maxlen=100)
+        self._drift_reanchors = 0
 
     def ingest_metrics(self, timestamp: float, metrics: Dict[str, float]) -> None:
         """Ingest metrics into both detection layers."""
@@ -49,6 +62,20 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
         # Layer 3 (optional): temporal shift detection
         self._temporal_result = (
             self.temporal_detector.update(metrics) if self.temporal_detector else None)
+        if self.temporal_detector:
+            self._recent.append(dict(metrics))
+            self.drift_detector.update(metrics)
+            if self.drift_detector.reanchor_count > self._drift_reanchors:
+                self._drift_reanchors = self.drift_detector.reanchor_count
+                if self.reanchor_on_drift:
+                    self.temporal_detector.reanchor(list(self._recent))
+
+    def acknowledge_shift(self) -> None:
+        """A person has validated a flagged sudden shift: accept the current state as normal."""
+        if self.drift_detector:
+            self.drift_detector.acknowledge()
+            self._drift_reanchors = self.drift_detector.reanchor_count
+            self.temporal_detector.reanchor(list(self._recent))
 
     def detect_anomalies(self) -> Dict:
         """
@@ -87,6 +114,7 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
             "traditional_detection": traditional,
             "generative_detection": generative,
             "temporal_detection": temporal,
+            "drift_status": self.drift_detector.get_drift_status() if self.drift_detector else None,
             "detection_method": "hybrid",
             "mahalanobis_distance": generative.get("mahalanobis_distance", 0.0),
             "explanation": f"Traditional: {traditional.get('explanation', 'N/A')} | Generative: {generative.get('reason', 'N/A')}"

@@ -115,3 +115,57 @@ class TestHybridIntegration:
                 assert r["anomaly_detected"] is True
             flagged |= step_flag
         assert flagged
+
+
+class TestDriftWiring:
+    @staticmethod
+    def _run(seed, steps, shift_fn, **kw):
+        rng = np.random.default_rng(seed)
+        det = HybridDetectorPipeline("w", temporal_shift=True, **kw)
+        for i in range(150):
+            det.ingest_metrics(1000.0 + i, {"a": float(rng.normal(100, 5)), "b": float(rng.normal(50, 3))})
+        flags = []
+        for i in range(steps):
+            da, db = shift_fn(i)
+            det.ingest_metrics(2000.0 + i, {"a": float(rng.normal(100 + da, 5)), "b": float(rng.normal(50 + db, 3))})
+            flags.append(bool(det.detect_anomalies()["temporal_detection"]["anomaly_detected"]))
+        return det, np.array(flags)
+
+    @staticmethod
+    def _drift(i):  # legitimate drift: +2 sigma over 200 steps, then plateau
+        f = min(i, 200) / 200
+        return 10.0 * f, 6.0 * f
+
+    def test_following_drift_cuts_false_alarms_vs_frozen(self):
+        wired = frozen = 0.0
+        for seed in range(3):
+            wired += self._run(seed, 400, self._drift)[1][300:].mean()
+            frozen += self._run(seed, 400, self._drift, reanchor_on_drift=False)[1][300:].mean()
+        assert frozen / 3 > 0.9
+        assert wired / 3 < frozen / 3 - 0.3
+
+    def test_abrupt_shift_held_until_acknowledged(self):
+        shift = lambda i: (15.0, 0.0) if i >= 20 else (0.0, 0.0)
+        det, flags = self._run(0, 250, shift)
+        assert flags[150:].mean() > 0.9  # not absorbed
+        assert det.drift_detector.get_drift_status()["drift_type"] == "sudden"
+        det.acknowledge_shift()
+        rng = np.random.default_rng(9)
+        post = []
+        for i in range(60):
+            det.ingest_metrics(9000.0 + i, {"a": float(rng.normal(115, 5)), "b": float(rng.normal(50, 3))})
+            post.append(det.detect_anomalies()["temporal_detection"]["anomaly_detected"])
+        assert np.mean(post[10:]) < 0.2
+
+    def test_reanchor_from_recent_observations_has_no_blind_period(self):
+        d, rng = _trained(0)
+        recent = [_obs(rng, shift=np.array([5.0, 5.0, 5.0])) for _ in range(100)]
+        d.reanchor(recent)
+        assert d.locked
+        assert d.update(_obs(rng, shift=np.array([5.0, 5.0, 5.0])))["anomaly_detected"] is False
+        assert d.update(_obs(rng, shift=np.array([15.0, 15.0, 15.0])))["anomaly_detected"] is True
+
+    def test_not_wired_when_temporal_disabled(self):
+        det = HybridDetectorPipeline("w")
+        assert det.drift_detector is None
+        det.acknowledge_shift()  # no-op, must not raise
