@@ -1,0 +1,651 @@
+{
+  "per_machine": {
+    "machine-1-1": {
+      "frozen": {
+        "step_fpr": 0.29734341671514447,
+        "event_rec": 1.0,
+        "point_rec": 0.7175204157386785,
+        "events": 8
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.07779716889664534,
+        "event_rec": 1.0,
+        "point_rec": 0.5968819599109132,
+        "events": 8
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.05685476051968198,
+        "event_rec": 1.0,
+        "point_rec": 0.5775798069784707,
+        "events": 8
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.034167151444638354,
+        "event_rec": 1.0,
+        "point_rec": 0.5853749072011878,
+        "events": 8
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.06879968974209812,
+        "event_rec": 1.0,
+        "point_rec": 0.5879732739420935,
+        "events": 8
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.6417296878029862,
+        "event_rec": 1.0,
+        "point_rec": 1.0,
+        "events": 8
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.08772542175683537,
+        "event_rec": 1.0,
+        "point_rec": 0.6425389755011136,
+        "events": 8
+      }
+    },
+    "machine-2-1": {
+      "frozen": {
+        "step_fpr": 0.02108861658675191,
+        "event_rec": 1.0,
+        "point_rec": 0.17094017094017094,
+        "events": 13
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.012253596164091636,
+        "event_rec": 1.0,
+        "point_rec": 0.05213675213675214,
+        "events": 13
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.0911472207423193,
+        "event_rec": 1.0,
+        "point_rec": 0.39487179487179486,
+        "events": 13
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.01234239033919375,
+        "event_rec": 1.0,
+        "point_rec": 0.05299145299145299,
+        "events": 13
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.03529568460309004,
+        "event_rec": 1.0,
+        "point_rec": 0.36923076923076925,
+        "events": 13
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.12133724027703782,
+        "event_rec": 1.0,
+        "point_rec": 0.5205128205128206,
+        "events": 13
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.055096785650861305,
+        "event_rec": 1.0,
+        "point_rec": 0.26495726495726496,
+        "events": 13
+      }
+    },
+    "machine-3-1": {
+      "frozen": {
+        "step_fpr": 0.8129050436742744,
+        "event_rec": 1.0,
+        "point_rec": 0.9675324675324676,
+        "events": 4
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.8128698224852071,
+        "event_rec": 1.0,
+        "point_rec": 0.9805194805194806,
+        "events": 4
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.03289659058889828,
+        "event_rec": 1.0,
+        "point_rec": 0.5292207792207793,
+        "events": 4
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.8123767258382643,
+        "event_rec": 1.0,
+        "point_rec": 0.9837662337662337,
+        "events": 4
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.8256903353057199,
+        "event_rec": 1.0,
+        "point_rec": 0.9772727272727273,
+        "events": 4
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.8203719357565511,
+        "event_rec": 1.0,
+        "point_rec": 0.9805194805194806,
+        "events": 4
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.14109608340377572,
+        "event_rec": 1.0,
+        "point_rec": 0.9545454545454546,
+        "events": 4
+      }
+    },
+    "machine-1-6": {
+      "frozen": {
+        "step_fpr": 0.4166958610680146,
+        "event_rec": 0.9666666666666667,
+        "point_rec": 0.9155879180151025,
+        "events": 30
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.10304789550072568,
+        "event_rec": 0.9,
+        "point_rec": 0.040992448759439054,
+        "events": 30
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.36965116861017966,
+        "event_rec": 0.7,
+        "point_rec": 0.8735167206040992,
+        "events": 30
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.10019518542615485,
+        "event_rec": 0.8333333333333334,
+        "point_rec": 0.03425026968716289,
+        "events": 30
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.37155297532656023,
+        "event_rec": 0.8,
+        "point_rec": 0.8759439050701187,
+        "events": 30
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.8413492818177268,
+        "event_rec": 0.9666666666666667,
+        "point_rec": 0.9981121898597627,
+        "events": 30
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.13968269856363547,
+        "event_rec": 0.9666666666666667,
+        "point_rec": 0.8055555555555556,
+        "events": 30
+      }
+    },
+    "machine-1-2": {
+      "frozen": {
+        "step_fpr": 0.005831029716655149,
+        "event_rec": 0.9,
+        "point_rec": 0.1014760147601476,
+        "events": 10
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.006435729094678645,
+        "event_rec": 0.8,
+        "point_rec": 0.042435424354243544,
+        "events": 10
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.013648928818244643,
+        "event_rec": 0.9,
+        "point_rec": 0.07380073800738007,
+        "events": 10
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.004103317208016586,
+        "event_rec": 1.0,
+        "point_rec": 0.055350553505535055,
+        "events": 10
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.013692121630960608,
+        "event_rec": 0.9,
+        "point_rec": 0.07380073800738007,
+        "events": 10
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.08003628196268141,
+        "event_rec": 1.0,
+        "point_rec": 0.6457564575645757,
+        "events": 10
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.06871976503109882,
+        "event_rec": 1.0,
+        "point_rec": 0.5738007380073801,
+        "events": 10
+      }
+    },
+    "machine-1-3": {
+      "frozen": {
+        "step_fpr": 0.029887267325002183,
+        "event_rec": 0.16666666666666666,
+        "point_rec": 0.06119951040391677,
+        "events": 12
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.029887267325002183,
+        "event_rec": 0.08333333333333333,
+        "point_rec": 0.05997552019583843,
+        "events": 12
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.8804509306999913,
+        "event_rec": 0.8333333333333334,
+        "point_rec": 0.9571603427172583,
+        "events": 12
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.029887267325002183,
+        "event_rec": 0.08333333333333333,
+        "point_rec": 0.05997552019583843,
+        "events": 12
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.8804509306999913,
+        "event_rec": 0.8333333333333334,
+        "point_rec": 0.9571603427172583,
+        "events": 12
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.4084156252730927,
+        "event_rec": 1.0,
+        "point_rec": 0.6756425948592412,
+        "events": 12
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.07030498995018788,
+        "event_rec": 1.0,
+        "point_rec": 0.44063647490820074,
+        "events": 12
+      }
+    },
+    "machine-1-4": {
+      "frozen": {
+        "step_fpr": 0.02997346326184365,
+        "event_rec": 0.16666666666666666,
+        "point_rec": 0.06111111111111111,
+        "events": 12
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.029929960412407013,
+        "event_rec": 0.25,
+        "point_rec": 0.0625,
+        "events": 12
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.030626006003393224,
+        "event_rec": 0.16666666666666666,
+        "point_rec": 0.06111111111111111,
+        "events": 12
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.029929960412407013,
+        "event_rec": 0.25,
+        "point_rec": 0.0625,
+        "events": 12
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.030539000304519948,
+        "event_rec": 0.16666666666666666,
+        "point_rec": 0.06111111111111111,
+        "events": 12
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.7302388306434071,
+        "event_rec": 1.0,
+        "point_rec": 0.9097222222222222,
+        "events": 12
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.08226388828468265,
+        "event_rec": 1.0,
+        "point_rec": 0.48055555555555557,
+        "events": 12
+      }
+    },
+    "machine-2-2": {
+      "frozen": {
+        "step_fpr": 0.034072938131978724,
+        "event_rec": 1.0,
+        "point_rec": 0.047299682315566534,
+        "events": 11
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.023769588345234103,
+        "event_rec": 1.0,
+        "point_rec": 0.04588775150017649,
+        "events": 11
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.000479225571476494,
+        "event_rec": 0.36363636363636365,
+        "point_rec": 0.0035298270384751147,
+        "events": 11
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.033018641874730435,
+        "event_rec": 1.0,
+        "point_rec": 0.05188845746558419,
+        "events": 11
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.02151722815929458,
+        "event_rec": 1.0,
+        "point_rec": 0.04412283798093893,
+        "events": 11
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.20611491829204007,
+        "event_rec": 1.0,
+        "point_rec": 0.3201553123896929,
+        "events": 11
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.08127665692241338,
+        "event_rec": 1.0,
+        "point_rec": 0.08542181433109777,
+        "events": 11
+      }
+    },
+    "machine-2-3": {
+      "frozen": {
+        "step_fpr": 0.21050384286934246,
+        "event_rec": 1.0,
+        "point_rec": 0.862453531598513,
+        "events": 10
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.04906063193851409,
+        "event_rec": 1.0,
+        "point_rec": 0.8921933085501859,
+        "events": 10
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.08996584116140051,
+        "event_rec": 1.0,
+        "point_rec": 0.8661710037174721,
+        "events": 10
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.046584116140051236,
+        "event_rec": 1.0,
+        "point_rec": 0.895910780669145,
+        "events": 10
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.07173356105892399,
+        "event_rec": 1.0,
+        "point_rec": 0.6356877323420075,
+        "events": 10
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.2511955593509821,
+        "event_rec": 1.0,
+        "point_rec": 0.8736059479553904,
+        "events": 10
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.05546541417591802,
+        "event_rec": 1.0,
+        "point_rec": 0.8550185873605948,
+        "events": 10
+      }
+    },
+    "machine-2-4": {
+      "frozen": {
+        "step_fpr": 0.37890429643100704,
+        "event_rec": 1.0,
+        "point_rec": 0.7302243211334121,
+        "events": 20
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.4327801773130257,
+        "event_rec": 1.0,
+        "point_rec": 0.8642266824085005,
+        "events": 20
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.19818140486474198,
+        "event_rec": 0.95,
+        "point_rec": 0.5354191263282172,
+        "events": 20
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.4135939986360537,
+        "event_rec": 1.0,
+        "point_rec": 0.6481700118063755,
+        "events": 20
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.20359172539213458,
+        "event_rec": 1.0,
+        "point_rec": 0.5277449822904369,
+        "events": 20
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.6035917253921346,
+        "event_rec": 1.0,
+        "point_rec": 0.8441558441558441,
+        "events": 20
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.06719709024778359,
+        "event_rec": 1.0,
+        "point_rec": 0.34887839433293977,
+        "events": 20
+      }
+    },
+    "machine-3-2": {
+      "frozen": {
+        "step_fpr": 0.005930778082676817,
+        "event_rec": 0.9,
+        "point_rec": 0.032461677186654644,
+        "events": 10
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.005134106399929185,
+        "event_rec": 0.9,
+        "point_rec": 0.030658250676284943,
+        "events": 10
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.0025227936620341685,
+        "event_rec": 0.7,
+        "point_rec": 0.023444544634806132,
+        "events": 10
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.005355404089581304,
+        "event_rec": 0.8,
+        "point_rec": 0.029756537421100092,
+        "events": 10
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.0030981676551296803,
+        "event_rec": 0.7,
+        "point_rec": 0.009017132551848512,
+        "events": 10
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.15751969549437903,
+        "event_rec": 0.9,
+        "point_rec": 0.11361587015329125,
+        "events": 10
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.07988846596441533,
+        "event_rec": 0.9,
+        "point_rec": 0.0739404869251578,
+        "events": 10
+      }
+    },
+    "machine-3-3": {
+      "frozen": {
+        "step_fpr": 0.008582202765376447,
+        "event_rec": 0.8846153846153846,
+        "point_rec": 0.13765822784810128,
+        "events": 26
+      },
+      "adapt 0.002, unflagged only": {
+        "step_fpr": 0.033548610810107925,
+        "event_rec": 1.0,
+        "point_rec": 0.375,
+        "events": 26
+      },
+      "adapt 0.01, unflagged only": {
+        "step_fpr": 0.021368817996619133,
+        "event_rec": 0.9615384615384616,
+        "point_rec": 0.12658227848101267,
+        "events": 26
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "step_fpr": 0.02037189545316631,
+        "event_rec": 1.0,
+        "point_rec": 0.32436708860759494,
+        "events": 26
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "step_fpr": 0.01972172857700143,
+        "event_rec": 0.9615384615384616,
+        "point_rec": 0.17088607594936708,
+        "events": 26
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "step_fpr": 0.04243422478436132,
+        "event_rec": 1.0,
+        "point_rec": 0.3575949367088608,
+        "events": 26
+      },
+      "reference: generative detector": {
+        "step_fpr": 0.0336786441853409,
+        "event_rec": 1.0,
+        "point_rec": 0.3829113924050633,
+        "events": 26
+      }
+    }
+  },
+  "summary": {
+    "dev": {
+      "frozen": {
+        "fpr_mean": 0.3870082345110464,
+        "fpr_median": 0.3570196388915795,
+        "fpr_ratio_log10_abs": 1.3317913558394325,
+        "within_3x": 1,
+        "event_rec": 0.9916666666666667,
+        "point_rec": 0.6928952430566049
+      },
+      "adapt 0.002, unflagged only": {
+        "fpr_mean": 0.25149212076166744,
+        "fpr_median": 0.09042253219868551,
+        "fpr_ratio_log10_abs": 0.9755718709918088,
+        "within_3x": 1,
+        "event_rec": 0.975,
+        "point_rec": 0.41763266033164625
+      },
+      "adapt 0.01, unflagged only": {
+        "fpr_mean": 0.13763743511526982,
+        "fpr_median": 0.07400099063100064,
+        "fpr_ratio_log10_abs": 0.9498633096657327,
+        "within_3x": 0,
+        "event_rec": 0.925,
+        "point_rec": 0.593797275418786
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "fpr_mean": 0.2397703632620628,
+        "fpr_median": 0.06718116843539661,
+        "fpr_ratio_log10_abs": 0.8839030939649716,
+        "within_3x": 1,
+        "event_rec": 0.9583333333333334,
+        "point_rec": 0.4140957159115094
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "fpr_mean": 0.32533467124436705,
+        "fpr_median": 0.22017633253432917,
+        "fpr_ratio_log10_abs": 1.218036508589821,
+        "within_3x": 0,
+        "event_rec": 0.95,
+        "point_rec": 0.7026051688789272
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "fpr_mean": 0.6061970364135756,
+        "fpr_median": 0.7310508117797687,
+        "fpr_ratio_log10_abs": 1.6825833419065295,
+        "within_3x": 0,
+        "event_rec": 0.9916666666666667,
+        "point_rec": 0.8747861227230158
+      },
+      "reference: generative detector": {
+        "fpr_mean": 0.10590024734377697,
+        "fpr_median": 0.11370406016023542,
+        "fpr_ratio_log10_abs": 0.9947273257441329,
+        "within_3x": 0,
+        "event_rec": 0.9916666666666667,
+        "point_rec": 0.6668993126398473
+      }
+    },
+    "heldout": {
+      "frozen": {
+        "fpr_mean": 0.08796072732298532,
+        "fpr_median": 0.02993036529342292,
+        "fpr_ratio_log10_abs": 0.6142458221865326,
+        "within_3x": 5,
+        "event_rec": 0.7522435897435897,
+        "point_rec": 0.2542355095446779
+      },
+      "adapt 0.002, unflagged only": {
+        "fpr_mean": 0.07631825895486236,
+        "fpr_median": 0.0299086138687046,
+        "fpr_ratio_log10_abs": 0.582653303934892,
+        "within_3x": 5,
+        "event_rec": 0.7541666666666667,
+        "point_rec": 0.2966096172106537
+      },
+      "adapt 0.01, unflagged only": {
+        "fpr_mean": 0.15465549359723768,
+        "fpr_median": 0.02599741200000618,
+        "fpr_ratio_log10_abs": 0.8830491776866587,
+        "within_3x": 4,
+        "event_rec": 0.7343968531468531,
+        "point_rec": 0.3309023715044666
+      },
+      "adapt 0.002, up to 2x threshold": {
+        "fpr_mean": 0.07285557514237609,
+        "fpr_median": 0.0299086138687046,
+        "fpr_ratio_log10_abs": 0.5902834682467548,
+        "within_3x": 5,
+        "event_rec": 0.7666666666666666,
+        "point_rec": 0.2659898687088966
+      },
+      "adapt 0.01, up to 2x threshold": {
+        "fpr_mean": 0.1555430579347445,
+        "fpr_median": 0.026028114231907262,
+        "fpr_ratio_log10_abs": 0.7333924527963832,
+        "within_3x": 4,
+        "event_rec": 0.8201923076923077,
+        "point_rec": 0.30994136911879355
+      },
+      "reference: Mahalanobis, chi-square cutoff": {
+        "fpr_mean": 0.30994335764913483,
+        "fpr_median": 0.22865523882151106,
+        "fpr_ratio_log10_abs": 1.337221246920394,
+        "within_3x": 0,
+        "event_rec": 0.9875,
+        "point_rec": 0.5925311482511397
+      },
+      "reference: generative detector": {
+        "fpr_mean": 0.06734936434523008,
+        "fpr_median": 0.06951237749064335,
+        "fpr_ratio_log10_abs": 0.8138067863472662,
+        "within_3x": 0,
+        "event_rec": 0.9875,
+        "point_rec": 0.40514543047824875
+      }
+    },
+    "selected_on_dev": "adapt 0.002, up to 2x threshold"
+  }
+}

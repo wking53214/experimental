@@ -20,17 +20,36 @@ from .workload import WorkloadClassifier, SmartPatternDetector
 from .metrics import MetricsTracker, DetectorPipeline
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
-from .phase9_integration import HybridDetectorPipeline
+from .phase9_integration import HybridDetectorPipeline, GenerativePipeline
 from .rollback import RollbackExecutor, RollbackReason
 
 
 class Governor:
-    # Circuit breaker: after this many automatic tightenings of one boundary with no
-    # human decision in between, further tightenings wait for a human (theory: dampening
-    # of false-positive and cascading tightening, white paper sec. 4).
-    AUTO_TIGHTEN_LIMIT = 3
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False,
+                 require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
+                 max_auto_tightenings: Optional[int] = None, clock=time.time,
+                 detection: str = "hybrid"):
+        """Optional limits on automatic tightening (all off by default; see docs/THREAT_MODEL.md).
 
-    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True):
+        require_fresh_evidence: a new tightening needs a pattern in violations recorded since
+            the last change to that boundary, not just the old ones again.
+        tighten_cooldown_s: minimum seconds between automatic tightenings of one boundary.
+        max_auto_tightenings: at most this many automatic tightenings per boundary until an
+            operator calls acknowledge_tightening(); further ones are held, not applied.
+        """
+        if detection not in ("hybrid", "generative"):
+            raise ValueError("detection must be 'hybrid' or 'generative'")
+        # 'generative' avoids the hybrid's traditional layer, which alarms on nearly every step of
+        # real many-metric telemetry (docs/BASELINE_COMPARISON.md)
+        self.detection = detection
+        self.require_fresh_evidence = require_fresh_evidence
+        self.tighten_cooldown_s = tighten_cooldown_s
+        self.max_auto_tightenings = max_auto_tightenings
+        self.clock = clock
+        self._evidence_cursor: dict = {}
+        self._last_auto_tighten_at: dict = {}
+        self._auto_tightenings: dict = {}
+        self.tightening_holds: list = []
         self.principles = PrincipleStore()
         self.boundaries = BoundaryStore()
         self.events = EventStore()
@@ -64,7 +83,8 @@ class Governor:
 
     def ingest_metrics(self, boundary_id: str, timestamp: float, metrics: dict):
         if boundary_id not in self.detector_pipelines:
-            self.detector_pipelines[boundary_id] = HybridDetectorPipeline(boundary_id)
+            cls = GenerativePipeline if self.detection == "generative" else HybridDetectorPipeline
+            self.detector_pipelines[boundary_id] = cls(boundary_id)
         pipeline = self.detector_pipelines[boundary_id]
         pipeline.ingest_metrics(timestamp, metrics)
         detection_result = pipeline.detect_anomalies()
@@ -138,7 +158,14 @@ class Governor:
 
     def detect_and_propose_adaptation(self, boundary_id: str) -> Optional[AdaptationProposal]:
         violations = self.events.get_violations_for_boundary(boundary_id)
+        if self.require_fresh_evidence:
+            violations = violations[self._evidence_cursor.get(boundary_id, 0):]
         if not violations:
+            return None
+        hold = self._tightening_hold(boundary_id)
+        if hold:
+            self.tightening_holds.append({"boundary_id": boundary_id, "reason": hold,
+                                          "timestamp": self.clock()})
             return None
         pattern_detected = False
         boundary_count = len(self.boundaries.list_boundaries())
@@ -186,52 +213,27 @@ class Governor:
             direction=AdaptationDirection.TIGHTEN,
         )
 
-    def _auto_tightenings_since_review(self, boundary_id: str) -> int:
-        """Automatic tightenings of this boundary since the last human decision on it."""
-        count = 0
-        for d in reversed(self.authority.decisions):
-            if d.decided_by != "system":
-                # Any human decision on this boundary's proposals resets the count.
-                try:
-                    if self.proposals.get_proposal(d.proposal_id).boundary_id == boundary_id:
-                        break
-                except KeyError:
-                    pass
-                continue
-            if d.result != AuthorizationResult.AUTO_APPROVED:
-                continue
-            try:
-                if self.proposals.get_proposal(d.proposal_id).boundary_id == boundary_id:
-                    count += 1
-            except KeyError:
-                continue
-        return count
+    def _tightening_hold(self, boundary_id: str) -> Optional[str]:
+        if (self.max_auto_tightenings is not None
+                and self._auto_tightenings.get(boundary_id, 0) >= self.max_auto_tightenings):
+            return (f"{self._auto_tightenings[boundary_id]} automatic tightenings since the last "
+                    f"operator acknowledgement; a human must review before more")
+        last = self._last_auto_tighten_at.get(boundary_id)
+        if self.tighten_cooldown_s and last is not None and self.clock() - last < self.tighten_cooldown_s:
+            return f"cooldown: {self.tighten_cooldown_s - (self.clock() - last):.0f}s remaining"
+        return None
+
+    def acknowledge_tightening(self, boundary_id: str, operator_id: str) -> None:
+        """An operator reviewed the automatic tightenings; allow the system to continue."""
+        if not operator_id or not str(operator_id).strip():
+            raise ValueError("operator_id is required")
+        self._auto_tightenings[boundary_id] = 0
 
     def authorize_proposal(self, proposal: AdaptationProposal):
-        breaker_open = (
-            proposal.direction == AdaptationDirection.TIGHTEN
-            and self._auto_tightenings_since_review(proposal.boundary_id) >= self.AUTO_TIGHTEN_LIMIT
-        )
-        result = self.authority.authorize_proposal(proposal, breaker_open=breaker_open)
+        result = self.authority.authorize_proposal(proposal)
         if result == AuthorizationResult.AUTO_APPROVED:
             return self.proposals.mark_approved(proposal.proposal_id), result
         return proposal, result
-
-    def review_effectiveness(self, proposal_id: str, observed_state) -> tuple:
-        """Validation layer: judge an applied adaptation against an independent signal.
-
-        If the registered validator says the adaptation DEGRADED things, the boundary is
-        rolled back. A rollback that loosens is queued for a human (see RollbackExecutor),
-        so the system still never loosens on its own. Returns (outcome, rollback_decision).
-        """
-        proposal = self.proposals.get_proposal(proposal_id)
-        outcome = self.validate_adaptation(proposal, observed_state)
-        decision = None
-        if outcome == ValidationOutcome.DEGRADED and self.rollback.should_attempt_rollback(
-                proposal.boundary_id, "degraded", 1.0):
-            decision = self.rollback.execute_rollback(
-                proposal_id, proposal.boundary_id, RollbackReason.DEGRADED_METRICS)
-        return outcome, decision
 
     def apply_approved_proposal(self, proposal: AdaptationProposal) -> BoundaryVersion:
         try:
@@ -260,7 +262,12 @@ class Governor:
         new_version = self.boundaries.update_boundary(
             boundary_id=current.boundary_id, new_limit=current.proposed_value, grant=grant,
         )
+        if decision.result == AuthorizationResult.AUTO_APPROVED:
+            self._auto_tightenings[current.boundary_id] = self._auto_tightenings.get(current.boundary_id, 0) + 1
+            self._last_auto_tighten_at[current.boundary_id] = self.clock()
         self.proposals.mark_applied(current.proposal_id)
+        self._evidence_cursor[current.boundary_id] = len(
+            self.events.get_violations_for_boundary(current.boundary_id))
         return new_version
 
     def _enforce_usability_floor(self, boundary_id: str, new_limit) -> None:
@@ -278,6 +285,22 @@ class Governor:
         except (TypeError, ValueError) as e:
             if "usability floor" in str(e):
                 raise
+
+    def review_effectiveness(self, proposal_id: str, observed_state) -> tuple:
+        """Validation layer: judge an applied adaptation against an independent signal.
+
+        A DEGRADED outcome rolls the boundary back. A rollback that loosens is queued for a
+        human (see RollbackExecutor), so the system still never loosens on its own.
+        Returns (outcome, rollback_decision).
+        """
+        proposal = self.proposals.get_proposal(proposal_id)
+        outcome = self.validate_adaptation(proposal, observed_state)
+        decision = None
+        if outcome == ValidationOutcome.DEGRADED and self.rollback.should_attempt_rollback(
+                proposal.boundary_id, "degraded", 1.0):
+            decision = self.rollback.execute_rollback(
+                proposal_id, proposal.boundary_id, RollbackReason.DEGRADED_METRICS)
+        return outcome, decision
 
     def validate_adaptation(self, proposal, observed_state):
         outcome = self.validators.validate(proposal.boundary_id, observed_state)
@@ -341,15 +364,10 @@ class Governor:
 
     def list_pending_review(self):
         from .proposal import ProposalStatus
-        def escalated_tighten(p):
-            # A tightening held by the circuit breaker is waiting for a human too.
-            d = self.authority.latest_decision(p.proposal_id)
-            return d is not None and d.result == AuthorizationResult.REQUIRES_HUMAN_REVIEW
         return [
             p for p in self.proposals.get_all_proposals()
             if p.status == ProposalStatus.PENDING_REVIEW
             or (p.status == ProposalStatus.PENDING and p.direction.value in ("loosen", "disable"))
-            or (p.status == ProposalStatus.PENDING and escalated_tighten(p))
         ]
 
     def get_evidence_pack(self, proposal_id: str) -> dict:

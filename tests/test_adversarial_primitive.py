@@ -242,8 +242,6 @@ class TestAdversarialBoundedness:
                 AdaptationDirection.TIGHTEN
             )
             approved, _ = governor.authorize_proposal(prop)
-            if approved.status.value != "approved":
-                break  # circuit breaker held it for a human
             new_version = governor.apply_approved_proposal(approved)
             current_limit = new_version.current_limit
 

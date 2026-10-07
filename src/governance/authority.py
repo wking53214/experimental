@@ -55,22 +55,16 @@ class AuthorityModel:
             return AuthorizationResult.REQUIRES_HUMAN_REVIEW
         return AuthorizationResult.REJECTED
 
-    def authorize_proposal(self, proposal: AdaptationProposal, breaker_open: bool = False) -> AuthorizationResult:
-        """breaker_open: the caller's circuit breaker has tripped for this boundary, so
-        an otherwise automatic tightening is held for a human instead."""
+    def authorize_proposal(self, proposal: AdaptationProposal) -> AuthorizationResult:
         result = self.evaluate_proposal(proposal)
-        if breaker_open and result == AuthorizationResult.AUTO_APPROVED:
-            result = AuthorizationResult.REQUIRES_HUMAN_REVIEW
-            reason = "circuit breaker open: too many automatic tightenings since the last human decision"
-        else:
-            reason = {
-                AuthorizationResult.AUTO_APPROVED: "TIGHTEN auto-approved by authority model",
-                AuthorizationResult.REQUIRES_HUMAN_REVIEW: (
-                    f"{proposal.direction.value} requires human review"
-                    if proposal.direction != AdaptationDirection.TIGHTEN
-                    else "declared TIGHTEN but its values loosen: requires human review"),
-                AuthorizationResult.REJECTED: "Proposal rejected by authority model",
-            }.get(result, "unknown")
+        reason = {
+            AuthorizationResult.AUTO_APPROVED: "TIGHTEN auto-approved by authority model",
+            AuthorizationResult.REQUIRES_HUMAN_REVIEW: (
+                f"{proposal.direction.value} requires human review"
+                if proposal.direction != AdaptationDirection.TIGHTEN
+                else "declared TIGHTEN but its values loosen: requires human review"),
+            AuthorizationResult.REJECTED: "Proposal rejected by authority model",
+        }.get(result, "unknown")
         self.decisions.append(AuthorizationDecision(
             proposal_id=proposal.proposal_id,
             direction=proposal.direction,

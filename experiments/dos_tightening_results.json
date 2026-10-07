@@ -1,0 +1,102 @@
+{
+  "none (current default)": {
+    "fast (1 value/min)": {
+      "events_to_harm": 7,
+      "events_to_floor": 16,
+      "days_to_floor": 0.01,
+      "final_limit": 22.88,
+      "legit_blocked_final": 1.0,
+      "holds_logged": 0,
+      "integrity_ok": true
+    },
+    "patient (1 value/hour)": {
+      "events_to_harm": 7,
+      "events_to_floor": 16,
+      "days_to_floor": 0.62,
+      "final_limit": 22.88,
+      "legit_blocked_final": 1.0,
+      "holds_logged": 0,
+      "integrity_ok": true
+    }
+  },
+  "fresh evidence": {
+    "fast (1 value/min)": {
+      "events_to_harm": 15,
+      "events_to_floor": 42,
+      "days_to_floor": 0.03,
+      "final_limit": 22.88,
+      "legit_blocked_final": 1.0,
+      "holds_logged": 0,
+      "integrity_ok": true
+    },
+    "patient (1 value/hour)": {
+      "events_to_harm": 15,
+      "events_to_floor": 42,
+      "days_to_floor": 1.71,
+      "final_limit": 22.88,
+      "legit_blocked_final": 1.0,
+      "holds_logged": 0,
+      "integrity_ok": true
+    }
+  },
+  "fresh + cooldown 1h": {
+    "fast (1 value/min)": {
+      "events_to_harm": 243,
+      "events_to_floor": 783,
+      "days_to_floor": 0.54,
+      "final_limit": 22.88,
+      "legit_blocked_final": 1.0,
+      "holds_logged": 767,
+      "integrity_ok": true
+    },
+    "patient (1 value/hour)": {
+      "events_to_harm": 15,
+      "events_to_floor": 42,
+      "days_to_floor": 1.71,
+      "final_limit": 22.88,
+      "legit_blocked_final": 1.0,
+      "holds_logged": 0,
+      "integrity_ok": true
+    }
+  },
+  "fresh + breaker (max 3)": {
+    "fast (1 value/min)": {
+      "events_to_harm": null,
+      "events_to_floor": null,
+      "days_to_floor": null,
+      "final_limit": 72.9,
+      "legit_blocked_final": 0.0,
+      "holds_logged": 4311,
+      "integrity_ok": true
+    },
+    "patient (1 value/hour)": {
+      "events_to_harm": null,
+      "events_to_floor": null,
+      "days_to_floor": null,
+      "final_limit": 72.9,
+      "legit_blocked_final": 0.0,
+      "holds_logged": 711,
+      "integrity_ok": true
+    }
+  },
+  "fresh + cooldown + breaker": {
+    "fast (1 value/min)": {
+      "events_to_harm": null,
+      "events_to_floor": null,
+      "days_to_floor": null,
+      "final_limit": 72.9,
+      "legit_blocked_final": 0.0,
+      "holds_logged": 4315,
+      "integrity_ok": true
+    },
+    "patient (1 value/hour)": {
+      "events_to_harm": null,
+      "events_to_floor": null,
+      "days_to_floor": null,
+      "final_limit": 72.9,
+      "legit_blocked_final": 0.0,
+      "holds_logged": 711,
+      "integrity_ok": true
+    }
+  }
+}

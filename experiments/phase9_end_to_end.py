@@ -23,6 +23,7 @@ from src.governance.phase9_integration import HybridDetectorPipeline
 from src.governance.phase9c_evolutionary import EvolutionaryAdversary
 from src.governance.phase9d_concept_drift import AdaptiveDetector
 from src.governance.phase9e_precursors import EarlyWarningSystem
+from experiments.baselines import MahalanobisBaseline, ZScoreBaseline
 
 METRICS = ["latency", "error_rate", "throughput", "cpu", "queue_depth"]
 MEANS = np.array([200.0, 2.0, 1000.0, 50.0, 30.0])
@@ -61,11 +62,17 @@ class Variant:
             self.d = HybridDetectorPipeline("b", 100)
         elif kind == "HT":
             self.d = HybridDetectorPipeline("b", 100, temporal_shift=True, temporal_smoothing=lam)
+        elif kind.startswith("Z"):
+            self.d = ZScoreBaseline(METRICS, family_alpha=NOMINAL.get(kind[1:], 0.001))
+        elif kind.startswith("M"):
+            self.d = MahalanobisBaseline(METRICS, quantile_z=QZ.get(kind[1:], 3.0902))
         elif kind == "H3":
             self.d = HybridDetectorPipeline("b", 100, mahalanobis_threshold=3.0)
 
     def ingest(self, ts, obs):
         k = self.kind
+        if k[0] in "ZM" and k not in ("Gc",):
+            return self.d.ingest(obs)
         if k in ("G", "Gc"):
             r = self.d.detect_anomaly(obs)
             self.d.ingest_observation(obs)
@@ -78,7 +85,9 @@ class Variant:
         return gd.detect_anomaly(obs)
 
 
-VARIANTS = [("traditional", "T"), ("generative(MD>3)", "G"),
+NOMINAL = {"": 0.001, "1": 0.01, "4": 0.04}  # nominal per-step false-alarm rate
+QZ = {"": 3.0902, "1": 2.3263, "4": 1.7507}  # matching normal quantiles
+VARIANTS = [("z-score baseline", "Z"), ("mahalanobis baseline", "M"), ("traditional", "T"), ("generative(MD>3)", "G"),
             ("generative(default)", "Gc"), ("hybrid(MD>3)", "H3"), ("hybrid(default)", "H"),
             ("hybrid+temporal", "HT")]
 
@@ -160,9 +169,9 @@ def clean_fpr(trained, rng, episodes=10):
     return flags / steps, ep_flag / episodes
 
 
-def e1(seeds):
+def e1(seeds, variants=None):
     out = {}
-    for name, kind in VARIANTS:
+    for name, kind in (variants or VARIANTS):
         rows = []
         for seed in range(seeds):
             np.random.seed(seed)

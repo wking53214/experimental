@@ -246,9 +246,6 @@ class TestNoiseInjectionUnderStress:
             proposal = governor.detect_and_propose_adaptation("barrage_target")
             if proposal:
                 approved, _ = governor.authorize_proposal(proposal)
-                if approved.status.value != "approved":
-                    # Circuit breaker held it for a human: the attack stops here.
-                    break
                 new_boundary = governor.apply_approved_proposal(approved)
                 current_limit = new_boundary.current_limit
                 print(f"Iteration {iteration}: Boundary tightened to {current_limit:.2f}")
