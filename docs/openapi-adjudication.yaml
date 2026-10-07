@@ -3,7 +3,19 @@ info:
   title: Self-Hardening Governance — Adjudication API (Demo)
   description: |
     Phase 11D/12B thin HTTP façade over the Governor adjudication path.
-    **Demo only — no authentication.** LOOSEN/DISABLE never auto-approve.
+    **Demo.** LOOSEN/DISABLE never auto-approve.
+
+    Authentication (all optional; with none configured every endpoint is open, loopback only):
+    - `ADJUDICATION_TOKEN`: one shared token. Every endpoint except a minimal `GET /health`
+      requires it (`Authorization: Bearer <token>` or `X-Adjudication-Token`). `operator_id`
+      in the request body is then self-asserted and required on `/decide`.
+    - `ADJUDICATION_OPERATOR_TOKENS=alice=tokA,bob=tokB`: one token per operator. The
+      operator is taken from the credential; a different `operator_id` in the body is a 403.
+
+    Errors are JSON `{"error": "..."}`: 400 invalid input (bad JSON, missing field, non-finite
+    or non-positive number, bad decision, wrong state), 401 missing or wrong token, 403
+    operator mismatch or refused by the authority, 404 unknown boundary or proposal, 409
+    boundary already exists, 413 body over 1 MB, 500 internal error.
   version: "0.1.0"
 servers:
   - url: http://127.0.0.1:8765
@@ -11,7 +23,7 @@ servers:
 paths:
   /health:
     get:
-      summary: Health and governor status counters
+      summary: Liveness; governor status counters are included only for an authenticated caller
       responses:
         "200":
           description: OK
@@ -48,7 +60,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [decision, operator_id]
+              required: [decision]  # operator_id required unless per-operator tokens are used
               properties:
                 decision:
                   type: string
@@ -58,8 +70,14 @@ paths:
       responses:
         "200":
           description: Decision applied
+        "200":
+          description: Decision applied; status is the proposal's final status (e.g. applied)
         "400":
-          description: Invalid decision or state
+          description: Invalid decision, missing operator_id, or proposal not pending
+        "403":
+          description: operator_id does not match the credential
+        "404":
+          description: Unknown proposal
   /boundaries:
     post:
       summary: Create boundary (demo)
@@ -75,6 +93,10 @@ paths:
       responses:
         "200":
           description: Created
+        "400":
+          description: Invalid boundary_id or initial_limit (must be a finite number > 0)
+        "409":
+          description: Boundary already exists
   /proposals/loosen:
     post:
       summary: Create LOOSEN proposal and submit for review
@@ -91,3 +113,7 @@ paths:
       responses:
         "200":
           description: Proposal id and pending_review status
+        "400":
+          description: Missing boundary_id, or proposed_value not a finite number > 0
+        "404":
+          description: Boundary not found
