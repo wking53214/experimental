@@ -21,14 +21,24 @@ from .metrics import MetricsTracker, DetectorPipeline
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
 from .phase9_integration import HybridDetectorPipeline, GenerativePipeline
+from .rollback import RollbackExecutor, RollbackReason
 
 
 class Governor:
-    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False,
+    # Theory (white paper sec. 4): automatic tightening stops after this many without a
+    # human decision, and violations are interpreted before they can tighten anything.
+    DEFAULT_MAX_AUTO_TIGHTENINGS = 3
+
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True,
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
-                 max_auto_tightenings: Optional[int] = None, clock=time.time,
+                 max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
                  detection: str = "generative"):
-        """Optional limits on automatic tightening (all off by default; see docs/THREAT_MODEL.md).
+        """Limits on automatic tightening (see docs/THREAT_MODEL.md).
+
+        use_semantic and max_auto_tightenings are on by default, per the theory document.
+        require_fresh_evidence and tighten_cooldown_s stay off by default. Pass None to
+        max_auto_tightenings or False to use_semantic to turn those off.
+        detection: 'generative' (default) or 'hybrid'; see docs/BASELINE_COMPARISON.md.
 
         require_fresh_evidence: a new tightening needs a pattern in violations recorded since
             the last change to that boundary, not just the old ones again.
@@ -72,6 +82,7 @@ class Governor:
         self.detector_pipelines = {}
         self.proposal_generators = {}
         self.file_store = ImmutableFileStore(store_path)
+        self.rollback = RollbackExecutor(self)
         self.telemetry_errors: list = []
 
     def _record_telemetry_error(self, where: str, exc: Exception) -> None:
@@ -284,6 +295,22 @@ class Governor:
             if "usability floor" in str(e):
                 raise
 
+    def review_effectiveness(self, proposal_id: str, observed_state) -> tuple:
+        """Validation layer: judge an applied adaptation against an independent signal.
+
+        A DEGRADED outcome rolls the boundary back. A rollback that loosens is queued for a
+        human (see RollbackExecutor), so the system still never loosens on its own.
+        Returns (outcome, rollback_decision).
+        """
+        proposal = self.proposals.get_proposal(proposal_id)
+        outcome = self.validate_adaptation(proposal, observed_state)
+        decision = None
+        if outcome == ValidationOutcome.DEGRADED and self.rollback.should_attempt_rollback(
+                proposal.boundary_id, "degraded", 1.0):
+            decision = self.rollback.execute_rollback(
+                proposal_id, proposal.boundary_id, RollbackReason.DEGRADED_METRICS)
+        return outcome, decision
+
     def validate_adaptation(self, proposal, observed_state):
         outcome = self.validators.validate(proposal.boundary_id, observed_state)
         self.validations.record_validation(
@@ -390,6 +417,16 @@ class Governor:
     def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = ""):
         proposal = self.proposals.get_proposal(proposal_id)
         decision_l = decision.lower().strip()
+        # Every human decision goes to the immutable audit store, not only the in-memory log.
+        try:
+            self.file_store.write_decision(
+                f"{proposal_id}_operator_{int(time.time()*1000)}",
+                {"proposal_id": proposal_id, "boundary_id": proposal.boundary_id,
+                 "decision": decision_l, "operator_id": operator_id,
+                 "rationale": rationale, "timestamp": time.time()},
+            )
+        except Exception as e:
+            self._record_telemetry_error("audit_operator_decision", e)
         if decision_l in ("reject", "rejected"):
             self.authority.record_operator_decision(
                 proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator"
