@@ -50,6 +50,16 @@
       "evasive_attacks": 75.4,
       "best_undetected_damage": 0.9328063500087056,
       "best_fitness": 0.9328063500087056
+    },
+    "hybrid+temporal": {
+      "step_fpr": 0.039,
+      "episode_fpr": 0.72,
+      "det_rate_gen0": 0.8899999999999999,
+      "det_rate_last": 0.8299999999999998,
+      "det_rate_all": 0.757,
+      "evasive_attacks": 48.6,
+      "best_undetected_damage": 0.6765576046611967,
+      "best_fitness": 0.5802894227278056
     }
   },
   "e2": {
@@ -67,6 +77,9 @@
     },
     "hybrid(default)": {
       "step_fpr_under_drift": 0.195
+    },
+    "hybrid+temporal": {
+      "step_fpr_under_drift": 0.72
     },
     "9D": {
       "acceptance_rate": 0.985,
@@ -93,5 +106,5 @@
       "false_alarm_rate_quiet_steps": 0.01875
     }
   },
-  "runtime_s": 31.244346141815186
+  "runtime_s": 38.404640913009644
 }

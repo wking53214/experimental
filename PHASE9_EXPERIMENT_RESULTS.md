@@ -67,6 +67,33 @@ It learned the signature `"normal"` as a precursor, because normal-looking steps
 
 The earlier 8/8 was inflated by the false alarms. This is a small sample on one synthetic scenario.
 
+## Adversarial feedback loop and the temporal layer (Phase 9F)
+
+Script: `experiments/phase9_adversarial_training.py` (about 2 minutes). Raw numbers: `experiments/phase9_adversarial_results.json`.
+
+**Why evasion worked.** Looking at the attacks that got through (finding 3), they were small shifts (about 2 sigma at most) held for 10 to 13 steps. Both detectors judge one step at a time, and the generative model also keeps learning from whatever it sees. Test: a sustained +1 sigma shift on one metric for 40 steps was caught in 5 of 20 episodes with the model updating, 12 of 20 with it frozen.
+
+**The fix.** `TemporalShiftDetector` (`src/governance/phase9f_temporal.py`) whitens observations against a reference that is frozen once learned and accumulates evidence over time with a multivariate EWMA. The same +1 sigma shift is caught 20 of 20 times, at a clean-data false-positive rate of 0.5% or less. It is opt-in on the hybrid (`HybridDetectorPipeline(temporal_shift=True)`, default off).
+
+**The loop.** Round 0: collect the attacks that evaded the unhardened hybrid. Each round: use those attacks to pick the smoothing value (highest detection of the attack set within a false-positive budget), then evolve a fresh adversary against the hardened detector on new seeds (5 per round), compared to the unhardened hybrid on the same seeds. Evasive attacks found each round join the tuning set.
+
+| Round | detection at last generation: unhardened -> hardened | best undetected damage: unhardened -> hardened | step FPR: unhardened -> hardened |
+|---|---|---|---|
+| 1 | 46% -> 78% | 1.00 -> 0.59 | 1.8% -> 2.2% |
+| 2 | 36% -> 91% | 1.00 -> 0.40 | 1.3% -> 1.5% |
+| 3 | 58% -> 98% | 1.00 -> 0.31 | 4.0% -> 4.8% |
+
+On the fixed seeds used elsewhere in this document (seeds 0 to 4, smoothing 0.2): detection at the last generation 60% -> 83%, best undetected damage 0.93 -> 0.68, step FPR 3.8% -> 3.9%.
+
+What the numbers do and do not show:
+- The gain is consistent across all three independent rounds, but the round-to-round numbers are noisy (5 seeds each; the unhardened baseline itself ranges from 36% to 58%). Do not read the rounds as a learning curve.
+- Almost all of the gain comes from adding the temporal layer. Tuning the smoothing value with the evolved attacks matters little: 0.2 and 0.3 score within a few points of each other.
+- What still evades is mostly very small shifts: in round 2, 82% of the remaining evasive attacks were under 1 sigma. The adversary can still win by being weak enough.
+
+**Cost: legitimate drift.** The reference is frozen, so a real long-term change eventually looks like an attack. On the +20% drift scenario the hybrid with the temporal layer alarms on 72% of steps (19.5% without it). `TemporalShiftDetector.reanchor()` exists, but nothing calls it yet; wiring it to the 9D drift detector's re-anchoring is the main open item, and it is why the layer is off by default.
+
+**Limits of the evidence.** 9C's attack model is only constant-size shifts on chosen metrics, which is exactly what a mean-shift detector is built for. Attacks that change variance, break correlations while keeping means, or oscillate are not generated here, so this result says nothing about them. Data is synthetic Gaussian.
+
 ## Caveats
 - Synthetic Gaussian data suits the generative model's assumptions. Real metrics will be harder.
 - One damage definition and one attack-effect model. Results shift with `SHIFT_SIGMA` and `DAMAGE_NORM`.
@@ -80,4 +107,4 @@ The earlier 8/8 was inflated by the false alarms. This is a small sample on one 
 4. ~~In 9D, refresh the reference distribution and classify drift by rate~~ (done).
 5. ~~In 9E, exclude the `"normal"` signature from learned patterns~~ (done).
 
-All five are fixed. The evasion result in finding 3 is unchanged: evolved attacks still reach a high damage level undetected against every detector with an acceptable false-positive rate.
+All five are fixed. The evasion result in finding 3 was unchanged by them; it is addressed by the temporal layer in the section above.

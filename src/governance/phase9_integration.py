@@ -12,6 +12,7 @@ Both signals feed into a composite anomaly score.
 from typing import Dict, Optional
 from src.governance.metrics import DetectorPipeline as BaseDetectorPipeline
 from src.governance.multivariate import GenerativeAnomalyDetector
+from src.governance.phase9f_temporal import TemporalShiftDetector
 
 
 class HybridDetectorPipeline(BaseDetectorPipeline):
@@ -23,7 +24,8 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
     """
 
     def __init__(self, boundary_id: str, history_window: int = 100,
-                 mahalanobis_threshold: Optional[float] = None):
+                 mahalanobis_threshold: Optional[float] = None,
+                 temporal_shift: bool = False, temporal_smoothing: float = 0.2):
         """Initialize hybrid detector."""
         super().__init__(boundary_id, history_window)
         self.generative_detector = GenerativeAnomalyDetector(
@@ -31,6 +33,10 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
             min_observations=20,
             mahalanobis_threshold=mahalanobis_threshold
         )
+        # Optional third layer: catches small shifts sustained over many steps, which
+        # the per-step layers miss. Off by default.
+        self.temporal_detector = (
+            TemporalShiftDetector(smoothing=temporal_smoothing) if temporal_shift else None)
 
     def ingest_metrics(self, timestamp: float, metrics: Dict[str, float]) -> None:
         """Ingest metrics into both detection layers."""
@@ -39,6 +45,10 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
 
         # Layer 2: Generative detection
         self.generative_detector.ingest_observation(metrics)
+
+        # Layer 3 (optional): temporal shift detection
+        self._temporal_result = (
+            self.temporal_detector.update(metrics) if self.temporal_detector else None)
 
     def detect_anomalies(self) -> Dict:
         """
@@ -62,8 +72,12 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
         # Each layer keeps its own decision rule; alarm if either fires. A shared
         # score cutoff would override the traditional layer's stricter threshold.
         combined_score = max(traditional_score, generative_score)
+        temporal = getattr(self, "_temporal_result", None)
+        if temporal:
+            combined_score = max(combined_score, temporal["anomaly_score"])
         anomaly_detected = bool(traditional.get("anomaly_detected", False)
-                                or generative.get("anomaly_detected", False))
+                                or generative.get("anomaly_detected", False)
+                                or (temporal or {}).get("anomaly_detected", False))
 
         return {
             "anomaly_detected": anomaly_detected,
@@ -72,6 +86,7 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
             "generative_score": generative_score,
             "traditional_detection": traditional,
             "generative_detection": generative,
+            "temporal_detection": temporal,
             "detection_method": "hybrid",
             "mahalanobis_distance": generative.get("mahalanobis_distance", 0.0),
             "explanation": f"Traditional: {traditional.get('explanation', 'N/A')} | Generative: {generative.get('reason', 'N/A')}"

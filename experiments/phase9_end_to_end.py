@@ -52,7 +52,7 @@ def sample(rng, scale=1.0):
 class Variant:
     """Uniform interface: ingest(ts, obs) -> bool (alarm at this step)."""
 
-    def __init__(self, name, kind):
+    def __init__(self, name, kind, lam=0.2):
         self.name, self.kind = name, kind
         if kind == "T":
             self.d = DetectorPipeline("b", 100)
@@ -60,6 +60,8 @@ class Variant:
             self.d = GenerativeAnomalyDetector("b", 20, 3.0 if kind == "G" else None)
         elif kind == "H":
             self.d = HybridDetectorPipeline("b", 100)
+        elif kind == "HT":
+            self.d = HybridDetectorPipeline("b", 100, temporal_shift=True, temporal_smoothing=lam)
         elif kind == "H3":
             self.d = HybridDetectorPipeline("b", 100, mahalanobis_threshold=3.0)
 
@@ -78,12 +80,13 @@ class Variant:
 
 
 VARIANTS = [("traditional", "T"), ("generative(MD>3)", "G"),
-            ("generative(default)", "Gc"), ("hybrid(MD>3)", "H3"), ("hybrid(default)", "H")]
+            ("generative(default)", "Gc"), ("hybrid(MD>3)", "H3"), ("hybrid(default)", "H"),
+            ("hybrid+temporal", "HT")]
 
 
-def train(kind, name, seed):
+def train(kind, name, seed, lam=0.2):
     rng = np.random.default_rng(10_000 + seed)
-    v = Variant(name, kind)
+    v = Variant(name, kind, lam)
     for i in range(BASELINE_STEPS):
         v.ingest(1000.0 + i, sample(rng))
     return v
