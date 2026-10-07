@@ -16,10 +16,9 @@ import json
 import time
 
 import numpy as np
-from scipy.stats import chi2
 
 from src.governance.metrics import DetectorPipeline
-from src.governance.multivariate import GenerativeAnomalyDetector
+from src.governance.multivariate import GenerativeAnomalyDetector, calibrated_mahalanobis_threshold
 from src.governance.phase9_integration import HybridDetectorPipeline
 from src.governance.phase9c_evolutionary import EvolutionaryAdversary
 from src.governance.phase9d_concept_drift import AdaptiveDetector
@@ -41,7 +40,7 @@ BASELINE_STEPS = 120
 EPISODE_STEPS = 40
 DAMAGE_NORM = 20.0
 SHIFT_SIGMA = 1.0  # a magnitude m shifts a metric by (m-1)*SHIFT_SIGMA standard deviations
-CALIBRATED_MD = float(np.sqrt(chi2.ppf(0.999, df=len(METRICS))))
+CALIBRATED_MD = calibrated_mahalanobis_threshold(len(METRICS))
 
 
 def sample(rng, scale=1.0):
