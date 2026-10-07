@@ -11,6 +11,9 @@ info:
       in the request body is then self-asserted and required on `/decide`.
     - `ADJUDICATION_OPERATOR_TOKENS=alice=tokA,bob=tokB`: one token per operator. The
       operator is taken from the credential; a different `operator_id` in the body is a 403.
+      Once any operator token exists, the shared token can no longer decide (403), and the
+      operator is also authenticated inside the governor's `OperatorRegistry`.
+    - `ADJUDICATION_AUDIT_LOG=<path>`: write the hash-chained audit log to this file.
 
     Errors are JSON `{"error": "..."}`: 400 invalid input (bad JSON, missing field, non-finite
     or non-positive number, bad decision, wrong state), 401 missing or wrong token, 403
@@ -27,6 +30,16 @@ paths:
       responses:
         "200":
           description: OK
+  /audit:
+    get:
+      summary: Audit-log head hash, length, and whether the hash chain verifies (authenticated)
+      description: |
+        `chain_intact` false (with `problem` naming the first bad entry) means a past entry was
+        edited, removed or reordered. It cannot detect a full rewrite unless you compare `head`
+        and `length` with a copy you stored earlier somewhere the server cannot write.
+      responses:
+        "200":
+          description: Chain status
   /proposals/pending:
     get:
       summary: List proposals awaiting operator decision

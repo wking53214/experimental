@@ -260,6 +260,7 @@ class RollbackExecutor:
         boundary_id: str,
         reason: RollbackReason,
         operator_id: Optional[str] = None,
+        credential: Optional[str] = None,
     ) -> Optional[RollbackDecision]:
         """
         Roll a boundary back to its previous limit.
@@ -301,7 +302,7 @@ class RollbackExecutor:
                 return None
             _, reverted_boundary = self.governor.apply_operator_decision(
                 proposal.proposal_id, "approve_loosen", operator_id,
-                f"operator-initiated rollback ({reason.value})",
+                f"operator-initiated rollback ({reason.value})", credential=credential,
             )
         else:
             approved, _ = self.governor.authorize_proposal(proposal)

@@ -16,9 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.governance.governor import Governor
+from src.governance.operators import OperatorRegistry
 from src.governance.proposal import AdaptationDirection
 
-GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True)
+GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True,
+               audit_path=os.environ.get("ADJUDICATION_AUDIT_LOG") or None)
 ADJUDICATION_TOKEN = os.environ.get("ADJUDICATION_TOKEN", "").strip()
 MAX_BODY_BYTES = 1_000_000
 DECISIONS = ("approve", "approve_loosen", "approve_disable", "reject", "rejected")
@@ -35,6 +37,24 @@ def _parse_operator_tokens(spec: str) -> dict:
 
 
 OPERATOR_TOKENS = _parse_operator_tokens(os.environ.get("ADJUDICATION_OPERATOR_TOKENS", ""))
+
+
+_REGISTRY_CACHE: dict = {"key": None, "registry": None}
+
+
+def _sync_operators():
+    """Keep the governor's operator registry in step with the configured operator tokens, so a
+    decision is authenticated in the core as well as at the HTTP layer. Read per request because
+    the tokens are module settings."""
+    key = tuple(sorted(OPERATOR_TOKENS.items()))
+    if key != _REGISTRY_CACHE["key"]:
+        registry = None
+        if OPERATOR_TOKENS:
+            registry = OperatorRegistry(min_length=6)
+            for token, name in OPERATOR_TOKENS.items():
+                registry.register(name, token)
+        _REGISTRY_CACHE.update(key=key, registry=registry)
+    GOV.authority.operators = _REGISTRY_CACHE["registry"]
 
 
 class BadRequest(Exception):
@@ -162,6 +182,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, body)
         if not authed:
             return self._unauthorized()
+        if path == "/audit":
+            ok, problem = GOV.audit.verify()
+            return self._json(200, {"length": len(GOV.audit.entries), "head": GOV.audit.head,
+                                    "chain_intact": ok, "problem": problem})
         if path == "/proposals/pending":
             pending = GOV.list_pending_review()
             return self._json(200, {
@@ -184,6 +208,7 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(404, {"error": "not found"})
 
     def _post(self):
+        _sync_operators()
         authed, token_operator = self._auth()
         if not authed:
             return self._unauthorized()
@@ -218,6 +243,8 @@ class Handler(BaseHTTPRequestHandler):
             if decision not in DECISIONS:
                 raise BadRequest(f"decision must be one of {', '.join(DECISIONS)}")
             claimed = data.get("operator_id")
+            if OPERATOR_TOKENS and not token_operator:
+                raise BadRequest("named operators are configured: decide with an operator's own credential", 403)
             if token_operator:
                 if claimed and str(claimed).strip() != token_operator:
                     raise BadRequest("operator_id does not match the credential used", 403)
@@ -231,7 +258,11 @@ class Handler(BaseHTTPRequestHandler):
             except KeyError:
                 raise BadRequest(f"proposal {pid} not found", 404)
             try:
-                result = GOV.apply_operator_decision(pid, decision, operator, str(data.get("rationale", ""))[:1000])
+                result = GOV.apply_operator_decision(
+                    pid, decision, operator, str(data.get("rationale", ""))[:1000],
+                    credential=self._presented_token() if token_operator else None)
+            except PermissionError as e:
+                raise BadRequest(str(e), 403)
             except ValueError as e:
                 raise BadRequest(str(e))
             final = GOV.proposals.get_proposal(pid)

@@ -140,6 +140,48 @@ class TestOperatorIdentity:
         last = GOV.authority.latest_decision(pid)
         assert last.decided_by == "alice"
 
+    def test_shared_token_cannot_decide_once_named_operators_exist(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "ADJUDICATION_TOKEN", "t0ken-shared")
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        pid = _loosen_proposal_authed(port, "id_shared", "tok-alice")
+        code, body = call(port, "POST", f"/proposals/{pid}/decide",
+                          {"decision": "approve_loosen", "operator_id": "alice"},
+                          headers={"Authorization": "Bearer t0ken-shared"})
+        assert code == 403 and "own credential" in body["error"]
+        assert GOV.boundaries.get_boundary("id_shared").current_limit == 50
+        code, _ = call(port, "POST", f"/proposals/{pid}/decide", {"decision": "approve_loosen"},
+                       headers={"Authorization": "Bearer tok-alice"})
+        assert code == 200
+
+    def test_core_registry_follows_the_configured_tokens(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-carol": "carol"})
+        pid = _loosen_proposal_authed(port, "id_core", "tok-carol")
+        call(port, "POST", f"/proposals/{pid}/decide", {"decision": "approve_loosen"},
+             headers={"Authorization": "Bearer tok-carol"})
+        assert GOV.authority.operators is not None
+        assert GOV.authority.latest_decision(pid).identity_verified is True
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {})
+        pid2 = _loosen_proposal(port, "id_core2")
+        call(port, "POST", f"/proposals/{pid2}/decide", {"decision": "approve_loosen", "operator_id": "dan"})
+        assert GOV.authority.operators is None
+
+    def test_audit_endpoint_reports_an_intact_chain_and_needs_auth(self, port, monkeypatch):
+        code, body = call(port, "GET", "/audit")
+        assert code == 200 and body["chain_intact"] is True and body["length"] == len(GOV.audit.entries)
+        monkeypatch.setattr(srv, "ADJUDICATION_TOKEN", "t0ken")
+        assert call(port, "GET", "/audit")[0] == 401
+        assert call(port, "GET", "/audit", headers={"Authorization": "Bearer t0ken"})[0] == 200
+
+    def test_audit_endpoint_flags_tampering(self, port):
+        GOV.audit.append("test_marker", {"note": "ensures the log is not empty"})
+        saved = GOV.audit.entries[0]["payload"]
+        GOV.audit.entries[0]["payload"] = {"forged": True}
+        try:
+            code, body = call(port, "GET", "/audit")
+            assert code == 200 and body["chain_intact"] is False and "entry 0" in body["problem"]
+        finally:
+            GOV.audit.entries[0]["payload"] = saved
+
     def test_unknown_proposal_and_bad_decision(self, port):
         assert call(port, "POST", "/proposals/nope/decide",
                     {"decision": "approve", "operator_id": "alice"})[0] == 404

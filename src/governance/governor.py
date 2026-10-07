@@ -12,7 +12,9 @@ from .boundary import BoundaryStore, BoundaryVersion
 from .event import EventStore
 from .pattern import PatternDetector
 from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
+from .audit_log import AuditLog
 from .authority import AuthorityModel, AuthorizationResult
+from .operators import OperatorRegistry
 from .grant import is_loosening
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
@@ -32,13 +34,17 @@ class Governor:
     def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True,
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
                  max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
-                 detection: str = "generative"):
+                 detection: str = "generative", operators: Optional[OperatorRegistry] = None,
+                 audit_path: Optional[str] = None):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
         require_fresh_evidence and tighten_cooldown_s stay off by default. Pass None to
         max_auto_tightenings or False to use_semantic to turn those off.
         detection: 'generative' (default) or 'hybrid'; see docs/BASELINE_COMPARISON.md.
+        operators: an OperatorRegistry. When given, operator decisions need a credential that
+            authenticates for the operator_id (docs/THREAT_MODEL.md, T9).
+        audit_path: file for the hash-chained audit log (docs/THREAT_MODEL.md, T8); in memory if None.
 
         require_fresh_evidence: a new tightening needs a pattern in violations recorded since
             the last change to that boundary, not just the old ones again.
@@ -64,7 +70,8 @@ class Governor:
         self.events = EventStore()
         self.patterns = PatternDetector()
         self.proposals = ProposalStore()
-        self.authority = AuthorityModel()
+        self.audit = AuditLog(audit_path)
+        self.authority = AuthorityModel(operators=operators, audit=self.audit)
         self.validators = ValidatorOracle()
         self.validations = ValidationStore()
         self.use_semantic = use_semantic
@@ -175,6 +182,7 @@ class Governor:
         if hold:
             self.tightening_holds.append({"boundary_id": boundary_id, "reason": hold,
                                           "timestamp": self.clock()})
+            self.audit.append("tightening_held", {"boundary_id": boundary_id, "reason": hold})
             return None
         pattern_detected = False
         boundary_count = len(self.boundaries.list_boundaries())
@@ -232,11 +240,25 @@ class Governor:
             return f"cooldown: {self.tighten_cooldown_s - (self.clock() - last):.0f}s remaining"
         return None
 
-    def acknowledge_tightening(self, boundary_id: str, operator_id: str) -> None:
+    def acknowledge_tightening(self, boundary_id: str, operator_id: str, credential: Optional[str] = None) -> None:
         """An operator reviewed the automatic tightenings; allow the system to continue."""
         if not operator_id or not str(operator_id).strip():
             raise ValueError("operator_id is required")
+        verified = self._authenticate_operator(operator_id, credential)
         self._auto_tightenings[boundary_id] = 0
+        self.audit.append("tightening_acknowledged", {
+            "boundary_id": boundary_id, "operator_id": operator_id, "identity_verified": verified})
+
+    def _authenticate_operator(self, operator_id: str, credential: Optional[str]) -> bool:
+        """True when a registry is configured and the credential authenticates; raises if a
+        registry is configured and it does not; False when there is no registry (claim only)."""
+        registry = self.authority.operators
+        if registry is None:
+            return False
+        if not registry.authenticate(operator_id, credential):
+            self.audit.append("operator_auth_failed", {"operator_id": operator_id})
+            raise PermissionError(f"operator {operator_id} could not be authenticated")
+        return True
 
     def authorize_proposal(self, proposal: AdaptationProposal):
         result = self.authority.authorize_proposal(proposal)
@@ -271,6 +293,10 @@ class Governor:
         new_version = self.boundaries.update_boundary(
             boundary_id=current.boundary_id, new_limit=current.proposed_value, grant=grant,
         )
+        self.audit.append("boundary_update", {
+            "boundary_id": current.boundary_id, "version": new_version.version,
+            "new_limit": current.proposed_value, "proposal_id": current.proposal_id,
+            "decision": decision.result.value, "grant_id": decision.grant_id})
         if decision.result == AuthorizationResult.AUTO_APPROVED:
             self._auto_tightenings[current.boundary_id] = self._auto_tightenings.get(current.boundary_id, 0) + 1
             self._last_auto_tighten_at[current.boundary_id] = self.clock()
@@ -328,8 +354,21 @@ class Governor:
             ("No unauthorized limit increase (version history audit)",
              not self.boundaries.unauthorized_loosenings()),
             ("File store immutability", self.file_store.verify_immutability()),
+            ("Audit log hash chain intact", self.audit.verify()[0]),
+            ("Decision list matches audit log", self.authority.audit_consistent()),
+            ("Every loosening is in the audit log with its grant", self._loosenings_logged()),
         ]
         return all(r for _, r in checks), checks
+
+    def _loosenings_logged(self) -> bool:
+        logged = {(e["payload"]["boundary_id"], e["payload"]["version"]): e["payload"]["grant_id"]
+                  for e in self.audit.find("boundary_update")}
+        return all(logged.get(key) == grant_id
+                   for key, grant_id in self.boundaries.authorized_loosenings.items())
+
+    def audit_anchor(self) -> dict:
+        """Store this somewhere the governor's process cannot write; verify against it later."""
+        return self.audit.anchor()
 
     def detect_from_pipeline(self, boundary_id: str):
         if boundary_id in self.detector_pipelines:
@@ -414,8 +453,10 @@ class Governor:
             "anomaly_scores": [],
         }
 
-    def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = ""):
+    def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = "",
+                                credential: Optional[str] = None):
         proposal = self.proposals.get_proposal(proposal_id)
+        self._authenticate_operator(operator_id, credential)  # before anything is recorded
         decision_l = decision.lower().strip()
         # Every human decision goes to the immutable audit store, not only the in-memory log.
         try:
@@ -429,7 +470,8 @@ class Governor:
             self._record_telemetry_error("audit_operator_decision", e)
         if decision_l in ("reject", "rejected"):
             self.authority.record_operator_decision(
-                proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator"
+                proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator",
+                credential=credential,
             )
             return self.proposals.mark_rejected(proposal_id), AuthorizationResult.REJECTED
         if decision_l in ("approve", "approve_loosen", "approve_disable"):
@@ -438,6 +480,7 @@ class Governor:
             self.authority.record_operator_decision(
                 proposal, AuthorizationResult.OPERATOR_APPROVED, operator_id,
                 rationale or f"operator approved {proposal.direction.value}",
+                credential=credential,
             )
             approved = self.proposals.mark_approved(proposal_id)
             return approved, self.apply_approved_proposal(approved)

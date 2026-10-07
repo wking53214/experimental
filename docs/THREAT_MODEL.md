@@ -25,8 +25,8 @@ Scope: the claim this project makes and who it holds against. Each row says what
 |---|---|---|
 | **A1** Observation-only | Controls the values and metrics fed to the system. Cannot call the API. | Yes, tested and measured |
 | **A2** API caller without operator rights | Calls governor/authority/rollback methods, forges or mislabels proposals. Models bugs and API misuse. | Yes, tested |
-| **A3** Holder of the adjudication-server token | Can call the HTTP endpoints, and can claim any `operator_id`. | Partly (see T9) |
-| **A4** Same-process code, or write access to stored state | Can edit memory, the version history and the decision log directly. | **No. Out of scope.** |
+| **A3** Holder of the adjudication-server token | Can call the HTTP endpoints. With the shared token alone, can claim any `operator_id`. With per-operator credentials, can act only as the operator whose credential they hold. | Yes (T9), when operator credentials are configured |
+| **A4** Same-process code, or write access to stored state | Can edit memory, the version history and the decision log directly. | **Detection only** (T8): edits are evident, not prevented |
 | **A5** Network observer or middlebox | Reads or alters HTTP traffic. | **No.** The server has no TLS. |
 | **A6** Malicious or mistaken operator | Holds legitimate approval power. | **No.** Decisions are logged, not constrained. |
 
@@ -41,8 +41,8 @@ Scope: the claim this project makes and who it holds against. Each row says what
 | T5 | **Slow attack absorbed as drift** | A1 | **Open trade-off.** A change slower than the drift window is indistinguishable from legitimate drift. The temporal layer is off by default for this reason. | `PHASE_9F_REPORT.md` |
 | T6 | **Mislabelled direction** (a proposal says TIGHTEN but raises the limit) | A2 | Fixed. The implied direction from the values is checked too. | `tests/test_invariant_attacks.py` |
 | T7 | **Loosening through the side door** (rollback, direct store update, replayed grant) | A2 | Fixed. A loosening update needs a single-use grant that only the authority model can issue. | `tests/test_invariant_attacks.py`, `src/governance/grant.py` |
-| T8 | **Tampering with history or the decision log** | A4 | **Not covered.** `unauthorized_loosenings()` audits stored history, but code that can write history can rewrite the audit too. A hash-chained log would make edits detectable; not built. | none |
-| T9 | **Operator impersonation** | A3 | **Not covered.** One shared token authenticates every caller, so `operator_id` is a claim, not a verified identity. The response says `identity_verified: false`. | `tests/test_adjudication_server_hardening.py` |
+| T8 | **Tampering with history or the decision log** | A4 | **Detected, not prevented.** Every authority decision, boundary change, breaker hold and acknowledgement goes into a hash-chained audit log. Editing, deleting, inserting or reordering a past entry breaks the chain; editing the in-memory decision list without the log, or hiding a loosening from the log, fails the integrity check. **Limit:** someone who can rewrite the whole log can recompute every hash and it will verify. That is caught only against an anchor (`Governor.audit_anchor()`) stored somewhere the writer cannot modify, which is the operator's job. Tail truncation is likewise caught only against an anchor. | `src/governance/audit_log.py`, `tests/test_audit_and_identity.py` |
+| T9 | **Operator impersonation** | A3 | **Mitigated when configured, not by default.** With an `OperatorRegistry` (`Governor(operators=...)`, or `ADJUDICATION_OPERATOR_TOKENS` on the server), every operator decision, rollback and breaker acknowledgement needs a credential that authenticates for that `operator_id`; failures are audited and change nothing. The server refuses the shared token for decisions once named operators exist. Without a registry, `operator_id` is still only a claim and the response says `identity_verified: false`. **Limit:** a shared secret held in one process proves the caller knew alice's secret; it is not non-repudiation (the process itself could forge any registered operator). | `src/governance/operators.py`, `tests/test_audit_and_identity.py`, `tests/test_adjudication_server_hardening.py` |
 | T10 | **Traffic interception or tampering** | A5 | **Not covered.** No TLS; the token travels in clear. | none |
 | T11 | **Unbounded memory growth** from event stores | A1 | **Not evaluated.** Event lists are append-only and unbounded by design. | none |
 
@@ -70,8 +70,8 @@ What this says:
 
 ## Not covered, in priority order
 
-1. T9 operator identity: per-operator credentials.
-2. T8 tamper evidence: hash-chained decision log.
+1. Anchor storage (T8): the log only helps against a rewrite if its head hash is kept somewhere the governor cannot write. Nothing here does that for you.
+2. Asymmetric operator signatures (T9) for real non-repudiation; needs a crypto library the project does not depend on yet.
 3. T2 baseline poisoning: measure how much a short attacker presence during training shifts later detection.
 4. T4: require operator approval to register an expected-load pattern.
 5. T10 TLS, T11 memory bounds.

@@ -14,7 +14,9 @@ from dataclasses import dataclass
 from typing import Optional
 import time
 
+from .audit_log import AuditLog
 from .grant import AuthorizationGrant, _ISSUER_KEY
+from .operators import OperatorRegistry
 from .proposal import AdaptationProposal, AdaptationDirection, ProposalStatus, effective_direction
 
 
@@ -35,10 +37,15 @@ class AuthorizationDecision:
     decided_by: str = "system"
     effective_direction: Optional[AdaptationDirection] = None
     grant_id: Optional[str] = None
+    identity_verified: bool = False  # credential checked against an OperatorRegistry
 
 
 class AuthorityModel:
-    def __init__(self):
+    def __init__(self, operators: Optional[OperatorRegistry] = None, audit: Optional[AuditLog] = None):
+        # With a registry, an operator decision needs a credential that authenticates for that
+        # operator_id. Without one, operator_id is only a claim (the original behavior).
+        self.operators = operators
+        self.audit = audit if audit is not None else AuditLog()
         self.decisions: list = []
         self.grants: dict = {}  # proposal_id -> AuthorizationGrant (operator approvals only)
 
@@ -74,11 +81,37 @@ class AuthorityModel:
             decided_by="system",
             effective_direction=effective_direction(proposal.current_value, proposal.proposed_value),
         ))
+        self._log(self.decisions[-1])
         return result
 
-    def record_operator_decision(self, proposal, result, operator_id, rationale=""):
+    def _log(self, d: AuthorizationDecision) -> None:
+        self.audit.append("authority_decision", {
+            "proposal_id": d.proposal_id, "direction": d.direction.value, "result": d.result.value,
+            "decided_by": d.decided_by, "effective_direction": d.effective_direction.value if d.effective_direction else None,
+            "grant_id": d.grant_id, "identity_verified": d.identity_verified, "reason": d.reason})
+
+    def audit_consistent(self) -> bool:
+        """The in-memory decision list must match the decisions in the audit log, in order."""
+        logged = self.audit.find("authority_decision")
+        if len(logged) != len(self.decisions):
+            return False
+        for e, d in zip(logged, self.decisions):
+            p = e["payload"]
+            if (p["proposal_id"], p["result"], p["decided_by"], p["grant_id"]) != (
+                    d.proposal_id, d.result.value, d.decided_by, d.grant_id):
+                return False
+        return True
+
+    def record_operator_decision(self, proposal, result, operator_id, rationale="", credential=None):
         if not operator_id or not str(operator_id).strip():
             raise ValueError("operator_id is required for an operator decision")
+        verified = False
+        if self.operators is not None:
+            if not self.operators.authenticate(operator_id, credential):
+                self.audit.append("operator_auth_failed", {
+                    "proposal_id": proposal.proposal_id, "operator_id": operator_id})
+                raise PermissionError(f"operator {operator_id} could not be authenticated")
+            verified = True
         grant = None
         if result == AuthorizationResult.OPERATOR_APPROVED:
             grant = AuthorizationGrant(
@@ -95,8 +128,10 @@ class AuthorityModel:
             decided_by=operator_id,
             effective_direction=effective_direction(proposal.current_value, proposal.proposed_value),
             grant_id=grant.grant_id if grant else None,
+            identity_verified=verified,
         )
         self.decisions.append(decision)
+        self._log(decision)
         return decision
 
     def latest_decision(self, proposal_id: str):
