@@ -1,0 +1,92 @@
+{
+  "z-score @0.1%": {
+    "step_fpr": 0.001,
+    "episode_fpr": 0.04,
+    "det_rate_gen0": 0.6699999999999999,
+    "det_rate_last": 0.36000000000000004,
+    "det_rate_all": 0.40800000000000003,
+    "evasive_attacks": 118.4,
+    "best_undetected_damage": 1.0,
+    "best_fitness": 1.0
+  },
+  "z-score @1%": {
+    "step_fpr": 0.008,
+    "episode_fpr": 0.3,
+    "det_rate_gen0": 0.8100000000000002,
+    "det_rate_last": 0.76,
+    "det_rate_all": 0.712,
+    "evasive_attacks": 57.6,
+    "best_undetected_damage": 1.0,
+    "best_fitness": 0.86
+  },
+  "z-score @4%": {
+    "step_fpr": 0.0395,
+    "episode_fpr": 0.82,
+    "det_rate_gen0": 0.89,
+    "det_rate_last": 0.8400000000000001,
+    "det_rate_all": 0.8310000000000001,
+    "evasive_attacks": 33.8,
+    "best_undetected_damage": 0.7482757822251236,
+    "best_fitness": 0.5969368224683003
+  },
+  "mahalanobis @0.1%": {
+    "step_fpr": 0.004,
+    "episode_fpr": 0.16,
+    "det_rate_gen0": 0.8400000000000001,
+    "det_rate_last": 0.62,
+    "det_rate_all": 0.622,
+    "evasive_attacks": 75.6,
+    "best_undetected_damage": 0.9479059623179907,
+    "best_fitness": 0.9479059623179907
+  },
+  "mahalanobis @1%": {
+    "step_fpr": 0.023,
+    "episode_fpr": 0.5599999999999999,
+    "det_rate_gen0": 0.95,
+    "det_rate_last": 0.8800000000000001,
+    "det_rate_all": 0.874,
+    "evasive_attacks": 25.2,
+    "best_undetected_damage": 0.6424154547772668,
+    "best_fitness": 0.6502162044494512
+  },
+  "mahalanobis @4%": {
+    "step_fpr": 0.06999999999999999,
+    "episode_fpr": 0.9199999999999999,
+    "det_rate_gen0": 0.96,
+    "det_rate_last": 0.99,
+    "det_rate_all": 0.974,
+    "evasive_attacks": 5.2,
+    "best_undetected_damage": 0.42338736764958257,
+    "best_fitness": 0.3509662362877593
+  },
+  "generative(default)": {
+    "step_fpr": 0.004,
+    "episode_fpr": 0.16,
+    "det_rate_gen0": 0.8400000000000001,
+    "det_rate_last": 0.48,
+    "det_rate_all": 0.537,
+    "evasive_attacks": 92.6,
+    "best_undetected_damage": 1.0,
+    "best_fitness": 1.0
+  },
+  "hybrid(default)": {
+    "step_fpr": 0.0385,
+    "episode_fpr": 0.72,
+    "det_rate_gen0": 0.7600000000000001,
+    "det_rate_last": 0.6,
+    "det_rate_all": 0.623,
+    "evasive_attacks": 75.4,
+    "best_undetected_damage": 0.9328063500087056,
+    "best_fitness": 0.9328063500087056
+  },
+  "hybrid+temporal": {
+    "step_fpr": 0.0445,
+    "episode_fpr": 0.72,
+    "det_rate_gen0": 0.9,
+    "det_rate_last": 0.8299999999999998,
+    "det_rate_all": 0.7719999999999999,
+    "evasive_attacks": 45.6,
+    "best_undetected_damage": 0.6786754396508774,
+    "best_fitness": 0.622436477092497
+  }
+}

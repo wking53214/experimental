@@ -27,6 +27,7 @@ Each layer keeps its own decision, and the hybrid alarms if any layer fires. The
 - Detection against evolved attacks, and the trade-offs of the temporal option, are in `PHASE9_EXPERIMENT_RESULTS.md`.
 
 ## Limitations
+- **Does not beat plain baselines.** At matched false-alarm rates a frozen Mahalanobis or z-score baseline detects more, and on real 30-metric telemetry the traditional layer alarms on about 99.9% of steps. See `docs/BASELINE_COMPARISON.md`.
 - The traditional layer dominates the false-positive rate.
 - The temporal option trades missed slow attacks against false alarms on legitimate drift, which is why it is off by default.
 - Evolved attacks still evade it at weak strengths (see the results document).

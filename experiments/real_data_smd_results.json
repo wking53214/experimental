@@ -1,0 +1,326 @@
+{
+  "machine-1-1": {
+    "steps": 28479,
+    "metrics_used": 30,
+    "anomaly_fraction": 0.09459601811861372,
+    "T": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 8,
+      "seconds": 1.0
+    },
+    "Gc": {
+      "step_fpr": 0.08772542175683537,
+      "event_rec": 1.0,
+      "point_rec": 0.6425389755011136,
+      "events": 8,
+      "seconds": 7.8
+    },
+    "H": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 8,
+      "seconds": 10.2
+    },
+    "HT": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 8,
+      "seconds": 23.0
+    },
+    "z-score (default 0.1%)": {
+      "step_fpr": 0.5300756253635834,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 8
+    },
+    "z-score (FPR 1%)": {
+      "step_fpr": 0.009889470622454915,
+      "event_rec": 1.0,
+      "point_rec": 0.23088344469190794,
+      "events": 8
+    },
+    "z-score (FPR 5%)": {
+      "step_fpr": 0.05002908667830134,
+      "event_rec": 1.0,
+      "point_rec": 0.3752783964365256,
+      "events": 8
+    },
+    "z-score (matched 8.8%)": {
+      "step_fpr": 0.050222997866976926,
+      "event_rec": 1.0,
+      "point_rec": 0.37861915367483295,
+      "events": 8
+    },
+    "mahalanobis (default 0.1%)": {
+      "step_fpr": 0.6417296878029862,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 8
+    },
+    "mahalanobis (FPR 1%)": {
+      "step_fpr": 0.010005817335660267,
+      "event_rec": 1.0,
+      "point_rec": 0.21269487750556793,
+      "events": 8
+    },
+    "mahalanobis (FPR 5%)": {
+      "step_fpr": 0.05002908667830134,
+      "event_rec": 1.0,
+      "point_rec": 0.45360059391239793,
+      "events": 8
+    },
+    "mahalanobis (matched 8.8%)": {
+      "step_fpr": 0.08772542175683537,
+      "event_rec": 1.0,
+      "point_rec": 0.6065330363771344,
+      "events": 8
+    }
+  },
+  "machine-2-1": {
+    "steps": 23694,
+    "metrics_used": 33,
+    "anomaly_fraction": 0.049379589769561916,
+    "T": {
+      "step_fpr": 0.9993340436867342,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 13,
+      "seconds": 0.8
+    },
+    "Gc": {
+      "step_fpr": 0.055096785650861305,
+      "event_rec": 1.0,
+      "point_rec": 0.26495726495726496,
+      "events": 13,
+      "seconds": 7.0
+    },
+    "H": {
+      "step_fpr": 0.9993340436867342,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 13,
+      "seconds": 8.0
+    },
+    "HT": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 13,
+      "seconds": 20.7
+    },
+    "z-score (default 0.1%)": {
+      "step_fpr": 0.12839637719765584,
+      "event_rec": 1.0,
+      "point_rec": 0.4948717948717949,
+      "events": 13
+    },
+    "z-score (FPR 1%)": {
+      "step_fpr": 0.010033741786538803,
+      "event_rec": 0.9230769230769231,
+      "point_rec": 0.12307692307692308,
+      "events": 13
+    },
+    "z-score (FPR 5%)": {
+      "step_fpr": 0.050035517670040844,
+      "event_rec": 1.0,
+      "point_rec": 0.252991452991453,
+      "events": 13
+    },
+    "z-score (matched 5.5%)": {
+      "step_fpr": 0.055096785650861305,
+      "event_rec": 1.0,
+      "point_rec": 0.26837606837606837,
+      "events": 13
+    },
+    "mahalanobis (default 0.1%)": {
+      "step_fpr": 0.12133724027703782,
+      "event_rec": 1.0,
+      "point_rec": 0.5205128205128206,
+      "events": 13
+    },
+    "mahalanobis (FPR 1%)": {
+      "step_fpr": 0.010033741786538803,
+      "event_rec": 1.0,
+      "point_rec": 0.10598290598290598,
+      "events": 13
+    },
+    "mahalanobis (FPR 5%)": {
+      "step_fpr": 0.050035517670040844,
+      "event_rec": 1.0,
+      "point_rec": 0.3367521367521368,
+      "events": 13
+    },
+    "mahalanobis (matched 5.5%)": {
+      "step_fpr": 0.05514118273841236,
+      "event_rec": 1.0,
+      "point_rec": 0.37435897435897436,
+      "events": 13
+    }
+  },
+  "machine-3-1": {
+    "steps": 28700,
+    "metrics_used": 30,
+    "anomaly_fraction": 0.010731707317073172,
+    "T": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 4,
+      "seconds": 0.9
+    },
+    "Gc": {
+      "step_fpr": 0.14109608340377572,
+      "event_rec": 1.0,
+      "point_rec": 0.9545454545454546,
+      "events": 4,
+      "seconds": 7.6
+    },
+    "H": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 4,
+      "seconds": 8.5
+    },
+    "HT": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 4,
+      "seconds": 21.5
+    },
+    "z-score (default 0.1%)": {
+      "step_fpr": 0.3298464356156664,
+      "event_rec": 1.0,
+      "point_rec": 0.7987012987012987,
+      "events": 4
+    },
+    "z-score (FPR 1%)": {
+      "step_fpr": 0.010002817695125387,
+      "event_rec": 1.0,
+      "point_rec": 0.6493506493506493,
+      "events": 4
+    },
+    "z-score (FPR 5%)": {
+      "step_fpr": 0.04934488588334742,
+      "event_rec": 1.0,
+      "point_rec": 0.7402597402597403,
+      "events": 4
+    },
+    "z-score (matched 14.1%)": {
+      "step_fpr": 0.13070583262890956,
+      "event_rec": 1.0,
+      "point_rec": 0.7662337662337663,
+      "events": 4
+    },
+    "mahalanobis (default 0.1%)": {
+      "step_fpr": 0.8203719357565511,
+      "event_rec": 1.0,
+      "point_rec": 0.9805194805194806,
+      "events": 4
+    },
+    "mahalanobis (FPR 1%)": {
+      "step_fpr": 0.010002817695125387,
+      "event_rec": 0.5,
+      "point_rec": 0.4090909090909091,
+      "events": 4
+    },
+    "mahalanobis (FPR 5%)": {
+      "step_fpr": 0.05001408847562694,
+      "event_rec": 0.75,
+      "point_rec": 0.41233766233766234,
+      "events": 4
+    },
+    "mahalanobis (matched 14.1%)": {
+      "step_fpr": 0.14109608340377572,
+      "event_rec": 1.0,
+      "point_rec": 0.4155844155844156,
+      "events": 4
+    }
+  },
+  "machine-1-6": {
+    "steps": 23689,
+    "metrics_used": 33,
+    "anomaly_fraction": 0.15652834648993202,
+    "T": {
+      "step_fpr": 0.9948451028477053,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 30,
+      "seconds": 0.8
+    },
+    "Gc": {
+      "step_fpr": 0.13968269856363547,
+      "event_rec": 0.9666666666666667,
+      "point_rec": 0.8055555555555556,
+      "events": 30,
+      "seconds": 7.1
+    },
+    "H": {
+      "step_fpr": 0.9949451979380411,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 30,
+      "seconds": 7.6
+    },
+    "HT": {
+      "step_fpr": 1.0,
+      "event_rec": 1.0,
+      "point_rec": 1.0,
+      "events": 30,
+      "seconds": 20.0
+    },
+    "z-score (default 0.1%)": {
+      "step_fpr": 0.8419998999049096,
+      "event_rec": 0.9666666666666667,
+      "point_rec": 0.9981121898597627,
+      "events": 30
+    },
+    "z-score (FPR 1%)": {
+      "step_fpr": 0.010009509033581903,
+      "event_rec": 0.4,
+      "point_rec": 0.48975188781014023,
+      "events": 30
+    },
+    "z-score (FPR 5%)": {
+      "step_fpr": 0.0499974976227416,
+      "event_rec": 0.7333333333333333,
+      "point_rec": 0.5577130528586839,
+      "events": 30
+    },
+    "z-score (matched 14.0%)": {
+      "step_fpr": 0.13973274610880337,
+      "event_rec": 0.9333333333333333,
+      "point_rec": 0.6647788565264293,
+      "events": 30
+    },
+    "mahalanobis (default 0.1%)": {
+      "step_fpr": 0.8413492818177268,
+      "event_rec": 0.9666666666666667,
+      "point_rec": 0.9981121898597627,
+      "events": 30
+    },
+    "mahalanobis (FPR 1%)": {
+      "step_fpr": 0.010009509033581903,
+      "event_rec": 0.43333333333333335,
+      "point_rec": 0.79638619201726,
+      "events": 30
+    },
+    "mahalanobis (FPR 5%)": {
+      "step_fpr": 0.0499974976227416,
+      "event_rec": 0.8,
+      "point_rec": 0.8106796116504854,
+      "events": 30
+    },
+    "mahalanobis (matched 14.0%)": {
+      "step_fpr": 0.13973274610880337,
+      "event_rec": 0.9,
+      "point_rec": 0.8325242718446602,
+      "events": 30
+    }
+  }
+}
