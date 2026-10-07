@@ -2,12 +2,12 @@
 Attacks on the core invariant: no automatic path may raise a limit.
 
 TestObservationOnlyAttacker: the threat model the thesis targets (an attacker who
-controls only the observations fed to the governor). Must hold.
+controls only the observations fed to the governor).
 
-TestApiBypasses: ways a bug or misuse of the public API can raise a limit without a
-human, and the integrity check failing to notice. Each is a known gap, marked as a
-strict expected failure: when one is fixed the test will start passing and strict
-mode forces the marker to be removed.
+TestApiBypassesAreClosed / TestGrants / TestRollbackIsGated: ways a bug or misuse of the
+public API used to be able to raise a limit without a human. Scope: this stops bugs and
+misuse; Python cannot stop malicious code in the same process from forging a grant, which
+is why the integrity check audits the stored version history.
 """
 import random
 
@@ -59,48 +59,160 @@ class TestObservationOnlyAttacker:
             assert g.authority.verify_no_auto_loosen()
 
 
-class TestApiBypasses:
-    @pytest.mark.xfail(strict=True, reason="authority trusts the declared direction; "
-                       "a proposal labelled TIGHTEN with a larger value is auto-approved and applied")
+class TestApiBypassesAreClosed:
+    """Each of these used to raise a limit without a human (and the integrity check did
+    not notice). They are regression tests for the fixes."""
+
     def test_mislabelled_tighten_cannot_raise_limit(self, tmp_path):
         g = _gov(tmp_path)
         before = _limit(g)
         p = g.proposals.create_proposal("b", [], before, before * 2, "x", AdaptationDirection.TIGHTEN)
-        g.authorize_proposal(p)
-        try:
-            g.apply_approved_proposal(p)
-        except Exception:
-            pass
-        assert _limit(g) <= before
+        _, result = g.authorize_proposal(p)
+        assert result == AuthorizationResult.REQUIRES_HUMAN_REVIEW
+        with pytest.raises(ValueError):
+            g.apply_approved_proposal(p)  # never approved
+        assert _limit(g) == before
 
-    @pytest.mark.xfail(strict=True, reason="BoundaryRegistry.update_boundary has no direction guard")
-    def test_update_boundary_cannot_raise_limit_directly(self, tmp_path):
+    def test_proposal_that_lies_about_its_current_value_cannot_loosen(self, tmp_path):
         g = _gov(tmp_path)
         before = _limit(g)
-        try:
-            g.boundaries.update_boundary("b", before * 10)
-        except Exception:
-            pass
-        assert _limit(g) <= before
+        # claims the limit is 1000, so 150 looks like a tightening; the real limit is 100
+        p = g.proposals.create_proposal("b", [], 1000, before * 1.5, "x", AdaptationDirection.TIGHTEN)
+        _, result = g.authorize_proposal(p)
+        assert result == AuthorizationResult.AUTO_APPROVED  # judged on its own (false) values
+        with pytest.raises(PermissionError):
+            g.apply_approved_proposal(p)  # but checked against the real limit when applied
+        assert _limit(g) == before
 
-    @pytest.mark.xfail(strict=True, reason="ProposalStore.mark_approved needs no authority decision, "
-                       "so a LOOSEN proposal can be approved and applied without a human")
+    def test_update_boundary_refuses_to_raise_limit_without_a_grant(self, tmp_path):
+        g = _gov(tmp_path)
+        before = _limit(g)
+        with pytest.raises(PermissionError):
+            g.boundaries.update_boundary("b", before * 10)
+        assert _limit(g) == before
+
     def test_loosen_cannot_be_approved_without_a_human(self, tmp_path):
         g = _gov(tmp_path)
         before = _limit(g)
         p = g.proposals.create_proposal("b", [], before, before * 2, "x", AdaptationDirection.LOOSEN)
         g.authorize_proposal(p)
-        g.proposals.mark_approved(p.proposal_id)
-        try:
+        g.proposals.mark_approved(p.proposal_id)  # skips the authority entirely
+        with pytest.raises(PermissionError):
             g.apply_approved_proposal(p)
-        except Exception:
-            pass
-        assert _limit(g) <= before
+        assert _limit(g) == before
 
-    @pytest.mark.xfail(strict=True, reason="verify_governance_integrity inspects only the authority's own "
-                       "decision log, so an actual limit increase is not detected")
-    def test_integrity_check_detects_an_actual_limit_increase(self, tmp_path):
+    def test_mutating_direction_after_creation_does_not_help(self, tmp_path):
         g = _gov(tmp_path)
-        g.boundaries.update_boundary("b", _limit(g) * 10)
-        ok, _ = g.verify_governance_integrity()
+        before = _limit(g)
+        p = g.proposals.create_proposal("b", [], before, before * 2, "x", AdaptationDirection.LOOSEN)
+        p.direction = AdaptationDirection.TIGHTEN
+        _, result = g.authorize_proposal(p)
+        assert result == AuthorizationResult.REQUIRES_HUMAN_REVIEW
+        assert _limit(g) == before
+
+    def test_clearing_the_decision_log_does_not_hide_a_raised_limit(self, tmp_path):
+        g = _gov(tmp_path)
+        # tamper with the stored history directly, bypassing update_boundary
+        from src.governance.boundary import BoundaryVersion, BoundaryStatus
+        hist = g.boundaries.get_boundary_history("b")
+        cur = hist.get_active_version()
+        hist.versions[cur.version] = BoundaryVersion(
+            cur.boundary_id, cur.version, cur.resource_or_action, cur.current_limit,
+            BoundaryStatus.SUPERSEDED, cur.created_at, cur.parent_version)
+        hist.add_version(BoundaryVersion("b", cur.version + 1, cur.resource_or_action,
+                                         cur.current_limit * 10, BoundaryStatus.ACTIVE,
+                                         0.0, cur.version))
+        g.authority.decisions.clear()
+        ok, checks = g.verify_governance_integrity()
         assert ok is False
+        assert any("version history" in name and not passed for name, passed in checks)
+
+
+class TestGrants:
+    def test_human_approved_loosen_works_and_passes_the_audit(self, tmp_path):
+        g = _gov(tmp_path)
+        before = _limit(g)
+        p = g.proposals.create_proposal("b", [], before, before * 1.5, "growth", AdaptationDirection.LOOSEN)
+        g.submit_for_review(p)
+        g.apply_operator_decision(p.proposal_id, "approve_loosen", "alice", "capacity added")
+        assert _limit(g) == before * 1.5
+        ok, _ = g.verify_governance_integrity()
+        assert ok
+
+    def test_grant_is_single_use(self, tmp_path):
+        g = _gov(tmp_path)
+        before = _limit(g)
+        p = g.proposals.create_proposal("b", [], before, before * 2, "x", AdaptationDirection.LOOSEN)
+        g.submit_for_review(p)
+        g.apply_operator_decision(p.proposal_id, "approve_loosen", "alice")
+        grant = g.authority.grants[p.proposal_id]
+        # tighten back, then try to replay the same grant to loosen again
+        g.boundaries.update_boundary("b", before)
+        with pytest.raises(PermissionError):
+            g.boundaries.update_boundary("b", before * 2, grant=grant)
+
+    def test_grant_only_works_for_its_own_boundary_and_value(self, tmp_path):
+        g = _gov(tmp_path)
+        before = _limit(g)
+        p = g.proposals.create_proposal("b", [], before, before * 2, "x", AdaptationDirection.LOOSEN)
+        g.submit_for_review(p)
+        g.authority.record_operator_decision(p, AuthorizationResult.OPERATOR_APPROVED, "alice")
+        grant = g.authority.grants[p.proposal_id]
+        with pytest.raises(PermissionError):
+            g.boundaries.update_boundary("b", before * 5, grant=grant)  # different value
+        assert _limit(g) == before
+
+    def test_grants_cannot_be_constructed_outside_the_authority(self):
+        from src.governance.grant import AuthorizationGrant
+        with pytest.raises(PermissionError):
+            AuthorizationGrant(object(), "p", "b", 5, "mallory")
+
+    def test_operator_decision_requires_an_operator_id(self, tmp_path):
+        g = _gov(tmp_path)
+        before = _limit(g)
+        p = g.proposals.create_proposal("b", [], before, before * 2, "x", AdaptationDirection.LOOSEN)
+        g.submit_for_review(p)
+        with pytest.raises(ValueError):
+            g.apply_operator_decision(p.proposal_id, "approve_loosen", "  ")
+
+    def test_non_numeric_and_nan_limits_are_treated_as_loosening(self, tmp_path):
+        g = _gov(tmp_path)
+        for bad in (float("nan"), "unlimited", None):
+            with pytest.raises(PermissionError):
+                g.boundaries.update_boundary("b", bad)
+
+
+class TestUsabilityFloor:
+    def test_auto_tightening_cannot_go_below_the_floor(self, tmp_path):
+        g = _gov(tmp_path)
+        p = g.proposals.create_proposal("b", [], 100, 5, "x", AdaptationDirection.TIGHTEN)
+        g.authorize_proposal(p)
+        with pytest.raises(ValueError, match="usability floor"):
+            g.apply_approved_proposal(p)
+        assert _limit(g) == 100
+
+
+class TestRollbackIsGated:
+    def _tightened(self, tmp_path):
+        from src.governance.rollback import RollbackExecutor
+        g = _gov(tmp_path)
+        p = g.proposals.create_proposal("b", [], 100, 90, "tighten", AdaptationDirection.TIGHTEN)
+        g.authorize_proposal(p)
+        g.apply_approved_proposal(p)
+        return g, RollbackExecutor(g)
+
+    def test_system_initiated_rollback_cannot_raise_the_limit(self, tmp_path):
+        from src.governance.rollback import RollbackReason
+        g, ex = self._tightened(tmp_path)
+        assert ex.execute_rollback("p", "b", RollbackReason.DEGRADED_METRICS) is None
+        assert _limit(g) == 90
+        assert len(ex.queued_for_review) == 1
+        assert g.list_pending_review()
+
+    def test_operator_initiated_rollback_is_applied_and_attributed(self, tmp_path):
+        from src.governance.rollback import RollbackReason
+        g, ex = self._tightened(tmp_path)
+        d = ex.execute_rollback("p", "b", RollbackReason.DEGRADED_METRICS, operator_id="alice")
+        assert d is not None and _limit(g) == 100
+        assert d.notes["initiated_by"] == "alice"
+        assert g.verify_governance_integrity()[0]

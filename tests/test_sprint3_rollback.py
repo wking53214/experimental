@@ -154,10 +154,12 @@ class TestRollbackExecution:
         assert v2.current_limit == 72
 
         # Execute rollback
+        # Going back to a looser limit is a loosening: a named operator must initiate it
         decision = executor.execute_rollback(
             proposal_id="prop_that_backfired",
             boundary_id="monitored",
             reason=RollbackReason.DEGRADED_METRICS,
+            operator_id="operator-1",
         )
 
         assert decision is not None

@@ -13,6 +13,7 @@ from .event import EventStore
 from .pattern import PatternDetector
 from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
 from .authority import AuthorityModel, AuthorizationResult
+from .grant import is_loosening
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector
@@ -191,11 +192,44 @@ class Governor:
             current = proposal
         if current.status.value != "approved":
             raise ValueError(f"Proposal {current.proposal_id} is not approved. Status: {current.status.value}")
+        # An approved status alone is not authority: the AuthorityModel must have decided.
+        decision = self.authority.latest_decision(current.proposal_id)
+        if decision is None or decision.result not in (
+                AuthorizationResult.AUTO_APPROVED, AuthorizationResult.OPERATOR_APPROVED):
+            raise PermissionError(
+                f"Proposal {current.proposal_id} has no approving decision from the authority")
+        grant = None
+        if decision.result == AuthorizationResult.OPERATOR_APPROVED:
+            grant = self.authority.grants.get(current.proposal_id)
+        else:
+            # System approval is only for tightening, judged against the ACTUAL current limit.
+            actual = self.boundaries.get_boundary(current.boundary_id).current_limit
+            if is_loosening(actual, current.proposed_value):
+                raise PermissionError(
+                    f"Auto-approved proposal {current.proposal_id} would raise {current.boundary_id} "
+                    f"from {actual} to {current.proposed_value}; a human must approve that")
+            self._enforce_usability_floor(current.boundary_id, current.proposed_value)
         new_version = self.boundaries.update_boundary(
-            boundary_id=current.boundary_id, new_limit=current.proposed_value,
+            boundary_id=current.boundary_id, new_limit=current.proposed_value, grant=grant,
         )
         self.proposals.mark_applied(current.proposal_id)
         return new_version
+
+    def _enforce_usability_floor(self, boundary_id: str, new_limit) -> None:
+        """The system may not tighten a boundary below 20% of its original limit."""
+        history = self.boundaries.boundaries.get(boundary_id)
+        if not history or not history.versions:
+            return
+        original = history.versions[min(history.versions)].current_limit
+        try:
+            floor = float(original) * 0.20
+            if float(new_limit) < floor:
+                raise ValueError(
+                    f"Refusing to tighten {boundary_id} to {new_limit}: below the 20% "
+                    f"usability floor ({floor})")
+        except (TypeError, ValueError) as e:
+            if "usability floor" in str(e):
+                raise
 
     def validate_adaptation(self, proposal, observed_state):
         outcome = self.validators.validate(proposal.boundary_id, observed_state)
@@ -211,6 +245,8 @@ class Governor:
             ("Principles immutable", self.principles.verify_principle_integrity()),
             ("No auto-loosen", self.authority.verify_no_auto_loosen()),
             ("No auto-disable", self.authority.verify_no_auto_disable()),
+            ("No unauthorized limit increase (version history audit)",
+             not self.boundaries.unauthorized_loosenings()),
             ("File store immutability", self.file_store.verify_immutability()),
         ]
         return all(r for _, r in checks), checks

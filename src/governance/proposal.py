@@ -7,11 +7,19 @@ from typing import Any, Optional
 import time
 import uuid
 
+from .grant import is_loosening
+
 
 class AdaptationDirection(Enum):
     TIGHTEN = "tighten"
     LOOSEN = "loosen"
     DISABLE = "disable"
+
+
+def effective_direction(current_value: Any, proposed_value: Any) -> AdaptationDirection:
+    """Direction implied by the values themselves, ignoring any declared label."""
+    return (AdaptationDirection.LOOSEN if is_loosening(current_value, proposed_value)
+            else AdaptationDirection.TIGHTEN)
 
 
 class ProposalStatus(Enum):

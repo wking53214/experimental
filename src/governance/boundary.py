@@ -9,6 +9,8 @@ from enum import Enum
 from typing import Any, Optional
 import time
 
+from .grant import AuthorizationGrant, is_loosening
+
 
 class BoundaryStatus(Enum):
     """Status of a boundary version."""
@@ -80,6 +82,8 @@ class BoundaryStore:
 
     def __init__(self):
         self.boundaries: dict[str, BoundaryHistory] = {}
+        # (boundary_id, version) of every version created by an authorized loosening
+        self.authorized_loosenings: dict[tuple, str] = {}
 
     def create_boundary(
         self,
@@ -112,16 +116,30 @@ class BoundaryStore:
         boundary_id: str,
         new_limit: Any,
         reason: str = "",
+        grant: Optional[AuthorizationGrant] = None,
     ) -> BoundaryVersion:
         """
         Update a boundary by creating a new version.
         The previous version becomes superseded.
+
+        Raising the limit (anything not provably a tightening) requires a grant issued
+        by the AuthorityModel for exactly this boundary and value. The check is made
+        against the boundary's actual current limit, not against anything the caller
+        declares.
         """
         if boundary_id not in self.boundaries:
             raise KeyError(f"Boundary {boundary_id} not found")
 
         history = self.boundaries[boundary_id]
         current = history.get_active_version()
+
+        loosening = is_loosening(current.current_limit, new_limit)
+        if loosening:
+            if grant is None:
+                raise PermissionError(
+                    f"Refusing to loosen {boundary_id} from {current.current_limit} to "
+                    f"{new_limit} without an authorization grant")
+            grant.consume(boundary_id, new_limit)
 
         # Mark previous version as superseded
         old_version = BoundaryVersion(
@@ -146,8 +164,24 @@ class BoundaryStore:
             parent_version=current.version,
         )
         history.add_version(new_version)
+        if loosening:
+            self.authorized_loosenings[(boundary_id, new_version.version)] = grant.grant_id
 
         return new_version
+
+    def unauthorized_loosenings(self) -> list:
+        """Audit the version history itself: every step that raises a limit must have a
+        recorded grant. This reads the stored versions, not any log kept by the caller,
+        so it also catches changes that bypassed update_boundary."""
+        found = []
+        for bid, history in self.boundaries.items():
+            versions = history.get_version_history()
+            for prev, cur in zip(versions, versions[1:]):
+                if is_loosening(prev.current_limit, cur.current_limit) and \
+                        (bid, cur.version) not in self.authorized_loosenings:
+                    found.append({"boundary_id": bid, "version": cur.version,
+                                  "from": prev.current_limit, "to": cur.current_limit})
+        return found
 
     def get_boundary(self, boundary_id: str) -> BoundaryVersion:
         """Get the currently active version of a boundary."""

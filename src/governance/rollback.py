@@ -251,35 +251,61 @@ class RollbackExecutor:
         """Initialize with reference to governor."""
         self.governor = governor
         self.rollback_manager = RollbackManager()
+        # Proposal ids of rollbacks that would raise a limit and are waiting for a human.
+        self.queued_for_review: list = []
 
     def execute_rollback(
         self,
         proposal_id: str,
         boundary_id: str,
         reason: RollbackReason,
+        operator_id: Optional[str] = None,
     ) -> Optional[RollbackDecision]:
         """
-        Execute rollback of a boundary.
+        Roll a boundary back to its previous limit.
 
-        Returns rollback decision if executed, None otherwise.
+        Going back to a looser limit is a loosening, so it goes through the same gate as
+        any other: without `operator_id` it is queued for human review (see
+        `queued_for_review`) and nothing changes (returns None). With an `operator_id`
+        it is recorded as that operator's decision and applied. Going back to a tighter
+        limit is a tightening and follows the normal automatic path.
+
+        Returns the rollback decision if a rollback was executed, None otherwise.
         """
-        # Get current boundary state
+        from .grant import is_loosening
+        from .proposal import AdaptationDirection
+
         current_boundary = self.governor.boundaries.get_boundary(boundary_id)
         history = self.governor.boundaries.get_boundary_history(boundary_id)
 
-        # Find previous version
         if current_boundary.version <= 1:
             # No previous version to rollback to
             return None
 
-        previous_version_num = current_boundary.version - 1
-        previous_version = history.get_version(previous_version_num)
+        previous_version = history.get_version(current_boundary.version - 1)
+        target = previous_version.current_limit
+        loosening = is_loosening(current_boundary.current_limit, target)
 
-        # Revert to previous limit
-        reverted_boundary = self.governor.boundaries.update_boundary(
+        proposal = self.governor.proposals.create_proposal(
             boundary_id=boundary_id,
-            new_limit=previous_version.current_limit,
+            source_evidence=[proposal_id],
+            current_value=current_boundary.current_limit,
+            proposed_value=target,
+            reason=f"rollback of {proposal_id}: {reason.value}",
+            direction=AdaptationDirection.LOOSEN if loosening else AdaptationDirection.TIGHTEN,
         )
+        if loosening:
+            self.governor.submit_for_review(proposal)
+            if operator_id is None:
+                self.queued_for_review.append(proposal.proposal_id)
+                return None
+            _, reverted_boundary = self.governor.apply_operator_decision(
+                proposal.proposal_id, "approve_loosen", operator_id,
+                f"operator-initiated rollback ({reason.value})",
+            )
+        else:
+            approved, _ = self.governor.authorize_proposal(proposal)
+            reverted_boundary = self.governor.apply_approved_proposal(approved)
 
         # Create rollback decision
         import uuid
@@ -295,6 +321,7 @@ class RollbackExecutor:
             notes={
                 "previous_limit": previous_version.current_limit,
                 "reverted_limit": reverted_boundary.current_limit,
+                "initiated_by": operator_id or "system",
             },
         )
 

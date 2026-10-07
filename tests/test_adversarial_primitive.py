@@ -281,7 +281,8 @@ class TestAdversarialMonotonicity:
         # Rollback creates v3 (not v1)
         from src.governance.rollback import RollbackExecutor
         executor = RollbackExecutor(governor)
-        decision = executor.execute_rollback("prop1", "metric", RollbackReason.DEGRADED_METRICS)
+        decision = executor.execute_rollback("prop1", "metric", RollbackReason.DEGRADED_METRICS,
+                                            operator_id="operator-1")
 
         v3 = governor.boundaries.get_boundary("metric")
         assert v3.version == 3, "Version increased even after rollback"
