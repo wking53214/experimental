@@ -1,0 +1,111 @@
+{
+  "calibrated_md_threshold": 4.5293493630358075,
+  "e1": {
+    "traditional": {
+      "step_fpr": 0.037,
+      "episode_fpr": 0.6799999999999999,
+      "det_rate_gen0": 0.53,
+      "det_rate_last": 0.38,
+      "det_rate_all": 0.43400000000000005,
+      "evasive_attacks": 113.2,
+      "best_undetected_damage": 1.0,
+      "best_fitness": 1.0
+    },
+    "generative(MD>3)": {
+      "step_fpr": 0.1565,
+      "episode_fpr": 1.0,
+      "det_rate_gen0": 0.96,
+      "det_rate_last": 0.99,
+      "det_rate_all": 0.985,
+      "evasive_attacks": 3.0,
+      "best_undetected_damage": 0.18078556630672868,
+      "best_fitness": 0.3
+    },
+    "generative(calibrated)": {
+      "step_fpr": 0.004,
+      "episode_fpr": 0.16,
+      "det_rate_gen0": 0.8400000000000001,
+      "det_rate_last": 0.48999999999999994,
+      "det_rate_all": 0.546,
+      "evasive_attacks": 90.8,
+      "best_undetected_damage": 1.0,
+      "best_fitness": 1.0
+    },
+    "hybrid as shipped": {
+      "step_fpr": 1.0,
+      "episode_fpr": 1.0,
+      "det_rate_gen0": 1.0,
+      "det_rate_last": 1.0,
+      "det_rate_all": 1.0,
+      "evasive_attacks": 0.0,
+      "best_undetected_damage": 0.0,
+      "best_fitness": 0.3
+    },
+    "hybrid fixed(MD>3)": {
+      "step_fpr": 0.1065,
+      "episode_fpr": 0.9800000000000001,
+      "det_rate_gen0": 0.9400000000000001,
+      "det_rate_last": 0.97,
+      "det_rate_all": 0.945,
+      "evasive_attacks": 11.0,
+      "best_undetected_damage": 0.4788288263229773,
+      "best_fitness": 0.36568195451266367
+    },
+    "hybrid fixed(calibrated)": {
+      "step_fpr": 0.1055,
+      "episode_fpr": 0.9800000000000001,
+      "det_rate_gen0": 0.8799999999999999,
+      "det_rate_last": 0.8800000000000001,
+      "det_rate_all": 0.849,
+      "evasive_attacks": 30.2,
+      "best_undetected_damage": 0.8179555741135239,
+      "best_fitness": 0.6457250504714145
+    }
+  },
+  "e2": {
+    "traditional": {
+      "step_fpr_under_drift": 0.195
+    },
+    "generative(MD>3)": {
+      "step_fpr_under_drift": 0.285
+    },
+    "generative(calibrated)": {
+      "step_fpr_under_drift": 0.015
+    },
+    "hybrid as shipped": {
+      "step_fpr_under_drift": 1.0
+    },
+    "hybrid fixed(MD>3)": {
+      "step_fpr_under_drift": 0.385
+    },
+    "hybrid fixed(calibrated)": {
+      "step_fpr_under_drift": 0.385
+    },
+    "9D": {
+      "acceptance_rate": 0.715,
+      "has_drift": true,
+      "drift_type": "sudden",
+      "drift_score": 3.844730457860936
+    }
+  },
+  "e3": {
+    "patterns_learned": 2,
+    "pattern_signatures": [
+      "elevated:4",
+      "normal"
+    ],
+    "as_shipped": {
+      "violations_warned_before": 8,
+      "test_episodes": 8,
+      "mean_lead_steps": 4.75,
+      "false_alarm_rate_quiet_steps": 0.6375
+    },
+    "without_normal_signature": {
+      "violations_warned_before": 7,
+      "test_episodes": 8,
+      "mean_lead_steps": 2.2857142857142856,
+      "false_alarm_rate_quiet_steps": 0.01875
+    }
+  },
+  "runtime_s": 36.98527431488037
+}
