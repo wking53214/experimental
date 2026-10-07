@@ -28,9 +28,9 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
     def __init__(self, boundary_id: str, history_window: int = 100,
                  mahalanobis_threshold: Optional[float] = None,
                  temporal_shift: bool = False, temporal_smoothing: float = 0.2,
-                 reanchor_on_drift: bool = True):
+                 reanchor_on_drift: bool = True, baseline_observations: int = 15):
         """Initialize hybrid detector."""
-        super().__init__(boundary_id, history_window)
+        super().__init__(boundary_id, history_window, baseline_observations)
         self.generative_detector = GenerativeAnomalyDetector(
             boundary_id,
             min_observations=20,
@@ -131,3 +131,30 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
             },
             "generative_detector": self.generative_detector.get_model_summary(),
         }
+
+
+class GenerativePipeline:
+    """Generative layer only, with the same ingest/detect interface as HybridDetectorPipeline.
+
+    Each observation is scored against the model BEFORE it is added to it (the hybrid scores after,
+    which lets the point partly explain itself). On real 30-metric telemetry this is the only layer
+    of the hybrid that does not alarm on nearly every step; see docs/BASELINE_COMPARISON.md.
+    """
+
+    def __init__(self, boundary_id: str, mahalanobis_threshold: Optional[float] = None, **_ignored):
+        self.boundary_id = boundary_id
+        self.generative_detector = GenerativeAnomalyDetector(
+            boundary_id, min_observations=20, mahalanobis_threshold=mahalanobis_threshold)
+        self._last: Dict = {"anomaly_detected": False, "anomaly_score": 0.0}
+
+    def ingest_metrics(self, timestamp: float, metrics: Dict[str, float]) -> None:
+        result = self.generative_detector.detect_anomaly(dict(metrics))
+        self.generative_detector.ingest_observation(dict(metrics))
+        self._last = {
+            "anomaly_detected": bool(result.get("anomaly_detected", False)),
+            "anomaly_score": float(result.get("anomaly_score", 0.0)),
+            "generative_detection": result,
+        }
+
+    def detect_anomalies(self) -> Dict:
+        return dict(self._last)

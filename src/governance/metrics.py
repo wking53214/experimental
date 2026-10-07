@@ -861,6 +861,24 @@ class CorrelationAnalyzer:
         return count
 
 
+def required_anomalous_metrics(n_metrics: int, max_false_alarm: float = 0.05,
+                               per_metric_tail: float = 0.0455) -> int:
+    """How many metrics beyond 2 sigma it takes to call a multi-metric anomaly.
+
+    The fixed rule "2 or more" false-alarms ever more often as metrics are added (about 2% at
+    5 metrics, 40% at 30, even for independent Gaussian metrics). This is the smallest count, at
+    least 2, whose chance under independence is at most max_false_alarm. Unchanged up to 7 metrics.
+    """
+    from math import comb
+    n = max(1, int(n_metrics))
+    q = 1.0 - per_metric_tail
+    for k in range(2, n + 1):
+        tail = sum(comb(n, j) * per_metric_tail ** j * q ** (n - j) for j in range(k, n + 1))
+        if tail <= max_false_alarm:
+            return k
+    return max(2, n)
+
+
 class DetectorPipeline:
     """
     Phase 8C: Complete detector pipeline integrating metrics with anomaly detection.
@@ -873,17 +891,23 @@ class DetectorPipeline:
     5. Violation event generation
     """
 
-    def __init__(self, boundary_id: str, history_window: int = 100):
+    def __init__(self, boundary_id: str, history_window: int = 100, baseline_observations: int = 15):
         """
         Initialize detector pipeline for a boundary.
 
         Args:
             boundary_id: The boundary being monitored
             history_window: Size of metric history buffer
+            baseline_observations: Observations the baseline is learned from (the pipeline
+                locks its baseline once it has this many). The default of 15 is too few for
+                autocorrelated real telemetry, which makes the baseline spread far too small.
         """
         self.boundary_id = boundary_id
+        self.baseline_observations = max(15, int(baseline_observations))
+        history_window = max(history_window, self.baseline_observations)
         self.stream = MetricStream(boundary_id, history_window=history_window)
-        self.baseline_establisher = BaselineEstablisher(min_observations=15)
+        self.baseline_establisher = BaselineEstablisher(
+            min_observations=15, learning_buffer_size=max(50, self.baseline_observations))
         self.correlation_analyzer = CorrelationAnalyzer()
 
         self.baseline = {}
@@ -907,7 +931,7 @@ class DetectorPipeline:
         self.stream.add_observation(timestamp, metrics)
 
         # Auto-establish baseline after learning window
-        if not self.baseline_locked and self.stream.size() >= 15:
+        if not self.baseline_locked and self.stream.size() >= self.baseline_observations:
             self.baseline = self.baseline_establisher.learn_baseline(self.stream)
             if self.baseline:
                 self.baseline_locked = True
@@ -977,7 +1001,9 @@ class DetectorPipeline:
                 "severity": gaming_score,
             })
 
-        anomaly_detected = anomaly_score > self.anomaly_threshold
+        required = required_anomalous_metrics(len(self.baseline))
+        anomaly_detected = anomaly_score > self.anomaly_threshold and (
+            anomaly_count >= required or results["gaming_detected"])
 
         return {
             "anomaly_detected": anomaly_detected,

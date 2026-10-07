@@ -20,13 +20,14 @@ from .workload import WorkloadClassifier, SmartPatternDetector
 from .metrics import MetricsTracker, DetectorPipeline
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
-from .phase9_integration import HybridDetectorPipeline
+from .phase9_integration import HybridDetectorPipeline, GenerativePipeline
 
 
 class Governor:
     def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False,
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
-                 max_auto_tightenings: Optional[int] = None, clock=time.time):
+                 max_auto_tightenings: Optional[int] = None, clock=time.time,
+                 detection: str = "hybrid"):
         """Optional limits on automatic tightening (all off by default; see docs/THREAT_MODEL.md).
 
         require_fresh_evidence: a new tightening needs a pattern in violations recorded since
@@ -35,6 +36,11 @@ class Governor:
         max_auto_tightenings: at most this many automatic tightenings per boundary until an
             operator calls acknowledge_tightening(); further ones are held, not applied.
         """
+        if detection not in ("hybrid", "generative"):
+            raise ValueError("detection must be 'hybrid' or 'generative'")
+        # 'generative' avoids the hybrid's traditional layer, which alarms on nearly every step of
+        # real many-metric telemetry (docs/BASELINE_COMPARISON.md)
+        self.detection = detection
         self.require_fresh_evidence = require_fresh_evidence
         self.tighten_cooldown_s = tighten_cooldown_s
         self.max_auto_tightenings = max_auto_tightenings
@@ -75,7 +81,8 @@ class Governor:
 
     def ingest_metrics(self, boundary_id: str, timestamp: float, metrics: dict):
         if boundary_id not in self.detector_pipelines:
-            self.detector_pipelines[boundary_id] = HybridDetectorPipeline(boundary_id)
+            cls = GenerativePipeline if self.detection == "generative" else HybridDetectorPipeline
+            self.detector_pipelines[boundary_id] = cls(boundary_id)
         pipeline = self.detector_pipelines[boundary_id]
         pipeline.ingest_metrics(timestamp, metrics)
         detection_result = pipeline.detect_anomalies()
