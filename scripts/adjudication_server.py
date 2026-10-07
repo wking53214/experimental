@@ -84,6 +84,15 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             raise BadRequest("invalid Content-Length")
         if n > MAX_BODY_BYTES:
+            # Read (and discard) the body before answering. Closing a socket that still has
+            # unread data makes the OS reset the connection, and the client would see a
+            # reset instead of the 413. Bounded, so a huge claimed length cannot tie us up.
+            remaining = min(n, 8 * MAX_BODY_BYTES)
+            while remaining > 0:
+                chunk = self.rfile.read(min(65536, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
             raise BadRequest("request body too large", 413)
         if n <= 0:
             return {}

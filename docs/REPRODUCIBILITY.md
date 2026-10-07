@@ -16,12 +16,13 @@ pip install -r requirements.txt
 # or: python -m pytest tests/ -q
 ```
 
-Expected: **373+ tests passed** in roughly 20–40 seconds on a modern laptop CPU.
+Expected: **460+ tests passed** in roughly 20–40 seconds on a modern laptop CPU.
 
 ## Multi-seed protocol (Phase 10A)
 
 ```bash
-python scripts/run_multiseed.py --seeds 10 --out results/multiseed_summary.json
+python scripts/run_multiseed.py --seeds 200 --out results/multiseed_summary.json   # reference results (about 30 s)
+python scripts/run_multiseed.py --seeds 10 --strict    # exit 1 unless every 95% interval supports its target
 ```
 
 ## Notes

@@ -47,7 +47,7 @@ barChart
   y-axis Value
 ```
 
-See `results/multiseed_summary.md` for numeric tables (N=10).
+See `results/multiseed_summary.md` for numeric tables (N=200).
 
 ## Figure 4 — Hybrid multi-metric dataflow
 
