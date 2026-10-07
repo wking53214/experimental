@@ -119,6 +119,8 @@ class AttackGovernorFarming:
             if proposal and proposal.direction == AdaptationDirection.TIGHTEN:
                 # Authorize and apply
                 approved, _ = governor.authorize_proposal(proposal)
+                if approved.status.value != "approved":
+                    break  # circuit breaker held it for a human
                 governor.apply_approved_proposal(approved)
                 tighten_count += 1
 

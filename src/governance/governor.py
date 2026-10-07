@@ -21,10 +21,16 @@ from .metrics import MetricsTracker, DetectorPipeline
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
 from .phase9_integration import HybridDetectorPipeline
+from .rollback import RollbackExecutor, RollbackReason
 
 
 class Governor:
-    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False):
+    # Circuit breaker: after this many automatic tightenings of one boundary with no
+    # human decision in between, further tightenings wait for a human (theory: dampening
+    # of false-positive and cascading tightening, white paper sec. 4).
+    AUTO_TIGHTEN_LIMIT = 3
+
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True):
         self.principles = PrincipleStore()
         self.boundaries = BoundaryStore()
         self.events = EventStore()
@@ -48,6 +54,7 @@ class Governor:
         self.detector_pipelines = {}
         self.proposal_generators = {}
         self.file_store = ImmutableFileStore(store_path)
+        self.rollback = RollbackExecutor(self)
         self.telemetry_errors: list = []
 
     def _record_telemetry_error(self, where: str, exc: Exception) -> None:
@@ -179,11 +186,52 @@ class Governor:
             direction=AdaptationDirection.TIGHTEN,
         )
 
+    def _auto_tightenings_since_review(self, boundary_id: str) -> int:
+        """Automatic tightenings of this boundary since the last human decision on it."""
+        count = 0
+        for d in reversed(self.authority.decisions):
+            if d.decided_by != "system":
+                # Any human decision on this boundary's proposals resets the count.
+                try:
+                    if self.proposals.get_proposal(d.proposal_id).boundary_id == boundary_id:
+                        break
+                except KeyError:
+                    pass
+                continue
+            if d.result != AuthorizationResult.AUTO_APPROVED:
+                continue
+            try:
+                if self.proposals.get_proposal(d.proposal_id).boundary_id == boundary_id:
+                    count += 1
+            except KeyError:
+                continue
+        return count
+
     def authorize_proposal(self, proposal: AdaptationProposal):
-        result = self.authority.authorize_proposal(proposal)
+        breaker_open = (
+            proposal.direction == AdaptationDirection.TIGHTEN
+            and self._auto_tightenings_since_review(proposal.boundary_id) >= self.AUTO_TIGHTEN_LIMIT
+        )
+        result = self.authority.authorize_proposal(proposal, breaker_open=breaker_open)
         if result == AuthorizationResult.AUTO_APPROVED:
             return self.proposals.mark_approved(proposal.proposal_id), result
         return proposal, result
+
+    def review_effectiveness(self, proposal_id: str, observed_state) -> tuple:
+        """Validation layer: judge an applied adaptation against an independent signal.
+
+        If the registered validator says the adaptation DEGRADED things, the boundary is
+        rolled back. A rollback that loosens is queued for a human (see RollbackExecutor),
+        so the system still never loosens on its own. Returns (outcome, rollback_decision).
+        """
+        proposal = self.proposals.get_proposal(proposal_id)
+        outcome = self.validate_adaptation(proposal, observed_state)
+        decision = None
+        if outcome == ValidationOutcome.DEGRADED and self.rollback.should_attempt_rollback(
+                proposal.boundary_id, "degraded", 1.0):
+            decision = self.rollback.execute_rollback(
+                proposal_id, proposal.boundary_id, RollbackReason.DEGRADED_METRICS)
+        return outcome, decision
 
     def apply_approved_proposal(self, proposal: AdaptationProposal) -> BoundaryVersion:
         try:
@@ -293,10 +341,15 @@ class Governor:
 
     def list_pending_review(self):
         from .proposal import ProposalStatus
+        def escalated_tighten(p):
+            # A tightening held by the circuit breaker is waiting for a human too.
+            d = self.authority.latest_decision(p.proposal_id)
+            return d is not None and d.result == AuthorizationResult.REQUIRES_HUMAN_REVIEW
         return [
             p for p in self.proposals.get_all_proposals()
             if p.status == ProposalStatus.PENDING_REVIEW
             or (p.status == ProposalStatus.PENDING and p.direction.value in ("loosen", "disable"))
+            or (p.status == ProposalStatus.PENDING and escalated_tighten(p))
         ]
 
     def get_evidence_pack(self, proposal_id: str) -> dict:
@@ -337,6 +390,16 @@ class Governor:
     def apply_operator_decision(self, proposal_id: str, decision: str, operator_id: str, rationale: str = ""):
         proposal = self.proposals.get_proposal(proposal_id)
         decision_l = decision.lower().strip()
+        # Every human decision goes to the immutable audit store, not only the in-memory log.
+        try:
+            self.file_store.write_decision(
+                f"{proposal_id}_operator_{int(time.time()*1000)}",
+                {"proposal_id": proposal_id, "boundary_id": proposal.boundary_id,
+                 "decision": decision_l, "operator_id": operator_id,
+                 "rationale": rationale, "timestamp": time.time()},
+            )
+        except Exception as e:
+            self._record_telemetry_error("audit_operator_decision", e)
         if decision_l in ("reject", "rejected"):
             self.authority.record_operator_decision(
                 proposal, AuthorizationResult.REJECTED, operator_id, rationale or "rejected by operator"
