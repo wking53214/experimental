@@ -77,4 +77,6 @@ python scripts/adjudication_server.py   # http://127.0.0.1:8765
 
 ## License
 
-Research prototype — not production-ready.
+Research prototype, not production-ready.
+
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Copyright 2026 William N. King.
