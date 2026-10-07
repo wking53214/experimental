@@ -1,138 +1,32 @@
-# Phase 9B: Hybrid Detection Pipeline - Two-Tier Anomaly Detection
+# Phase 9B: Hybrid Detection Pipeline
 
-## Executive Summary
+**Status:** Implemented and tested | **Tests:** 8 in `tests/test_phase9b_e_integration.py` plus 6 hybrid-integration tests in `tests/test_phase9f_temporal.py`, all passing | **Source:** `src/governance/phase9_integration.py` (133 lines)
 
-Combines traditional multi-metric detection (Phase 8C) with generative anomaly detection (Phase 9A) to catch both known attack patterns and novel statistical distortions.
+## What it is
+`HybridDetectorPipeline` extends the Phase 8C `DetectorPipeline` (rule-based, baseline-driven) with the Phase 9A generative detector, and optionally a temporal layer (Phase 9F). Every observation goes to every layer.
 
-**Status:** Complete | **Tests:** 3 passing | **Source lines:** 86 (`phase9_integration.py`)
+## Decision rule
+Each layer keeps its own decision, and the hybrid alarms if any layer fires. The reported `anomaly_score` is the maximum of the layers' scores. The result also includes each layer's own output (`traditional_detection`, `generative_detection`, `temporal_detection`, `drift_status`).
 
-## Problem Statement
+## Options
+- `mahalanobis_threshold`: passed to the generative layer (default: calibrated from the metric count).
+- `temporal_shift` (default `False`): adds the Phase 9F temporal layer and a Phase 9D `ConceptDriftDetector`. Gradual drift re-anchors the temporal layer; an abrupt shift is held until `acknowledge_shift()` is called.
+- `reanchor_on_drift` (default `True`): set `False` for a strict frozen reference.
 
-Phase 8C's traditional detector excels at known patterns but misses novel attacks. Phase 9A's generative detector catches distribution anomalies but lacks context. Neither alone is sufficient. The hybrid approach leverages strengths of both:
+## Defects found and fixed during the end-to-end experiment
+1. The generative layer was handed an empty observation (the pipeline asked the stream for a method that does not exist, behind a `hasattr` guard), so it flagged every step: a 100% false-positive rate.
+2. The default Mahalanobis threshold of 3.0 was a one-dimensional rule (about 11% false alarms on clean 5-metric data).
+3. A shared `> 0.5` score cutoff made the traditional layer fire about three times as often as its own rule intends.
 
-- Traditional: Fast, pattern-based, low false positives for known attacks
-- Generative: Catches novel metric combinations, statistical impossibilities
-- Hybrid: Max score across both layers, full signal context preserved
+## Integration
+`Governor.ingest_metrics` (`src/governance/governor.py`) creates one `HybridDetectorPipeline` per boundary, ingests each observation, calls `detect_anomalies()`, and records an execution plus violation event whenever `anomaly_detected` is true. Before fix 1, this would have recorded a violation on every observation after the generative layer's 20-observation warmup. The temporal option is not enabled by the governor.
 
-## Solution Architecture
+## Measured
+- Cost: about 0.08 ms per observation (ingest plus detect, 5 metrics); about 0.24 ms with the temporal layer and drift detector on.
+- Clean-data false-positive rate per step: about 3.8% on the main experiment seeds (1.3% to 4.0% across other seed sets), almost all from the traditional layer: its own rule fires on 3.9% of clean steps and the generative layer on 0.3%.
+- Detection against evolved attacks, and the trade-offs of the temporal option, are in `PHASE9_EXPERIMENT_RESULTS.md`.
 
-### Core Components
-
-#### 1. **HybridDetectorPipeline** 
-Orchestrates dual detection layers with composite scoring.
-
-**Key features:**
-- Wraps BaseDetectorPipeline (Phase 8C traditional detection)
-- Embeds GenerativeAnomalyDetector (Phase 9A statistical detection)
-- Composite score: max(traditional_score, generative_score)
-- Full metric history retained in both paths
-
-**Decision flow:**
-```
-Observation
-    ↓
-├─→ Traditional DetectorPipeline → traditional_score
-│
-├─→ Generative AnomalyDetector → generative_score
-│
-└─→ Composite: max(traditional_score, generative_score)
-    ↓
-    anomaly_detected = composite_score > threshold
-```
-
-**Model lifecycle:**
-- Both detectors ingest identical metrics in parallel
-- Traditional detector: window-based pattern matching
-- Generative detector: multivariate distribution learning
-- Results merged with full context (method attribution, detection reason)
-
-## What It Detects
-
-### Novel Attacks (Generative Path)
-Attacks that game individual metrics but distort joint distribution. Example: CPU normal, memory normal, but inverse correlation appears. Traditional: clean. Generative: anomaly (MD >> 3.0). Hybrid: anomaly.
-
-### Known Attacks (Traditional Path)
-Signature-matched patterns (DDoS, cache flush, resource exhaustion). Traditional detector catches via anomaly windows. Generative may also flag. Hybrid: anomaly via either path.
-
-### Hybrid Advantage: Reinforced Signals
-When both layers agree, confidence is high (composite score near 1.0). When one detects, investigation context is rich:
-- Traditional: which metric anomaly?
-- Generative: which distribution distortion?
-
-## Test Coverage
-
-3 integration tests in `tests/test_phase9b_e_integration.py` (class `TestPhase9B`), all passing: initialization, metric ingestion into both layers, and detection result structure. There are no isolated unit tests, and code coverage was not measured.
-
-## Performance Characteristics
-
-| Metric | Value |
-|--------|-------|
-| Detection latency | <2ms per observation (serial composition) |
-| Memory overhead | O(m²) for generative + O(w) for traditional |
-| False positive rate | Reduced vs single layer (both must agree for high confidence) |
-| False negative rate | Reduced vs single layer (either path catches attacks) |
-| Throughput | 50+ obs/sec (serial composition bottleneck) |
-
-## Key Insights
-
-1. **Two-Tier Defense**
-   - Traditional catches known patterns fast
-   - Generative catches novel statistical anomalies
-   - Neither alone complete; together comprehensive
-
-2. **Composite Score Philosophy**
-   - max(traditional, generative) is OR logic
-   - Flags if either layer detects
-   - Conservative (prefer false positives over false negatives)
-
-3. **Context Preservation**
-   - Both layers see same data
-   - Results include attribution (which detector fired)
-   - Enables investigation and feedback
-
-4. **Serial Composition Tradeoff**
-   - Both detectors run on every observation
-   - Doubles latency vs single detector
-   - Necessary for orthogonal signal paths
-   - Still <2ms per observation (acceptable)
-
-## Integration Points
-
-**Upstream:**
-- MetricStream (Phase 8B) provides observations
-- DetectorPipeline (Phase 8C) is wrapped as traditional layer
-
-**Downstream:**
-- Governor.detect_anomalies() consumes hybrid results
-- Detection results feed Phase 9D (adaptive baseline)
-- Anomaly scores feed Phase 9E (early warning)
-
-**Cross-phase:**
-- Phase 9C (evolutionary adversary) tests against hybrid detector
-- Phase 9D uses hybrid scores for drift baseline
-- Phase 9E uses hybrid scores for precursor learning
-
-## Limitations & Future Work
-
-**Current limitations:**
-- Serial composition (sequential execution of both layers)
-- No weighting between traditional and generative layers
-- No per-metric attribution (which metric caused generative flag?)
-- No adaptive thresholds
-
-**Future enhancements:**
-- Parallel execution of detection layers
-- Weighted composite scoring based on detector reliability
-- Per-metric anomaly breakdown from generative detector
-- Threshold adaptation based on drift (Phase 9D)
-- Ensemble confidence scoring (both agree vs one)
-
-## Conclusion
-
-Phase 9B creates a robust two-tier detection system that combines pattern recognition (traditional) with statistical anomaly detection (generative). By running both detectors on identical data and taking the maximum score, the hybrid approach catches both known and novel attacks while maintaining full diagnostic context for investigation.
-
----
-
-**Author:** Claude Haiku 4.5  
-**Date:** 2026-10-07  
-**Status:** Implemented and tested
+## Limitations
+- The traditional layer dominates the false-positive rate.
+- The temporal option trades missed slow attacks against false alarms on legitimate drift, which is why it is off by default.
+- Evolved attacks still evade it at weak strengths (see the results document).
