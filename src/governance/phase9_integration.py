@@ -22,13 +22,14 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
     detection, combining signals for robust coverage of known and novel attacks.
     """
 
-    def __init__(self, boundary_id: str, history_window: int = 100):
+    def __init__(self, boundary_id: str, history_window: int = 100,
+                 mahalanobis_threshold: Optional[float] = None):
         """Initialize hybrid detector."""
         super().__init__(boundary_id, history_window)
         self.generative_detector = GenerativeAnomalyDetector(
             boundary_id,
             min_observations=20,
-            mahalanobis_threshold=3.0
+            mahalanobis_threshold=mahalanobis_threshold
         )
 
     def ingest_metrics(self, timestamp: float, metrics: Dict[str, float]) -> None:
@@ -58,11 +59,14 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
         traditional_score = traditional.get("anomaly_score", 0.0)
         generative_score = generative.get("anomaly_score", 0.0)
 
-        # Combined: if either detects high confidence, flag it
+        # Each layer keeps its own decision rule; alarm if either fires. A shared
+        # score cutoff would override the traditional layer's stricter threshold.
         combined_score = max(traditional_score, generative_score)
+        anomaly_detected = bool(traditional.get("anomaly_detected", False)
+                                or generative.get("anomaly_detected", False))
 
         return {
-            "anomaly_detected": combined_score > 0.5,
+            "anomaly_detected": anomaly_detected,
             "anomaly_score": combined_score,
             "traditional_score": traditional_score,
             "generative_score": generative_score,

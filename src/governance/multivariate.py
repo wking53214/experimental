@@ -106,6 +106,17 @@ class MultivariateGaussian:
         return float(-0.5 * (k * np.log(2 * np.pi) + np.log(det) + md ** 2))
 
 
+def calibrated_mahalanobis_threshold(n_metrics: int, quantile_z: float = 3.0902) -> float:
+    """Mahalanobis distance exceeded by ~0.1% of normal observations in n dimensions.
+
+    Wilson-Hilferty approximation of sqrt(chi-square 99.9th percentile, n dof).
+    A fixed 3.0 is a one-dimensional 3-sigma rule and false-alarms often when n > 1.
+    """
+    k = float(max(1, n_metrics))
+    c = 2.0 / (9.0 * k)
+    return float((k * (1.0 - c + quantile_z * np.sqrt(c)) ** 3) ** 0.5)
+
+
 class MahalanobisAnomalyScorer:
     def __init__(self, threshold: float = 3.0, saturation: float = 5.0):
         self.threshold = threshold
@@ -182,11 +193,14 @@ class InvariantLearner:
 
 class GenerativeAnomalyDetector:
     def __init__(self, boundary_id: str, min_observations: int = 20,
-                 mahalanobis_threshold: float = 3.0, regularization: float = 1e-6):
+                 mahalanobis_threshold: Optional[float] = None, regularization: float = 1e-6):
+        # None: calibrate from the number of metrics when the first observation arrives.
         self.boundary_id = boundary_id
         self.min_observations = min_observations
         self.model: Optional[MultivariateGaussian] = None
-        self.scorer = MahalanobisAnomalyScorer(threshold=mahalanobis_threshold)
+        self._calibrate = mahalanobis_threshold is None
+        self.scorer = MahalanobisAnomalyScorer(
+            threshold=3.0 if mahalanobis_threshold is None else mahalanobis_threshold)
         self.invariant_learner = InvariantLearner(min_observations=min_observations)
         self.observation_count = 0
         self.model_locked = False
@@ -195,6 +209,9 @@ class GenerativeAnomalyDetector:
     def ingest_observation(self, observation: Dict[str, float]) -> None:
         if self.model is None:
             self.model = MultivariateGaussian(list(observation.keys()), regularization=self.regularization)
+            if self._calibrate:
+                thr = calibrated_mahalanobis_threshold(len(observation))
+                self.scorer = MahalanobisAnomalyScorer(threshold=thr, saturation=thr + 2.0)
         self.model.update(observation)
         self.invariant_learner.add_observation(observation)
         self.observation_count += 1

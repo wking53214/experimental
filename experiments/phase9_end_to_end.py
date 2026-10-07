@@ -49,24 +49,6 @@ def sample(rng, scale=1.0):
     return {m: float(x) for m, x in zip(METRICS, v)}
 
 
-class FixedHybrid(HybridDetectorPipeline):
-    """Hybrid with the generative layer fed the real latest observation."""
-
-    def __init__(self, *a, mahalanobis_threshold=3.0, **k):
-        super().__init__(*a, **k)
-        self.generative_detector.scorer.threshold = mahalanobis_threshold
-
-    def detect_anomalies(self):
-        trad = DetectorPipeline.detect_anomalies(self)
-        latest = self.stream.get_latest()
-        obs = latest[1] if latest else {}
-        gen = self.generative_detector.detect_anomaly(obs)
-        score = max(trad.get("anomaly_score", 0.0), gen.get("anomaly_score", 0.0))
-        return {"anomaly_detected": score > 0.5, "anomaly_score": score,
-                "traditional_detected": trad["anomaly_detected"],
-                "generative_detected": gen["anomaly_detected"]}
-
-
 class Variant:
     """Uniform interface: ingest(ts, obs) -> bool (alarm at this step)."""
 
@@ -75,14 +57,11 @@ class Variant:
         if kind == "T":
             self.d = DetectorPipeline("b", 100)
         elif kind in ("G", "Gc"):
-            self.d = GenerativeAnomalyDetector(
-                "b", 20, CALIBRATED_MD if kind == "Gc" else 3.0)
-        elif kind == "H_shipped":
+            self.d = GenerativeAnomalyDetector("b", 20, 3.0 if kind == "G" else None)
+        elif kind == "H":
             self.d = HybridDetectorPipeline("b", 100)
-        elif kind == "H_fixed":
-            self.d = FixedHybrid("b", 100, mahalanobis_threshold=3.0)
-        elif kind == "Hc_fixed":
-            self.d = FixedHybrid("b", 100, mahalanobis_threshold=CALIBRATED_MD)
+        elif kind == "H3":
+            self.d = HybridDetectorPipeline("b", 100, mahalanobis_threshold=3.0)
 
     def ingest(self, ts, obs):
         k = self.kind
@@ -99,8 +78,7 @@ class Variant:
 
 
 VARIANTS = [("traditional", "T"), ("generative(MD>3)", "G"),
-            ("generative(calibrated)", "Gc"), ("hybrid as shipped", "H_shipped"),
-            ("hybrid fixed(MD>3)", "H_fixed"), ("hybrid fixed(calibrated)", "Hc_fixed")]
+            ("generative(default)", "Gc"), ("hybrid(MD>3)", "H3"), ("hybrid(default)", "H")]
 
 
 def train(kind, name, seed):
@@ -239,7 +217,7 @@ def staged_episode(rng, violate=True):
 
 def e3(seed=0, train_eps=8, test_eps=8):
     rng = np.random.default_rng(300 + seed)
-    gen = GenerativeAnomalyDetector("b", 20, CALIBRATED_MD)
+    gen = GenerativeAnomalyDetector("b", 20)
     for _ in range(BASELINE_STEPS):
         gen.ingest_observation(sample(rng))
     ews = EarlyWarningSystem("b")

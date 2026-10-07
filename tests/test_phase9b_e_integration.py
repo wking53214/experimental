@@ -1,5 +1,6 @@
 """Phase 9B-9E: Advanced Adversarial Testing Suite (hardened mutation test)"""
 import numpy as np
+import pytest
 from src.governance.phase9_integration import HybridDetectorPipeline
 from src.governance.phase9c_evolutionary import EvolutionaryAdversary
 from src.governance.phase9d_concept_drift import ConceptDriftDetector, OnlineAdaptiveBaseline, AdaptiveDetector
@@ -108,3 +109,31 @@ class TestHybridGenerativeWiring:
     def test_empty_stream_does_not_crash(self):
         r = HybridDetectorPipeline("w").detect_anomalies()
         assert r["anomaly_detected"] is False
+
+
+class TestHybridCutoff:
+    """Each layer keeps its own decision rule; the hybrid alarms if either fires."""
+
+    @staticmethod
+    def _clean_hybrid():
+        rng = np.random.default_rng(3)
+        det = HybridDetectorPipeline("c", history_window=100)
+        for i in range(80):
+            det.ingest_metrics(1000.0 + i, {"a": float(rng.normal(100, 5)), "b": float(rng.normal(50, 3))})
+        return det
+
+    def test_mid_score_below_traditional_threshold_not_flagged(self, monkeypatch):
+        from src.governance.metrics import DetectorPipeline
+        det = self._clean_hybrid()
+        monkeypatch.setattr(DetectorPipeline, "detect_anomalies",
+                            lambda self: {"anomaly_detected": False, "anomaly_score": 0.7})
+        r = det.detect_anomalies()
+        assert r["anomaly_detected"] is False
+        assert r["anomaly_score"] == pytest.approx(0.7)
+
+    def test_traditional_detection_is_flagged(self, monkeypatch):
+        from src.governance.metrics import DetectorPipeline
+        det = self._clean_hybrid()
+        monkeypatch.setattr(DetectorPipeline, "detect_anomalies",
+                            lambda self: {"anomaly_detected": True, "anomaly_score": 0.9})
+        assert det.detect_anomalies()["anomaly_detected"] is True

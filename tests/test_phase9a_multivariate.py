@@ -7,6 +7,7 @@ via Mahalanobis distance scoring.
 """
 
 import numpy as np
+import pytest
 from src.governance.multivariate import (
     MultivariateGaussian, MahalanobisAnomalyScorer, InvariantLearner, GenerativeAnomalyDetector
 )
@@ -436,3 +437,36 @@ class TestGenerativeDetectorPerformance:
         avg_time = np.mean(times)
         # Detection should be very fast (< 1ms even at scale)
         assert avg_time < 0.001
+
+
+class TestCalibratedThreshold:
+    """Default Mahalanobis threshold scales with the number of metrics."""
+
+    @pytest.mark.parametrize("k,exact", [(1, 3.291), (5, 4.529), (10, 5.439), (20, 6.73)])
+    def test_matches_chi_square_quantile(self, k, exact):
+        from src.governance.multivariate import calibrated_mahalanobis_threshold
+        assert calibrated_mahalanobis_threshold(k) == pytest.approx(exact, rel=0.02)
+
+    def test_default_detector_calibrates_on_first_observation(self):
+        d = GenerativeAnomalyDetector("t")
+        assert d.scorer.threshold == 3.0  # placeholder until the model exists
+        d.ingest_observation({f"m{i}": 1.0 for i in range(5)})
+        assert d.scorer.threshold == pytest.approx(4.53, rel=0.02)
+        assert d.scorer.saturation == pytest.approx(d.scorer.threshold + 2.0)
+
+    def test_explicit_threshold_is_respected(self):
+        d = GenerativeAnomalyDetector("t", mahalanobis_threshold=2.0)
+        d.ingest_observation({"a": 1.0, "b": 2.0})
+        assert d.scorer.threshold == 2.0
+
+    def test_low_false_alarm_rate_on_clean_multivariate_data(self):
+        rng = np.random.default_rng(0)
+        names = [f"m{i}" for i in range(5)]
+        d = GenerativeAnomalyDetector("t", min_observations=30)
+        for _ in range(150):
+            d.ingest_observation(dict(zip(names, rng.normal(0, 1, 5))))
+        flags = 0
+        for _ in range(500):
+            obs = dict(zip(names, rng.normal(0, 1, 5)))
+            flags += d.detect_anomaly(obs)["anomaly_detected"]
+        assert flags / 500 < 0.03
