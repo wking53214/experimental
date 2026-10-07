@@ -4,7 +4,7 @@
 
 Evolves attack strategies via genetic algorithm to discover novel attacks that evade detection. Tests detector robustness by finding attack patterns never explicitly coded.
 
-**Status:** ✅ Complete | **Tests:** 5/5 passing | **Lines:** 220 | **Coverage:** 100%
+**Status:** Complete | **Tests:** 5 passing | **Source lines:** 128 (`phase9c_evolutionary.py`)
 
 ## Problem Statement
 
@@ -12,15 +12,15 @@ Adversaries innovate. Hard-coded attack patterns miss evolution. The evolutionar
 
 - Population: 20 attack chromosomes per generation
 - Generations: 10 evolution cycles
-- Fitness: damage × (0.5 if detected, 1.0 if not detected)
-- Mutation rate: 30% (magnitude, duration, delay variance)
-- Crossover rate: 70% (single-point crossing over metric targets)
+- Fitness: damage × (0.3 if detected, 1.0 if not detected)
+- Mutation rate: 20% per attribute (magnitude, duration, delay)
+- Elitism: top 20% of each generation carried over unchanged; offspring come from single-point crossover of the two fittest parents, then mutation
 
 ## Solution Architecture
 
 ### Core Components
 
-#### 1. **AttackChromosome** (Lines 14-22)
+#### 1. **AttackChromosome** 
 Genetic representation of an attack strategy.
 
 **Gene structure:**
@@ -41,23 +41,23 @@ AttackChromosome(
 )
 ```
 
-#### 2. **EvolutionaryAdversary** (Lines 25-230)
+#### 2. **EvolutionaryAdversary** 
 Genetic algorithm for attack evolution.
 
 **Evolution cycle:**
-1. **Initialization** (lines 56-72): Generate 20 random attack chromosomes
-2. **Evaluation** (lines 201-217): Run each against detector, compute fitness
-3. **Selection** (lines 157-162): Roulette wheel selection (high-fitness attacks more likely to reproduce)
-4. **Crossover** (lines 101-116): Single-point crossover of metric targets and genes
-5. **Mutation** (lines 74-99): 30% chance to vary magnitude, duration, delay per gene
+1. **Initialization** : Generate 20 random attack chromosomes
+2. **Evaluation** : Run each against detector, compute fitness
+3. **Selection**: top-ranked parents are chosen for crossover (not roulette wheel)
+4. **Crossover** : Single-point crossover of metric targets and genes
+5. **Mutation**: 20% chance per attribute to vary magnitude, duration, or delay
 6. **Repeat** for 10 generations
 
 **Fitness function:**
 ```python
-fitness = damage * (0.5 if detected else 1.0)
+fitness = damage * (0.3 if detected else 1.0)
 ```
 - Undetected attack: full damage score counts
-- Detected attack: fitness penalized by 50%
+- Detected attack: fitness cut to 30%
 - Evolution favors both damage AND evasion
 
 **Key invariants:**
@@ -85,20 +85,7 @@ Each generation is adversarial evaluation:
 
 ## Test Coverage
 
-### Unit Tests (5)
-- Evolutionary adversary initialization (population_size, generations)
-- Initial population generation (random chromosome creation)
-- Mutation (genes change per mutation_rate)
-- Crossover (single-point crossing produces valid child)
-- Fitness evaluation (detected attacks penalized, undetected rewarded)
-
-### Integration Tests (0)
-Evolution itself is integration test; run_evolution tests end-to-end.
-
-### Scale Tests (0)
-Population size (20) and generations (10) define scale.
-
-**All tests passing:** 5/5 ✅
+5 unit tests in `tests/test_phase9b_e_integration.py` (class `TestPhase9C`), all passing: initialization, population generation, mutation, crossover, and fitness evaluation. `run_evolution` itself has no dedicated test. Code coverage was not measured.
 
 ## Performance Characteristics
 
@@ -107,8 +94,8 @@ Population size (20) and generations (10) define scale.
 | Population size | 20 attack strategies |
 | Generations | 10 evolution cycles |
 | Total evaluations | 200 attacks tested |
-| Mutation rate | 30% per gene |
-| Crossover rate | 70% of offspring |
+| Mutation rate | 20% per attribute |
+| Elitism | top 20% preserved |
 | Evolution time | <1 second (200 attacks) |
 | Fitness range | 0.0-1.0 (damage × detection_penalty) |
 | Best fitness tracked | Yes (convergence curve) |
@@ -132,7 +119,7 @@ Population size (20) and generations (10) define scale.
    - Plateau indicates detector is "locally optimal" against this population
 
 4. **Evasion Pressure**
-   - Detection penalty (0.5×) is aggressive
+   - Detection penalty (0.3×) is aggressive
    - Undetected attacks receive full reward
    - Evolution strongly favors sneaky strategies
    - Tests detector's ability to catch surprise attacks
@@ -176,4 +163,4 @@ The core insight: **Evolution finds the gaps. If the detector can survive evolut
 
 **Author:** Claude Haiku 4.5  
 **Date:** 2026-10-07  
-**Status:** Production Ready
+**Status:** Implemented and unit-tested; evolution loop not directly tested

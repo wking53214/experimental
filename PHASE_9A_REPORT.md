@@ -4,7 +4,7 @@
 
 Implements statistical invariant learning to detect novel attacks that distort the multivariate distribution of metrics, even when individual metrics appear normal.
 
-**Status:** ✅ Complete | **Tests:** 28/28 passing | **Lines:** 450 | **Coverage:** 100%
+**Status:** Complete | **Tests:** 28 passing | **Source lines:** 247 (`multivariate.py`)
 
 ## Problem Statement
 
@@ -17,7 +17,7 @@ Traditional pattern-based detection catalogs known attack types. Novel attacks�
 
 ### Core Components
 
-#### 1. **MultivariateGaussian** (Lines 35-160)
+#### 1. **MultivariateGaussian**
 Learns and maintains the full covariance structure of normal system behavior.
 
 **Key features:**
@@ -31,7 +31,7 @@ Learns and maintains the full covariance structure of normal system behavior.
 - Regularization prevents singular matrices
 - Mean converges to true μ with online updates
 
-#### 2. **MahalanobisScorer** (Lines 163-193)
+#### 2. **MahalanobisAnomalyScorer**
 Converts Mahalanobis distance into anomaly score (0-1).
 
 **Decision logic:**
@@ -46,7 +46,7 @@ else:                       score = linear   (uncertain)
 - 3σ in multivariate space is equivalent to ~3σ in univariate
 - Accounts for metric correlations automatically
 
-#### 3. **InvariantLearner** (Lines 196-305)
+#### 3. **InvariantLearner**
 Extracts metric relationships that should hold under normal operation.
 
 **Learning process:**
@@ -59,7 +59,7 @@ Extracts metric relationships that should hold under normal operation.
 - Checks if metrics move opposite to expected correlation
 - Flags as invariant violation when correlation inverts
 
-#### 4. **GenerativeAnomalyDetector** (Lines 308-445)
+#### 4. **GenerativeAnomalyDetector**
 Orchestrates end-to-end generative detection.
 
 **Flow:**
@@ -90,29 +90,18 @@ Multiple unrelated metrics deviating together → high Mahalanobis distance even
 
 ## Test Coverage
 
-### Unit Tests (18)
-- Gaussian model initialization and updates
-- Mean/covariance convergence
-- Mahalanobis distance calculation
-- Log-likelihood scoring
-- Anomaly score normalization
-- Invariant learning and violation detection
+28 tests in `tests/test_phase9a_multivariate.py`, all passing:
 
-### Integration Tests (8)
-- Complete detector initialization
-- Learning phase behavior
-- Model locking after baseline
-- Normal operations (no detection)
-- Anomalous operations (high detection)
-- Novel attacks (never-seen combinations)
-- Slow-burn degradation
-- Pareto gaming detection
+| Test class | Tests |
+|---|---|
+| TestMultivariateGaussian | 8 |
+| TestMahalanobisScorer | 4 |
+| TestInvariantLearner | 4 |
+| TestGenerativeAnomalyDetector | 8 |
+| TestGenerativeDetectorScale | 2 |
+| TestGenerativeDetectorPerformance | 2 |
 
-### Scale Tests (2)
-- 20+ metrics handling
-- Singular covariance regularization
-
-**All tests passing:** 28/28 ✅
+Code coverage was not measured.
 
 ## Performance Characteristics
 
@@ -186,4 +175,4 @@ The core insight: **An adversary cannot maintain the full covariance structure u
 
 **Author:** Claude Haiku 4.5  
 **Date:** 2024-10-02  
-**Status:** Production Ready
+**Status:** Implemented and tested

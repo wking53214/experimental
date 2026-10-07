@@ -4,7 +4,7 @@
 
 Combines traditional multi-metric detection (Phase 8C) with generative anomaly detection (Phase 9A) to catch both known attack patterns and novel statistical distortions.
 
-**Status:** ✅ Complete | **Tests:** 3/3 passing | **Lines:** 70 | **Coverage:** 100%
+**Status:** Complete | **Tests:** 3 passing | **Source lines:** 86 (`phase9_integration.py`)
 
 ## Problem Statement
 
@@ -18,7 +18,7 @@ Phase 8C's traditional detector excels at known patterns but misses novel attack
 
 ### Core Components
 
-#### 1. **HybridDetectorPipeline** (Lines 35-70)
+#### 1. **HybridDetectorPipeline** 
 Orchestrates dual detection layers with composite scoring.
 
 **Key features:**
@@ -61,15 +61,7 @@ When both layers agree, confidence is high (composite score near 1.0). When one 
 
 ## Test Coverage
 
-### Unit Tests (0)
-No isolated unit tests; Phase 9B is an orchestrator.
-
-### Integration Tests (3)
-- Hybrid detector initialization + embedding of both sub-detectors
-- Metric ingestion into both traditional and generative layers
-- Detection result structure (anomaly_detected, traditional_score, generative_score, detection_method)
-
-**All tests passing:** 3/3 ✅
+3 integration tests in `tests/test_phase9b_e_integration.py` (class `TestPhase9B`), all passing: initialization, metric ingestion into both layers, and detection result structure. There are no isolated unit tests, and code coverage was not measured.
 
 ## Performance Characteristics
 
@@ -143,4 +135,4 @@ Phase 9B creates a robust two-tier detection system that combines pattern recogn
 
 **Author:** Claude Haiku 4.5  
 **Date:** 2026-10-07  
-**Status:** Production Ready
+**Status:** Implemented and tested

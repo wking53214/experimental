@@ -4,7 +4,7 @@
 
 Detects when system behavior has fundamentally changed (concept drift) and adapts baseline without accommodating attacks. Distinguishes legitimate system evolution from adversarial poisoning.
 
-**Status:** ✅ Complete | **Tests:** 5/5 passing | **Lines:** 240 | **Coverage:** 100%
+**Status:** Implemented, **no tests yet** | **Source lines:** 224 (`phase9d_concept_drift.py`)
 
 ## Problem Statement
 
@@ -20,7 +20,7 @@ The defense:
 
 ### Core Components
 
-#### 1. **ConceptDriftDetector** (Lines 14-92)
+#### 1. **ConceptDriftDetector** 
 Detects distribution shifts using KL divergence.
 
 **Key features:**
@@ -47,7 +47,7 @@ KL divergence:     0.4 (gradual drift detected)
 Action:            Accommodate the change, adapt baseline
 ```
 
-#### 2. **OnlineAdaptiveBaseline** (Lines 94-164)
+#### 2. **OnlineAdaptiveBaseline** 
 Learns baseline that adapts without accommodating attacks.
 
 **Adaptive learning:**
@@ -81,7 +81,7 @@ Action:   Accept (learn from it)
           Baseline moves: μ ≈ [100.5, 50.1]
 ```
 
-#### 3. **AdaptiveDetector** (Lines 167-224)
+#### 3. **AdaptiveDetector** 
 Combines drift detection with adaptive learning.
 
 **Integration flow:**
@@ -117,20 +117,7 @@ Example: Memory leak → latency gradually increases, success rate gradually dec
 
 ## Test Coverage
 
-### Unit Tests (5)
-- ConceptDriftDetector initialization
-- Concept drift detection (gradual vs sudden)
-- OnlineAdaptiveBaseline learning
-- Outlier rejection (high-MD observations rejected)
-- AdaptiveDetector integration (drift + learning combined)
-
-### Integration Tests (0)
-AdaptiveDetector tests cover integration.
-
-### Scale Tests (0)
-Baseline adapts to arbitrary dimensions.
-
-**All tests passing:** 5/5 ✅
+None. `tests/test_phase9b_e_integration.py` imports this module but contains no tests that exercise it, so its behavior described here is unverified by the suite. Adding tests is the main follow-up.
 
 ## Performance Characteristics
 
@@ -210,4 +197,4 @@ The core insight: **Legitimate change is gradual and persistent; attacks are sud
 
 **Author:** Claude Haiku 4.5  
 **Date:** 2026-10-07  
-**Status:** Production Ready
+**Status:** Implemented, untested
