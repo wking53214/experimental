@@ -4,7 +4,7 @@
 
 Learns what metric patterns precede violations, enabling proactive intervention before attacks manifest. Shifts detection from reactive (after violation) to predictive (before violation).
 
-**Status:** Implemented, **no tests yet** | **Source lines:** 240 (`phase9e_precursors.py`)
+**Status:** Complete | **Tests:** 12 passing, 1 expected failure | **Source lines:** 240 (`phase9e_precursors.py`)
 
 ## Problem Statement
 
@@ -134,7 +134,16 @@ Gradual metric deviation preceding violations. Example: latency slowly increases
 
 ## Test Coverage
 
-None. `tests/test_phase9b_e_integration.py` imports this module but contains no tests that exercise it, so its behavior described here is unverified by the suite. Adding tests is the main follow-up.
+13 tests in `tests/test_phase9d_e.py`: 12 passing and 1 expected failure (`xfail`).
+
+| Test class | Tests | Covers |
+|---|---|---|
+| TestAttackPrecursorLearner | 8 | too few violations, detection with no patterns, violation index recording, signature and lead-time learning, detection of a learned precursor, normal data not flagged, summary shape, stale indices (xfail) |
+| TestEarlyWarningSystem | 5 | normal state, precursor alone is "elevated" at 0.4 confidence, precursor plus anomaly is "critical" at 0.9, summary counts, relearning after a violation |
+
+**Known bug (xfail):** `violation_indices` store positions in a bounded deque. Once old observations are evicted, the stored positions point at the wrong observations, so precursor learning can look back from the wrong place on long runs. The test is `strict`, so it will flag when this is fixed.
+
+Code coverage was not measured.
 
 ## Performance Characteristics
 
@@ -223,4 +232,4 @@ The core insight: **Attacks are staged. Each stage leaves a signature. Learn sig
 
 **Author:** Claude Haiku 4.5  
 **Date:** 2026-10-07  
-**Status:** Implemented, untested
+**Status:** Implemented and tested

@@ -4,7 +4,7 @@
 
 Detects when system behavior has fundamentally changed (concept drift) and adapts baseline without accommodating attacks. Distinguishes legitimate system evolution from adversarial poisoning.
 
-**Status:** Implemented, **no tests yet** | **Source lines:** 224 (`phase9d_concept_drift.py`)
+**Status:** Complete | **Tests:** 13 passing | **Source lines:** 224 (`phase9d_concept_drift.py`)
 
 ## Problem Statement
 
@@ -117,7 +117,15 @@ Example: Memory leak → latency gradually increases, success rate gradually dec
 
 ## Test Coverage
 
-None. `tests/test_phase9b_e_integration.py` imports this module but contains no tests that exercise it, so its behavior described here is unverified by the suite. Adding tests is the main follow-up.
+13 tests in `tests/test_phase9d_e.py`, all passing:
+
+| Test class | Tests | Covers |
+|---|---|---|
+| TestConceptDriftDetector | 6 | empty status, ignored empty input, no drift on stationary data, detection of a mean shift, KL divergence of identical and zero-variance inputs |
+| TestOnlineAdaptiveBaseline | 5 | uninitialized state, threshold boundary (3.0 accepted), rejection leaves baseline unchanged, tracking of gradual drift, resistance to a 50-observation poisoning attempt |
+| TestAdaptiveDetector | 2 | accept/reject counts and acceptance rate, empty summary |
+
+Code coverage was not measured. Minor note: `has_drift` is returned as a NumPy bool, not a Python bool, which can trip JSON serialization.
 
 ## Performance Characteristics
 
@@ -197,4 +205,4 @@ The core insight: **Legitimate change is gradual and persistent; attacks are sud
 
 **Author:** Claude Haiku 4.5  
 **Date:** 2026-10-07  
-**Status:** Implemented, untested
+**Status:** Implemented and tested
