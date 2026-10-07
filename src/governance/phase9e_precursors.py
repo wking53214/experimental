@@ -31,16 +31,25 @@ class AttackPrecursorLearner:
         self.min_patterns = min_patterns
 
         self.observation_history = deque(maxlen=lookback_window * 10)
-        self.violation_indices: List[int] = []
+        self.violation_indices: List[int] = []  # absolute sequence numbers, not deque positions
+        self._total_observed = 0
         self.learned_patterns: Dict[str, Dict] = {}
         self.pattern_detections: Dict[str, int] = {}
 
     def add_observation(self, observation: Dict[str, float], is_violation: bool = False) -> None:
         """Add observation to history, marking violations."""
         self.observation_history.append(observation)
+        self._total_observed += 1
 
         if is_violation:
-            self.violation_indices.append(len(self.observation_history) - 1)
+            self.violation_indices.append(self._total_observed - 1)
+
+        offset = self._history_offset()
+        self.violation_indices = [i for i in self.violation_indices if i >= offset]
+
+    def _history_offset(self) -> int:
+        """Absolute sequence number of the oldest observation still in history."""
+        return self._total_observed - len(self.observation_history)
 
     def learn_precursors(self) -> Dict:
         """
@@ -56,7 +65,9 @@ class AttackPrecursorLearner:
         pattern_candidates: Dict[str, List] = {}
 
         # For each violation, look back at preceding observations
-        for violation_idx in self.violation_indices[-10:]:  # Recent violations
+        offset = self._history_offset()
+        for abs_idx in self.violation_indices[-10:]:  # Recent violations
+            violation_idx = abs_idx - offset
             start = max(0, violation_idx - self.lookback_window)
 
             # Extract lead-time patterns (1, 2, 3, 5 steps before violation)

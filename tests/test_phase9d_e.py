@@ -163,19 +163,28 @@ class TestAttackPrecursorLearner:
         assert s["patterns_learned"] == 0
         assert s["predictive_accuracy"] == 0.0
 
-    @pytest.mark.xfail(
-        reason="violation_indices are positions in a bounded deque and go stale once old observations are evicted",
-        strict=True,
-    )
     def test_violation_index_stays_valid_after_eviction(self):
         learner = AttackPrecursorLearner(lookback_window=2)  # maxlen 20
         for _ in range(30):
             learner.add_observation({"m": 1.0})
         learner.add_observation({"m": 99.0}, is_violation=True)
-        idx = learner.violation_indices[0]
-        assert list(learner.observation_history)[idx]["m"] == 99.0
-        learner.add_observation({"m": 1.0})  # evicts oldest; index now points one step late
-        assert list(learner.observation_history)[idx]["m"] == 99.0
+        learner.add_observation({"m": 1.0})  # evicts oldest
+        rel = learner.violation_indices[0] - learner._history_offset()
+        assert list(learner.observation_history)[rel]["m"] == 99.0
+
+    def test_evicted_violations_are_dropped(self):
+        learner = AttackPrecursorLearner(lookback_window=2)  # maxlen 20
+        learner.add_observation({"m": 99.0}, is_violation=True)
+        for _ in range(25):
+            learner.add_observation({"m": 1.0})
+        assert learner.violation_indices == []
+
+    def test_learning_works_after_history_wraps(self):
+        learner = AttackPrecursorLearner(lookback_window=10, min_patterns=3)  # maxlen 100
+        for _ in range(150):
+            learner.add_observation({"m": 100.0})
+        _feed_pattern(learner, repeats=4)
+        assert learner.learn_precursors()
 
 
 class TestEarlyWarningSystem:

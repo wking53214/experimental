@@ -4,7 +4,7 @@
 
 Learns what metric patterns precede violations, enabling proactive intervention before attacks manifest. Shifts detection from reactive (after violation) to predictive (before violation).
 
-**Status:** Complete | **Tests:** 12 passing, 1 expected failure | **Source lines:** 240 (`phase9e_precursors.py`)
+**Status:** Complete | **Tests:** 15 passing | **Source lines:** 240 (`phase9e_precursors.py`)
 
 ## Problem Statement
 
@@ -134,14 +134,14 @@ Gradual metric deviation preceding violations. Example: latency slowly increases
 
 ## Test Coverage
 
-13 tests in `tests/test_phase9d_e.py`: 12 passing and 1 expected failure (`xfail`).
+15 tests in `tests/test_phase9d_e.py`, all passing.
 
 | Test class | Tests | Covers |
 |---|---|---|
-| TestAttackPrecursorLearner | 8 | too few violations, detection with no patterns, violation index recording, signature and lead-time learning, detection of a learned precursor, normal data not flagged, summary shape, stale indices (xfail) |
+| TestAttackPrecursorLearner | 10 | too few violations, detection with no patterns, violation index recording, signature and lead-time learning, detection of a learned precursor, normal data not flagged, summary shape, indices valid after eviction, evicted violations dropped, learning after the history wraps |
 | TestEarlyWarningSystem | 5 | normal state, precursor alone is "elevated" at 0.4 confidence, precursor plus anomaly is "critical" at 0.9, summary counts, relearning after a violation |
 
-**Known bug (xfail):** `violation_indices` store positions in a bounded deque. Once old observations are evicted, the stored positions point at the wrong observations, so precursor learning can look back from the wrong place on long runs. The test is `strict`, so it will flag when this is fixed.
+**Bug fixed:** violation positions were stored as indices into the bounded history deque and went stale once old observations were evicted. They are now stored as absolute sequence numbers, converted to deque positions when learning, and dropped once evicted. As a result, `violation_indices` and the violation count used for confidence only include violations still inside the history window.
 
 Code coverage was not measured.
 
