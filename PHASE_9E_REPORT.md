@@ -4,7 +4,7 @@
 
 Learns what metric patterns precede violations, enabling proactive intervention before attacks manifest. Shifts detection from reactive (after violation) to predictive (before violation).
 
-**Status:** Complete | **Tests:** 15 passing | **Source lines:** 240 (`phase9e_precursors.py`)
+**Status:** Complete | **Tests:** 17 passing | **Source lines:** 240 (`phase9e_precursors.py`)
 
 ## Problem Statement
 
@@ -134,14 +134,16 @@ Gradual metric deviation preceding violations. Example: latency slowly increases
 
 ## Test Coverage
 
-15 tests in `tests/test_phase9d_e.py`, all passing.
+17 tests in `tests/test_phase9d_e.py`, all passing.
 
 | Test class | Tests | Covers |
 |---|---|---|
-| TestAttackPrecursorLearner | 10 | too few violations, detection with no patterns, violation index recording, signature and lead-time learning, detection of a learned precursor, normal data not flagged, summary shape, indices valid after eviction, evicted violations dropped, learning after the history wraps |
+| TestAttackPrecursorLearner | 12 | too few violations, detection with no patterns, violation index recording, signature and lead-time learning, detection of a learned precursor, normal signature never learned, ordinary observations not flagged after learning, summary shape, indices valid after eviction, evicted violations dropped, learning after the history wraps |
 | TestEarlyWarningSystem | 5 | normal state, precursor alone is "elevated" at 0.4 confidence, precursor plus anomaly is "critical" at 0.9, summary counts, relearning after a violation |
 
 **Bug fixed:** violation positions were stored as indices into the bounded history deque and went stale once old observations were evicted. They are now stored as absolute sequence numbers, converted to deque positions when learning, and dropped once evicted. As a result, `violation_indices` and the violation count used for confidence only include violations still inside the history window.
+
+**Second bug fixed:** the learner treated the `"normal"` signature as a precursor, because most steps before any violation look normal. Every ordinary observation then matched it, so 64% of quiet steps raised a warning. `"normal"` and `"unknown"` are no longer learned. In the staged-attack experiment this took false alarms from 64% to 1.9% while still warning ahead of 7 of 8 violations (mean lead 2.3 steps; small sample).
 
 Code coverage was not measured.
 

@@ -69,23 +69,22 @@
       "step_fpr_under_drift": 0.195
     },
     "9D": {
-      "acceptance_rate": 0.715,
-      "has_drift": true,
-      "drift_type": "sudden",
-      "drift_score": 3.844730457860936
+      "acceptance_rate": 0.985,
+      "has_drift": false,
+      "drift_type": "none",
+      "drift_score": 0.027563117930675608
     }
   },
   "e3": {
-    "patterns_learned": 2,
+    "patterns_learned": 1,
     "pattern_signatures": [
-      "elevated:4",
-      "normal"
+      "elevated:4"
     ],
     "as_shipped": {
-      "violations_warned_before": 8,
+      "violations_warned_before": 7,
       "test_episodes": 8,
-      "mean_lead_steps": 4.75,
-      "false_alarm_rate_quiet_steps": 0.6375
+      "mean_lead_steps": 2.2857142857142856,
+      "false_alarm_rate_quiet_steps": 0.01875
     },
     "without_normal_signature": {
       "violations_warned_before": 7,
@@ -94,5 +93,5 @@
       "false_alarm_rate_quiet_steps": 0.01875
     }
   },
-  "runtime_s": 29.992661714553833
+  "runtime_s": 31.244346141815186
 }

@@ -4,7 +4,7 @@
 
 Detects when system behavior has fundamentally changed (concept drift) and adapts baseline without accommodating attacks. Distinguishes legitimate system evolution from adversarial poisoning.
 
-**Status:** Complete | **Tests:** 13 passing | **Source lines:** 224 (`phase9d_concept_drift.py`)
+**Status:** Complete | **Tests:** 18 passing | **Source lines:** 224 (`phase9d_concept_drift.py`)
 
 ## Problem Statement
 
@@ -29,15 +29,16 @@ Detects distribution shifts using KL divergence.
 - Drift metric: KL divergence between recent and historical
 - Detection: drift_score > 0.3 = significant drift
 
-**KL Divergence formula:**
+**KL Divergence formula (per metric, largest value taken):**
 ```
-KL(P||Q) ≈ 0.5 * sum(log(σ2²/σ1²) + (σ1² + (μ1-μ2)²)/σ2² - 1)
+KL(P||Q) = 0.5 * (log(σ2²/σ1²) + (σ1² + (μ1-μ2)²)/σ2² - 1)
 ```
+The maximum over metrics (not the sum) keeps thresholds independent of how many metrics are tracked.
 Captures how different the recent distribution is from the historical one.
 
 **Drift classification:**
-- Gradual drift: drift_score in [0.3, 0.7] (legitimate system evolution)
-- Sudden shift: drift_score > 0.7 (potential attack or critical event)
+- Drift: KL from the reference distribution above 0.3. If it persists and the window is full, the reference is re-anchored to the current window (legitimate evolution is accommodated).
+- Sudden shift: KL between the older and newer half of a full window above 0.7. This measures speed, not size. It is held (no re-anchoring) until `acknowledge()` is called, so a person validates it.
 
 **Example scenario:**
 ```
@@ -57,7 +58,7 @@ Learns baseline that adapts without accommodating attacks.
 
 **Outlier rejection gate:**
 ```python
-if mahalanobis_distance > 3.0:  # 3σ threshold
+if mahalanobis_distance > cutoff:  # cutoff calibrated from the metric count (4.53 for 5 metrics)
     reject observation (don't learn from it)
 else:
     accept observation, update baseline with EMA
@@ -117,15 +118,20 @@ Example: Memory leak → latency gradually increases, success rate gradually dec
 
 ## Test Coverage
 
-13 tests in `tests/test_phase9d_e.py`, all passing:
+26 tests in `tests/test_phase9d_e.py`, all passing:
 
 | Test class | Tests | Covers |
 |---|---|---|
-| TestConceptDriftDetector | 6 | empty status, ignored empty input, no drift on stationary data, detection of a mean shift, KL divergence of identical and zero-variance inputs |
-| TestOnlineAdaptiveBaseline | 5 | uninitialized state, threshold boundary (3.0 accepted), rejection leaves baseline unchanged, tracking of gradual drift, resistance to a 50-observation poisoning attempt |
+| TestConceptDriftDetector | 6 | empty status, ignored empty input, no drift on stationary data, detection of a mean shift, KL of identical and zero-variance inputs |
+| TestDriftClassification | 2 | slow drift is gradual and re-anchors; a sudden shift stays flagged until acknowledged |
+| TestDriftMultiMetric | 3 | clean 5-metric data never flagged sudden (8 seeds), single-metric abrupt shift flagged (8 seeds), status is JSON-serializable |
+| TestOnlineAdaptiveBaseline | 5 | uninitialized state, threshold boundary, rejection leaves baseline unchanged, tracking of gradual drift, resistance to a 50-observation poisoning attempt |
+| TestCalibratedRejection | 2 | default cutoff scales with metric count; explicit cutoff respected |
 | TestAdaptiveDetector | 2 | accept/reject counts and acceptance rate, empty summary |
 
 Code coverage was not measured.
+
+**Fixed after the end-to-end experiment:** the drift reference was frozen after the first 10 observations and "sudden" was decided by size, so any large slow drift was labeled sudden (on a +20% drift the baseline rejected 28.5% of legitimate observations). Now the reference re-anchors, sudden shifts are detected by speed, the rejection cutoff is calibrated, and the sudden check only runs on a full window (with 10-observation half-windows it false-flagged clean data). On the same drift scenario, acceptance is now 98.5% and no sudden flag is raised.
 
 ## Performance Characteristics
 
@@ -135,7 +141,7 @@ Code coverage was not measured.
 | Baseline update latency | <0.5ms per observation (EMA) |
 | Memory overhead | O(w) for window (w=100 observations) |
 | KL divergence threshold | 0.3 (drift), 0.7 (sudden) |
-| Mahalanobis distance threshold | 3.0σ (outlier rejection) |
+| Mahalanobis rejection cutoff | calibrated from metric count (3.29 for 1 metric, 4.53 for 5); explicit override supported |
 | Decay factor | 0.95 (EMA recency weight) |
 | Max observations held | 100 (sliding window) |
 
@@ -160,8 +166,8 @@ Code coverage was not measured.
    - Smooth tracking of gradual drift
 
 4. **Concept Drift is Diagnostic**
-   - Gradual drift (0.3-0.7): legitimate evolution, accommodate
-   - Sudden shift (>0.7): potential crisis, flag for human review
+   - Gradual drift: legitimate evolution, accommodate and re-anchor
+   - Sudden shift (older vs newer half of the window): potential crisis, hold for human review
    - Drift score is interpretable (KL divergence units)
    - Enables operator intervention at critical points
 

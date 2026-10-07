@@ -83,8 +83,12 @@ class AttackPrecursorLearner:
                         pattern_candidates[signature] = []
                     pattern_candidates[signature].append((lead_time, idx))
 
-        # Retain patterns that occur frequently
+        # Retain patterns that occur frequently. "normal"/"unknown" are not precursors:
+        # most steps before any violation look normal, so learning them would flag
+        # every ordinary observation.
         for signature, occurrences in pattern_candidates.items():
+            if signature in ("normal", "unknown"):
+                continue
             if len(occurrences) >= self.min_patterns:
                 avg_lead_time = np.mean([lt for lt, _ in occurrences])
 

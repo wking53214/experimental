@@ -20,7 +20,8 @@ def _noisy(rng, center, n, sd=1.0):
 class TestConceptDriftDetector:
     def test_status_before_data(self):
         status = ConceptDriftDetector().get_drift_status()
-        assert status == {"has_drift": False, "drift_score": 0.0, "drift_type": "none"}
+        assert status == {"has_drift": False, "drift_score": 0.0, "drift_type": "none",
+                          "reanchor_count": 0}
 
     def test_empty_observation_ignored(self):
         d = ConceptDriftDetector()
@@ -60,6 +61,65 @@ class TestConceptDriftDetector:
         assert 0.0 <= kl <= 10.0
 
 
+class TestDriftClassification:
+    def test_slow_drift_is_gradual_and_reanchors(self):
+        rng = np.random.default_rng(0)
+        d = ConceptDriftDetector(window_size=100)
+        for i in range(400):  # +4 sigma over 400 steps
+            d.update({"m": float(100 + 4.0 * i / 400 + rng.normal(0, 1.0))})
+        s = d.get_drift_status()
+        assert d.sudden_flagged is False
+        assert s["drift_type"] != "sudden"
+        assert d.reanchor_count >= 1  # reference follows legitimate drift
+
+    def test_sudden_shift_is_held_until_acknowledged(self):
+        rng = np.random.default_rng(0)
+        d = ConceptDriftDetector(window_size=50)
+        for obs in _noisy(rng, 100, 30):
+            d.update(obs)
+        for obs in _noisy(rng, 200, 120):  # long after the jump, still flagged
+            d.update(obs)
+        s = d.get_drift_status()
+        assert s["drift_type"] == "sudden" and s["has_drift"] is True
+        assert d.reanchor_count == 0
+        d.acknowledge()
+        for obs in _noisy(rng, 200, 30):
+            d.update(obs)
+        s = d.get_drift_status()
+        assert s["drift_type"] == "none" and s["has_drift"] is False
+
+
+class TestDriftMultiMetric:
+    @staticmethod
+    def _stream(seed, steps, shift_after=None, metric=0, sigmas=0.0):
+        rng = np.random.default_rng(seed)
+        for i in range(steps):
+            v = rng.normal(0, 1, 5)
+            if shift_after is not None and i >= shift_after:
+                v[metric] += sigmas
+            yield {f"m{j}": float(x) for j, x in enumerate(v)}
+
+    def test_clean_multimetric_data_never_flagged_sudden(self):
+        for seed in range(8):
+            d = ConceptDriftDetector()
+            for obs in self._stream(seed, 300):
+                d.update(obs)
+            assert d.get_drift_status()["drift_type"] != "sudden", seed
+
+    def test_single_metric_abrupt_shift_is_flagged(self):
+        for seed in range(8):
+            d = ConceptDriftDetector()
+            for obs in self._stream(seed, 300, shift_after=150, metric=2, sigmas=3.0):
+                d.update(obs)
+            assert d.get_drift_status()["drift_type"] == "sudden", seed
+
+    def test_status_is_json_serializable(self):
+        d = ConceptDriftDetector()
+        for obs in self._stream(0, 150):
+            d.update(obs)
+        json.dumps(d.get_drift_status())
+
+
 class TestOnlineAdaptiveBaseline:
     def test_uninitialized_baseline(self):
         assert OnlineAdaptiveBaseline().get_current_baseline() == {"status": "not_initialized"}
@@ -73,7 +133,7 @@ class TestOnlineAdaptiveBaseline:
         b = OnlineAdaptiveBaseline()
         b.update_with_outlier_rejection({"m": 100.0}, 0.5)
         before = b.get_current_baseline()["mean"]
-        accepted, reason = b.update_with_outlier_rejection({"m": 10_000.0}, 3.1)
+        accepted, reason = b.update_with_outlier_rejection({"m": 10_000.0}, 3.5)
         assert not accepted
         assert "Rejected" in reason
         assert b.rejected_count == 1
@@ -94,6 +154,17 @@ class TestOnlineAdaptiveBaseline:
             b.update_with_outlier_rejection({"m": 1000.0}, 8.0)
         assert b.get_current_baseline()["mean"][0] == pytest.approx(100.0)
         assert b.rejected_count == 50
+
+
+class TestCalibratedRejection:
+    def test_default_cutoff_scales_with_metric_count(self):
+        obs = {f"m{i}": 1.0 for i in range(5)}
+        assert OnlineAdaptiveBaseline().update_with_outlier_rejection(obs, 4.0)[0] is True
+        assert OnlineAdaptiveBaseline().update_with_outlier_rejection(obs, 6.0)[0] is False
+
+    def test_explicit_cutoff_is_respected(self):
+        obs = {f"m{i}": 1.0 for i in range(5)}
+        assert OnlineAdaptiveBaseline().update_with_outlier_rejection(obs, 4.0, 3.0)[0] is False
 
 
 class TestAdaptiveDetector:
@@ -127,6 +198,21 @@ class TestAttackPrecursorLearner:
         learner = AttackPrecursorLearner(min_patterns=3)
         learner.add_observation({"m": 1.0}, is_violation=True)
         assert learner.learn_precursors() == {}
+
+    def test_normal_signature_never_learned(self):
+        learner = AttackPrecursorLearner(min_patterns=3)
+        _feed_pattern(learner, repeats=4)
+        patterns = learner.learn_precursors()
+        assert "normal" not in patterns and "unknown" not in patterns
+
+    def test_ordinary_observation_not_flagged_after_learning(self):
+        ews = EarlyWarningSystem("b")
+        _feed_pattern(ews.precursor_learner, repeats=4)
+        ews.update_from_violation()
+        for _ in range(5):
+            ews.process_observation({"m": 100.0}, anomaly_score=0.0)
+        r = ews.process_observation({"m": 100.0}, anomaly_score=0.0)
+        assert r["warning_level"] == "normal"
 
     def test_detect_without_patterns_returns_none(self):
         assert AttackPrecursorLearner().detect_precursor({"m": 1.0}) is None

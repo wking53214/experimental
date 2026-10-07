@@ -44,15 +44,28 @@ For comparison, before the fixes the hybrid had a 100% false-positive rate as sh
 - The fixed hybrid detects more than either layer alone (60% in the last generation vs 38% traditional and 48% generative) at the traditional layer's false-positive rate (3.8%). It is a trade-off, not a clear win: the generative layer alone has 0.4% false positives.
 - The hybrid's cutoff was the cause of its excess false positives. The traditional layer's own rule (`> 0.85`) fires on 3.9% of clean steps; at the old shared `> 0.5` cutoff it fired on 10.3%. Each layer now keeps its own decision rule, and the hybrid alarms if either fires.
 
-### 4. 9D misclassifies legitimate drift (200 steps, +20% on all metrics)
-- The acceptance rate was 71.5%. 9D rejected 28.5% of legitimate observations as outliers, so the baseline lags behind real drift.
-- It reported `has_drift = True`, `drift_type = "sudden"`. From the code: the drift reference distribution is frozen after the first 10 observations and never updated, and "sudden" is decided by magnitude (KL > 0.7), not by how fast the change happened. Any large, slow drift ends up classified as "sudden".
-- False-positive rate under drift: traditional 19.5%, generative MD>3 28.5%, default generative 1.5%, hybrid MD>3 37%, default hybrid 19.5%.
+### 4. 9D misclassified legitimate drift (now fixed)
+Scenario: 200 steps, +20% on all metrics.
 
-### 5. 9E works once one bug is accounted for (staged attack, 8 training and 8 test episodes)
-- It learned the signature `"normal"` as a precursor, because normal-looking steps precede violations too. As shipped, every ordinary step then matches it: 64% of quiet steps raised a warning.
-- With the `"normal"` signature removed: 7/8 violations warned about in advance, mean lead of 2.3 steps, and 1.9% false alarms on quiet steps.
-- This is a small sample on one synthetic scenario.
+| | before | after |
+|---|---|---|
+| observations accepted into the baseline | 71.5% | 98.5% |
+| drift label | "sudden" | none (reference re-anchored) |
+
+Causes found along the way: the reference distribution was frozen after the first 10 observations; "sudden" was decided by size, not speed; the rejection cutoff was a fixed 3.0 (wrong for several metrics); and the KL value was summed over metrics, so thresholds meant different things for different metric counts. Fixes: re-anchor the reference to the current window when drift persists, detect sudden shifts by comparing the older and newer halves of a full window (held until `acknowledge()`), calibrate the rejection cutoff, and use the largest per-metric KL. One regression caught on the way: comparing half-windows before the window was full false-flagged clean data, so the check now waits for a full window. Over 20 seeds on 5-metric data: 0/20 false sudden flags on clean data, and abrupt shifts (one metric +3σ, one metric +5σ, all metrics +2σ) flagged 20/20.
+
+False-positive rate under drift for the detectors themselves: traditional 19.5%, generative MD>3 28.5%, default generative 1.5%, hybrid MD>3 37%, default hybrid 19.5%.
+
+### 5. 9E had a precursor-learning bug (now fixed)
+It learned the signature `"normal"` as a precursor, because normal-looking steps precede violations too. Every ordinary step then matched it: 64% of quiet steps raised a warning.
+
+| staged attack (8 train, 8 test episodes) | before | after |
+|---|---|---|
+| violations warned about in advance | 8/8 | 7/8 |
+| mean lead time | 4.75 steps | 2.3 steps |
+| false alarms on quiet steps | 64% | 1.9% |
+
+The earlier 8/8 was inflated by the false alarms. This is a small sample on one synthetic scenario.
 
 ## Caveats
 - Synthetic Gaussian data suits the generative model's assumptions. Real metrics will be harder.
@@ -60,9 +73,11 @@ For comparison, before the fixes the hybrid had a 100% false-positive rate as sh
 - 5 seeds, results averaged without confidence intervals.
 - 9D and 9E are exercised standalone. The repo has no wiring between 9B, 9C, 9D and 9E, so this experiment composes them by hand.
 
-## Suggested fixes (not applied)
+## Fixes
 1. ~~Fix `HybridDetectorPipeline` wiring~~ (done, with regression tests).
 2. ~~Default the Mahalanobis threshold from chi-square quantiles~~ (done).
 3. ~~Use each layer's own decision rule in the hybrid~~ (done).
-4. In 9D, refresh the reference distribution and classify drift by rate, not just size.
-5. In 9E, exclude the `"normal"` signature from learned patterns.
+4. ~~In 9D, refresh the reference distribution and classify drift by rate~~ (done).
+5. ~~In 9E, exclude the `"normal"` signature from learned patterns~~ (done).
+
+All five are fixed. The evasion result in finding 3 is unchanged: evolved attacks still reach a high damage level undetected against every detector with an acceptable false-positive rate.
