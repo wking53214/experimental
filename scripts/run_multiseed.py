@@ -157,7 +157,9 @@ def experiment_7c_slow_ramp(seed: int):
 
 def experiment_3_late_succeeded(seed: int) -> int:
     rng = random.Random(seed)
-    gov = Governor(store_path=f"/tmp/ms_p3_{seed}_{time.time()}", use_semantic=True)
+    # Reference results (results/multiseed_summary.md) were produced with no tightening limit.
+    gov = Governor(store_path=f"/tmp/ms_p3_{seed}_{time.time()}", use_semantic=True,
+                   max_auto_tightenings=None)
     for bid in ["cpu_limit", "memory_limit", "io_ops"]:
         gov.boundaries.create_boundary(bid, bid, 100)
         gov.patterns.create_pattern(f"{bid}_p", bid, 2, 60)
@@ -191,7 +193,8 @@ def experiment_3_late_succeeded(seed: int) -> int:
 
 def experiment_5_endurance(seed: int) -> dict:
     rng = random.Random(seed)
-    gov = Governor(store_path=f"/tmp/ms_p5_{seed}_{time.time()}", use_semantic=True)
+    gov = Governor(store_path=f"/tmp/ms_p5_{seed}_{time.time()}", use_semantic=True,
+                   max_auto_tightenings=None)
     boundaries = [f"e_{i:03d}" for i in range(10)]
     initial = {}
     for bid in boundaries:

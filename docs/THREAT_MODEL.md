@@ -37,7 +37,7 @@ Scope: the claim this project makes and who it holds against. Each row says what
 | T1 | **Evasion**: stay under the detectors | A1 | Partly mitigated. Evolved attacks still evade at weak strengths. A temporal layer roughly halves the weakest detectable shift, at the cost of absorbing slow attacks as drift (T5). | `PHASE9_EXPERIMENT_RESULTS.md`, `experiments/phase9_power_curves.py` |
 | T2 | **Baseline poisoning**: attacker is present while the baseline is learned | A1 | **Not evaluated.** The baseline is assumed clean. | none |
 | T3 | **Tightening as denial of service**: feed over-limit values so the system tightens itself to the floor | A1 | **Real, now measured.** Opt-in mitigation reduces it. See below. | `experiments/dos_tightening.py`, `tests/test_tightening_limits.py` |
-| T4 | **Spoofing "expected" load** so that real violations are excused | A2 | **Weak.** Patterns marked untrusted are ignored, but registration defaults to `trusted=True`, so any caller who can register a pattern is trusted. Only tests in `tests/test_sprint1_semantic.py`. Semantic classification is off by default. | `src/governance/workload.py` |
+| T4 | **Spoofing "expected" load** so that real violations are excused | A2 | **Weak.** Patterns marked untrusted are ignored, but registration defaults to `trusted=True`, so any caller who can register a pattern is trusted. Only tests in `tests/test_sprint1_semantic.py`. Semantic classification is on by default, but only excuses a violation inside a range someone registered. | `src/governance/workload.py` |
 | T5 | **Slow attack absorbed as drift** | A1 | **Open trade-off.** A change slower than the drift window is indistinguishable from legitimate drift. The temporal layer is off by default for this reason. | `PHASE_9F_REPORT.md` |
 | T6 | **Mislabelled direction** (a proposal says TIGHTEN but raises the limit) | A2 | Fixed. The implied direction from the values is checked too. | `tests/test_invariant_attacks.py` |
 | T7 | **Loosening through the side door** (rollback, direct store update, replayed grant) | A2 | Fixed. A loosening update needs a single-use grant that only the authority model can issue. | `tests/test_invariant_attacks.py`, `src/governance/grant.py` |
@@ -66,7 +66,7 @@ What this says:
 - **A cooldown only buys time.** A patient attacker reaches the floor either way.
 - **The breaker bounds the damage.** After `max_auto_tightenings` automatic tightenings on a boundary, further ones are held and logged in `tightening_holds` until an operator calls `acknowledge_tightening`. This keeps the asymmetry: it removes autonomy only in the tightening direction, and loosening still needs a human.
 - **The breaker's cost is real.** A genuine, sustained attack is also held after the cap. With a cap of 3, the most the system can lose without a human is about 27% of the limit. Whether that is harmless depends on headroom: here legitimate traffic sits at half the limit, so a 27% loss is harmless. A boundary with less than 27% headroom would still be hurt.
-- All three options are **off by default**, so existing behavior is unchanged. Turning the breaker on is a policy decision about how much autonomy to give up.
+- The breaker (`max_auto_tightenings=3`) and the semantic layer (`use_semantic=True`) are **on by default**, per the theory document. The cooldown and freshness options stay off. Turning the breaker off (`max_auto_tightenings=None`) is a policy decision about how much autonomy to give up.
 
 ## Not covered, in priority order
 

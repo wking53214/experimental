@@ -71,7 +71,9 @@ class SimpleAdversary:
 class TestPhase5LongTermStability:
     @pytest.fixture
     def endurance_setup(self):
-        gov = Governor(store_path="/tmp/test_phase5_endurance", use_semantic=True)
+        # Documents the unlimited-tightening finding; the breaker is on by default now.
+        gov = Governor(store_path="/tmp/test_phase5_endurance", use_semantic=True,
+                       max_auto_tightenings=None)
         boundaries = [f"endurance_{i:03d}" for i in range(10)]
         initial_limits = {}
         for bid in boundaries:

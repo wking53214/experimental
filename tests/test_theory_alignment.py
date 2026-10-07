@@ -73,10 +73,16 @@ class TestCircuitBreaker:
         # cpu has used up its three; mem still gets its own three before it is held.
         assert _drive(g, "mem", 10) == 3
 
-    def test_off_by_default(self, tmp_path):
+    def test_on_by_default(self, tmp_path):
         g = Governor(store_path=str(tmp_path / "s"))
         g.boundaries.create_boundary("cpu", "cpu", 100)
-        assert _drive(g, "cpu", 10) > 3  # no cap: applied until the evidence runs out
+        assert _drive(g, "cpu", 10) == Governor.DEFAULT_MAX_AUTO_TIGHTENINGS
+        assert g.tightening_holds
+
+    def test_can_be_turned_off(self, tmp_path):
+        g = Governor(store_path=str(tmp_path / "s"), max_auto_tightenings=None)
+        g.boundaries.create_boundary("cpu", "cpu", 100)
+        assert _drive(g, "cpu", 10) > Governor.DEFAULT_MAX_AUTO_TIGHTENINGS
         assert not g.tightening_holds
 
 

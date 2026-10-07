@@ -24,9 +24,16 @@ def make(tmp_path, **kw):
     return g, now
 
 
-def test_defaults_unchanged_old_evidence_retriggers(tmp_path):
+def test_no_limit_old_evidence_retriggers(tmp_path):
+    # With the breaker explicitly off, every violation after the third tightens again.
+    g, _ = make(tmp_path, max_auto_tightenings=None)
+    assert _drive(g, 17) == 15
+
+
+def test_default_breaker_is_on(tmp_path):
     g, _ = make(tmp_path)
-    assert _drive(g, 17) == 15  # every violation after the third tightens again
+    assert g.max_auto_tightenings == Governor.DEFAULT_MAX_AUTO_TIGHTENINGS
+    assert _drive(g, 17) == Governor.DEFAULT_MAX_AUTO_TIGHTENINGS
 
 
 def test_fresh_evidence_needs_new_violations(tmp_path):

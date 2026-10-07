@@ -25,11 +25,19 @@ from .rollback import RollbackExecutor, RollbackReason
 
 
 class Governor:
-    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False,
+    # Theory (white paper sec. 4): automatic tightening stops after this many without a
+    # human decision, and violations are interpreted before they can tighten anything.
+    DEFAULT_MAX_AUTO_TIGHTENINGS = 3
+
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True,
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
-                 max_auto_tightenings: Optional[int] = None, clock=time.time,
+                 max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
                  detection: str = "hybrid"):
-        """Optional limits on automatic tightening (all off by default; see docs/THREAT_MODEL.md).
+        """Limits on automatic tightening (see docs/THREAT_MODEL.md).
+
+        use_semantic and max_auto_tightenings are on by default, per the theory document.
+        require_fresh_evidence and tighten_cooldown_s stay off by default. Pass None to
+        max_auto_tightenings or False to use_semantic to turn those off.
 
         require_fresh_evidence: a new tightening needs a pattern in violations recorded since
             the last change to that boundary, not just the old ones again.
