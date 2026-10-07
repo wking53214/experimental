@@ -7,8 +7,11 @@ produced by evolutionary search over attack parameters.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 import numpy as np
+
+
+ATTACK_KINDS = ("shift", "variance", "oscillate", "decorrelate")
 
 
 @dataclass
@@ -19,12 +22,18 @@ class AttackChromosome:
     durations: List[float]
     delays: List[float]
     fitness: float = 0.0
+    kinds: Optional[List[str]] = None  # per target: one of ATTACK_KINDS; None means all "shift"
 
 
 class EvolutionaryAdversary:
     """Genetic algorithm for generating novel multi-metric attacks."""
 
-    def __init__(self, population_size: int = 20, generations: int = 10, mutation_rate: float = 0.2):
+    def __init__(self, population_size: int = 20, generations: int = 10, mutation_rate: float = 0.2,
+                 attack_kinds: Sequence[str] = ("shift",)):
+        bad = [k for k in attack_kinds if k not in ATTACK_KINDS]
+        if bad or not attack_kinds:
+            raise ValueError(f"attack_kinds must be a non-empty subset of {ATTACK_KINDS}, got {tuple(attack_kinds)}")
+        self.attack_kinds = tuple(attack_kinds)
         self.population_size = population_size
         self.generations = generations
         self.mutation_rate = mutation_rate
@@ -41,12 +50,23 @@ class EvolutionaryAdversary:
                 magnitudes=[float(np.random.uniform(1.5, 5.0)) for _ in targets],
                 durations=[float(np.random.uniform(1.0, 20.0)) for _ in targets],
                 delays=[float(np.random.uniform(0.0, 10.0)) for _ in targets],
+                kinds=self._random_kinds(len(targets)),
             )
             population.append(chromosome)
         self.population = population
         return population
 
+    def _random_kinds(self, n: int) -> List[str]:
+        if len(self.attack_kinds) == 1:  # no randomness consumed: single-kind runs are unchanged
+            return [self.attack_kinds[0]] * n
+        return [str(k) for k in np.random.choice(self.attack_kinds, size=n)]
+
+    @staticmethod
+    def _kinds_of(c: AttackChromosome) -> List[str]:
+        return list(c.kinds) if c.kinds is not None else ["shift"] * len(c.metric_targets)
+
     def mutate(self, chromosome: AttackChromosome, metrics: List[str]) -> AttackChromosome:
+        kinds = self._kinds_of(chromosome)
         mags = list(chromosome.magnitudes)
         durs = list(chromosome.durations)
         dels = list(chromosome.delays)
@@ -62,12 +82,16 @@ class EvolutionaryAdversary:
             i = np.random.randint(0, len(dels))
             dels[i] = float(np.clip(dels[i] + np.random.uniform(-2, 2), 0.0, 20.0))
 
+        if len(self.attack_kinds) > 1 and kinds and np.random.random() < self.mutation_rate:
+            kinds[int(np.random.randint(0, len(kinds)))] = str(np.random.choice(self.attack_kinds))
+
         return AttackChromosome(
             metric_targets=targets,
             magnitudes=mags,
             durations=durs,
             delays=dels,
             fitness=chromosome.fitness,
+            kinds=kinds,
         )
 
     def crossover(self, parent1: AttackChromosome, parent2: AttackChromosome, *_args) -> AttackChromosome:
@@ -82,6 +106,7 @@ class EvolutionaryAdversary:
             magnitudes=parent1.magnitudes[:point] + parent2.magnitudes[point:],
             durations=parent1.durations[:point] + parent2.durations[point:],
             delays=parent1.delays[:point] + parent2.delays[point:],
+            kinds=self._kinds_of(parent1)[:point] + self._kinds_of(parent2)[point:],
         )
         return child
 

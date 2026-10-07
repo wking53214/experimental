@@ -103,7 +103,42 @@ The two middle rows are the trade-off, and it is fundamental, not a bug: a slow 
 
 I left `temporal_shift` off by default because of this. It is the right choice when evasion by subtle attacks is the main concern and a person can acknowledge flagged shifts. It is the wrong one for environments where metrics legitimately drift a lot and nobody is watching.
 
-**Limits of the evidence.** 9C's attack model is only constant-size shifts on chosen metrics, which is exactly what a mean-shift detector is built for. Attacks that change variance, break correlations while keeping means, or oscillate are not generated here, so this result says nothing about them. Data is synthetic Gaussian.
+**Limits of the evidence.** The feedback-loop results above used shift-only attacks, which is exactly what a mean-shift detector is built for; the next section tests other families. Data is synthetic Gaussian.
+
+## Does it generalize beyond mean shifts? (attack families)
+
+9C can now generate four attack families (`EvolutionaryAdversary(attack_kinds=...)`; default is shift only, and default results are unchanged): **shift** (move the mean), **variance** (scale the spread, mean preserved), **oscillate** (alternate the sign of a shift each step, average about zero), and **decorrelate** (blend in independent noise, so the metric keeps its own mean and spread but loses its link to the other metrics).
+
+**Finding: the first version of the temporal layer did not generalize.** Against evolved attacks it helped with shifts only. Correlation breaks were caught about 30% of the time by both detectors. Variance, oscillation and correlation breaks all leave the means alone but increase the energy of the whitened observations, so I added a second statistic to `TemporalShiftDetector` (`dispersion=True` by default): an EWMA of the whitened squared norm, two-sided, with the false-alarm budget split between the two statistics (clean false alarms 0.55% per step, budget 0.5%).
+
+**Detection probability versus attack strength** (`experiments/phase9_power_curves.py`; one metric attacked for 20 steps, 20 seeds per point):
+
+| Family (strength) | | | | | |
+|---|---|---|---|---|---|
+| shift (sigma) | 0.25 | 0.5 | 1.0 | 1.5 | 2.0 |
+| hybrid | 0.35 | 0.40 | 0.40 | 0.55 | 0.75 |
+| + temporal layer | 0.50 | 0.70 | 1.00 | 1.00 | 1.00 |
+| variance (spread ratio) | 1.25 | 1.5 | 2.0 | 3.0 | 4.0 |
+| hybrid | 0.45 | 0.60 | 0.80 | 1.00 | 1.00 |
+| + temporal layer | 0.50 | 0.60 | 0.90 | 1.00 | 1.00 |
+| oscillate (amplitude, sigma) | 0.5 | 1.0 | 1.5 | 2.0 | 3.0 |
+| hybrid | 0.40 | 0.55 | 0.60 | 0.85 | 1.00 |
+| + temporal layer | 0.55 | 0.95 | 1.00 | 1.00 | 1.00 |
+| decorrelate (fraction replaced) | 0.2 | 0.4 | 0.6 | 0.8 | 1.0 |
+| hybrid | 0.30 | 0.15 | 0.15 | 0.30 | 0.90 |
+| + temporal layer | 0.35 | 0.25 | 0.45 | 0.85 | 0.95 |
+
+**Important: the chance floor.** "Detected" means any alarm during the attack window. With no attack at all, a 20-step window still raises an alarm 35% of the time for the hybrid and 40% with the temporal layer (per-step false alarms add up over 20 steps). Values near 0.4 above are chance, not detection. This also inflates the absolute detection rates in the earlier evolution experiments. The comparisons between detectors are still fair because both are counted the same way, and the gains at 1 sigma (0.40 to 1.00) are far above the 5-point difference in chance floor, but treat absolute rates with care.
+
+What the curves show:
+- The layer roughly halves the weakest detectable attack: shifts from about 2 sigma to 0.5 to 1 sigma, oscillation from 2 sigma to 1 sigma, correlation breaks from full replacement to about 70-80% replaced.
+- Variance changes were already caught by the hybrid at 3x or more; the layer adds little there (2x: 0.80 to 0.90).
+- Attacks weaker than those thresholds (shifts under 0.5 sigma, correlation breaks under about 60% replaced, spread changes under 1.5x) are still at chance. At this false-alarm budget and over 20 steps, they are close to undetectable with these statistics.
+- A spread *reduction* on one metric (flatline, ratio 0.5) is barely detected (6 of 20 in a direct check), because one narrowed metric among five changes the total energy only slightly.
+
+**Against evolved attacks of all families** (5 seeds, `experiments/phase9_attack_families.py`), detection over all evolved attacks, hybrid -> hybrid with layer: shift 62% -> 77%, variance 82% -> 86%, oscillate 57% -> 73%, decorrelate 30% -> 35%, mixed 56% -> 58%; false positives 3.8% -> 4.4%. Evolution keeps finding weak versions that sit at the chance floor, especially for correlation breaks and mixed attacks. The "best undetected damage" column in the raw results is not comparable across families, because the damage formula (magnitude times duration) means something different for each attack kind.
+
+So the hardening generalizes partly: it moves the detection threshold down by about 2x for shifts, oscillation and correlation breaks, but it cannot reach attacks below the noise.
 
 ## Caveats
 - Synthetic Gaussian data suits the generative model's assumptions. Real metrics will be harder.

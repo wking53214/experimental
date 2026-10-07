@@ -92,24 +92,50 @@ def train(kind, name, seed, lam=0.2):
     return v
 
 
+def apply_attack(obs, metric, kind, mag, step_in_window, rng):
+    """Apply one attack family to one metric of an observation, in place.
+
+    shift: move the mean. variance: scale the spread around the mean (mean preserved).
+    oscillate: alternate the sign of a shift every step (average shift ~0).
+    decorrelate: blend in independent noise, so the metric keeps its own mean and
+    variance but loses its correlation with the other metrics.
+    """
+    j = METRICS.index(metric)
+    mu, sd = MEANS[j], SD[j]
+    if kind == "shift":
+        obs[metric] += (mag - 1.0) * SHIFT_SIGMA * sd
+    elif kind == "variance":
+        obs[metric] = mu + (obs[metric] - mu) * max(mag, 0.05)
+    elif kind == "oscillate":
+        sign = 1.0 if step_in_window % 2 == 0 else -1.0
+        obs[metric] += sign * (mag - 1.0) * SHIFT_SIGMA * sd
+    elif kind == "decorrelate":
+        w = min(1.0, max(0.0, (mag - 1.0) / 3.0))
+        z = (obs[metric] - mu) / sd
+        obs[metric] = mu + sd * (np.sqrt(1.0 - w * w) * z + w * rng.standard_normal())
+    else:
+        raise ValueError(kind)
+
+
 def run_episode(trained, chrom, rng, attack=True):
     """Returns (detected_during_attack, any_flag, steps_flagged, steps_attacked)."""
     v = copy.deepcopy(trained)
     windows = {}
     if attack:
-        for t, mag, dur, dly in zip(chrom.metric_targets, chrom.magnitudes,
-                                    chrom.durations, chrom.delays):
+        kinds = chrom.kinds if getattr(chrom, "kinds", None) else ["shift"] * len(chrom.metric_targets)
+        for t, mag, dur, dly, kind in zip(chrom.metric_targets, chrom.magnitudes,
+                                          chrom.durations, chrom.delays, kinds):
             s = int(dly)
-            windows[t] = (s, min(EPISODE_STEPS, s + max(1, int(dur))), mag)
+            windows[t] = (s, min(EPISODE_STEPS, s + max(1, int(dur))), mag, kind)
     detected = False
     any_flag = 0
     attacked = 0
     for step in range(EPISODE_STEPS):
         obs = sample(rng)
         active = False
-        for t, (s, e, mag) in windows.items():
+        for t, (s, e, mag, kind) in windows.items():
             if s <= step < e:
-                obs[t] += (mag - 1.0) * SHIFT_SIGMA * SD[METRICS.index(t)]
+                apply_attack(obs, t, kind, mag, step - s, rng)
                 active = True
         flag = v.ingest(2000.0 + step, obs)
         any_flag += flag

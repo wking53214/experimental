@@ -1,0 +1,92 @@
+{
+  "shift": {
+    "hybrid": {
+      "step_fpr": 0.0385,
+      "det_gen0": 0.7600000000000001,
+      "det_last": 0.6,
+      "det_all": 0.623,
+      "evasive": 75.4,
+      "best_undetected_damage": 0.9328063500087056
+    },
+    "hybrid+temporal": {
+      "step_fpr": 0.0445,
+      "det_gen0": 0.9,
+      "det_last": 0.8299999999999998,
+      "det_all": 0.7719999999999999,
+      "evasive": 45.6,
+      "best_undetected_damage": 0.6786754396508774
+    }
+  },
+  "variance": {
+    "hybrid": {
+      "step_fpr": 0.0385,
+      "det_gen0": 0.9,
+      "det_last": 0.8300000000000001,
+      "det_all": 0.8220000000000001,
+      "evasive": 35.6,
+      "best_undetected_damage": 0.8524782613764371
+    },
+    "hybrid+temporal": {
+      "step_fpr": 0.0445,
+      "det_gen0": 0.9199999999999999,
+      "det_last": 0.86,
+      "det_all": 0.861,
+      "evasive": 27.8,
+      "best_undetected_damage": 0.765783201107062
+    }
+  },
+  "oscillate": {
+    "hybrid": {
+      "step_fpr": 0.0385,
+      "det_gen0": 0.74,
+      "det_last": 0.53,
+      "det_all": 0.567,
+      "evasive": 86.6,
+      "best_undetected_damage": 1.0
+    },
+    "hybrid+temporal": {
+      "step_fpr": 0.0445,
+      "det_gen0": 0.89,
+      "det_last": 0.73,
+      "det_all": 0.731,
+      "evasive": 53.8,
+      "best_undetected_damage": 0.8057847284229744
+    }
+  },
+  "decorrelate": {
+    "hybrid": {
+      "step_fpr": 0.0385,
+      "det_gen0": 0.36,
+      "det_last": 0.27,
+      "det_all": 0.29900000000000004,
+      "evasive": 140.2,
+      "best_undetected_damage": 1.0
+    },
+    "hybrid+temporal": {
+      "step_fpr": 0.0445,
+      "det_gen0": 0.47000000000000003,
+      "det_last": 0.32999999999999996,
+      "det_all": 0.34800000000000003,
+      "evasive": 130.4,
+      "best_undetected_damage": 1.0
+    }
+  },
+  "mixed": {
+    "hybrid": {
+      "step_fpr": 0.0385,
+      "det_gen0": 0.76,
+      "det_last": 0.41,
+      "det_all": 0.5599999999999999,
+      "evasive": 88.0,
+      "best_undetected_damage": 1.0
+    },
+    "hybrid+temporal": {
+      "step_fpr": 0.0445,
+      "det_gen0": 0.8800000000000001,
+      "det_last": 0.48999999999999994,
+      "det_all": 0.58,
+      "evasive": 84.0,
+      "best_undetected_damage": 1.0
+    }
+  }
+}

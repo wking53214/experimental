@@ -83,6 +83,18 @@ Each generation is adversarial evaluation:
 - Failed (detected) attacks die out
 - Population converges toward detector-evasive strategies
 
+## Attack families
+`EvolutionaryAdversary(attack_kinds=...)` can evolve four attack families; each gene carries a kind (`AttackChromosome.kinds`), and mutation can switch kinds. The default is shift only, which behaves exactly as before.
+
+| Kind | Effect on the attacked metric |
+|---|---|
+| `shift` | moves the mean |
+| `variance` | scales the spread around the mean (mean preserved) |
+| `oscillate` | alternates the sign of a shift each step (average about zero) |
+| `decorrelate` | blends in independent noise: same mean and spread, no link to the other metrics |
+
+The effects are applied by `apply_attack` in `experiments/phase9_end_to_end.py`. 12 tests in `tests/test_phase9c_attack_kinds.py` cover the gene bookkeeping and check each effect statistically (for example, variance attacks preserve the mean, and decorrelation keeps the marginals while dropping a 0.8 correlation below 0.15).
+
 ## Test Coverage
 
 5 unit tests in `tests/test_phase9b_e_integration.py` (class `TestPhase9C`), all passing: initialization, population generation, mutation, crossover, and fitness evaluation. `run_evolution` itself has no dedicated test. Code coverage was not measured.

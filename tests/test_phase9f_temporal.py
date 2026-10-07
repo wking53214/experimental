@@ -169,3 +169,70 @@ class TestDriftWiring:
         det = HybridDetectorPipeline("w")
         assert det.drift_detector is None
         det.acknowledge_shift()  # no-op, must not raise
+
+
+class TestDispersionStatistic:
+    """Changes that leave the means alone: spread, oscillation, broken correlations."""
+    L = np.linalg.cholesky(np.array([[1.0, 0.8, 0.0], [0.8, 1.0, 0.0], [0.0, 0.0, 1.0]]))
+
+    def _draw(self, rng):
+        return self.L @ rng.standard_normal(3)  # a and b correlated at 0.8
+
+    def _trained(self, seed, **kw):
+        rng = np.random.default_rng(seed)
+        d = TemporalShiftDetector(**kw)
+        for _ in range(100):
+            v = self._draw(rng)
+            d.update({"a": float(v[0]), "b": float(v[1]), "c": float(v[2])})
+        return d, rng
+
+    def _detect_rate(self, attack, seeds=8, steps=40, **kw):
+        hits = 0
+        for s in range(seeds):
+            d, rng = self._trained(s, **kw)
+            hit = False
+            for i in range(steps):
+                v = self._draw(rng)
+                v = attack(v, i, rng)
+                hit |= d.update({"a": float(v[0]), "b": float(v[1]), "c": float(v[2])})["anomaly_detected"]
+            hits += hit
+        return hits / seeds
+
+    def test_clean_false_alarm_rate_stays_low(self):
+        flags = n = 0
+        for s in range(10):
+            d, rng = self._trained(s)
+            for _ in range(200):
+                v = self._draw(rng)
+                flags += d.update({"a": float(v[0]), "b": float(v[1]), "c": float(v[2])})["anomaly_detected"]
+                n += 1
+        assert flags / n < 0.02
+
+    def test_detects_variance_inflation(self):
+        def attack(v, i, rng):
+            v = v.copy(); v[0] *= 2.5; return v
+        assert self._detect_rate(attack) >= 0.85
+
+    def test_detects_oscillation_with_zero_mean(self):
+        def attack(v, i, rng):
+            v = v.copy(); v[0] += (2.5 if i % 2 == 0 else -2.5); return v
+        assert self._detect_rate(attack) >= 0.85
+
+    def test_detects_broken_correlation_with_intact_marginals(self):
+        def attack(v, i, rng):
+            v = v.copy(); v[1] = rng.standard_normal(); return v  # same marginal, no link to a
+        assert self._detect_rate(attack) >= 0.85
+
+    def test_reports_which_statistic_fired(self):
+        d, rng = self._trained(0)
+        reasons = set()
+        for i in range(40):
+            v = self._draw(rng); v[0] += (3.0 if i % 2 == 0 else -3.0)
+            r = d.update({"a": float(v[0]), "b": float(v[1]), "c": float(v[2])})
+            if r["anomaly_detected"]:
+                reasons.add(r["reason"])
+        assert any("Spread/correlation" in r for r in reasons)
+
+    def test_can_be_disabled(self):
+        d, _ = self._trained(0, dispersion=False)
+        assert d.dispersion_threshold == float("inf")
