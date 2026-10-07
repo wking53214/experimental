@@ -1,5 +1,7 @@
 """Tests for Phase 9D (concept drift / adaptive baseline) and 9E (precursors / early warning)."""
 
+import json
+
 import numpy as np
 import pytest
 
@@ -30,7 +32,7 @@ class TestConceptDriftDetector:
         d = ConceptDriftDetector(window_size=50)
         for obs in _noisy(rng, 100, 120):
             d.update(obs)
-        assert not d.get_drift_status()["has_drift"]
+        assert d.get_drift_status()["has_drift"] is False
 
     def test_mean_shift_is_detected(self):
         rng = np.random.default_rng(0)
@@ -40,7 +42,9 @@ class TestConceptDriftDetector:
         for obs in _noisy(rng, 200, 60):
             d.update(obs)
         status = d.get_drift_status()
-        assert status["has_drift"]
+        assert status["has_drift"] is True
+        assert type(status["drift_score"]) is float
+        json.dumps(status)
         assert status["drift_type"] == "sudden"
 
     def test_kl_identical_is_zero(self):

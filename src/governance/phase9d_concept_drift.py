@@ -84,8 +84,8 @@ class ConceptDriftDetector:
         recent_drift = np.mean(self.drift_history[-10:]) if len(self.drift_history) >= 10 else self.drift_history[-1]
 
         return {
-            "has_drift": recent_drift > self.drift_threshold,
-            "drift_score": recent_drift,
+            "has_drift": bool(recent_drift > self.drift_threshold),
+            "drift_score": float(recent_drift),
             "drift_type": "sudden" if len(self.drift_history) > 0 and self.drift_history[-1] > 0.7 else "gradual",
             "drift_history": self.drift_history[-20:],
         }

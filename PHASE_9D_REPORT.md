@@ -125,7 +125,7 @@ Example: Memory leak → latency gradually increases, success rate gradually dec
 | TestOnlineAdaptiveBaseline | 5 | uninitialized state, threshold boundary (3.0 accepted), rejection leaves baseline unchanged, tracking of gradual drift, resistance to a 50-observation poisoning attempt |
 | TestAdaptiveDetector | 2 | accept/reject counts and acceptance rate, empty summary |
 
-Code coverage was not measured. Minor note: `has_drift` is returned as a NumPy bool, not a Python bool, which can trip JSON serialization.
+Code coverage was not measured.
 
 ## Performance Characteristics
 
