@@ -19,7 +19,7 @@ Each layer keeps its own decision, and the hybrid alarms if any layer fires. The
 3. A shared `> 0.5` score cutoff made the traditional layer fire about three times as often as its own rule intends.
 
 ## Integration
-`Governor.ingest_metrics` (`src/governance/governor.py`) creates one `HybridDetectorPipeline` per boundary, ingests each observation, calls `detect_anomalies()`, and records an execution plus violation event whenever `anomaly_detected` is true. Before fix 1, this would have recorded a violation on every observation after the generative layer's 20-observation warmup. The temporal option is not enabled by the governor.
+**Default changed 2026-10-07: `Governor` now defaults to `detection="generative"`; the hybrid is opt-in (`detection="hybrid"`). Reason: on real 30-metric telemetry the hybrid's traditional layer alarms on about 99.9% of steps (docs/BASELINE_COMPARISON.md).** `Governor.ingest_metrics` (`src/governance/governor.py`) creates one pipeline per boundary (hybrid only when requested), ingests each observation, calls `detect_anomalies()`, and records an execution plus violation event whenever `anomaly_detected` is true. Before fix 1, this would have recorded a violation on every observation after the generative layer's 20-observation warmup. The temporal option is not enabled by the governor.
 
 ## Measured
 - Cost: about 0.08 ms per observation (ingest plus detect, 5 metrics); about 0.24 ms with the temporal layer and drift detector on.

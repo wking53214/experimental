@@ -51,6 +51,8 @@ See `results/multiseed_summary.md` for numeric tables (N=200).
 
 ## Figure 4 — Hybrid multi-metric dataflow
 
+> This is the opt-in hybrid path. The default is now generative-only (the Generative / Mahalanobis branch alone): see `BASELINE_COMPARISON.md`.
+
 ```mermaid
 flowchart LR
   M[Metrics dict] --> H[HybridDetectorPipeline]

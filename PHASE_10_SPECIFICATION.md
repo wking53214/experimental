@@ -69,6 +69,8 @@ For each experiment E in {Phase7C_diurnal_FP, Phase5_endurance, Phase3_convergen
 
 ## 10B — HybridDetectorPipeline Default Path
 
+> **Superseded.** Default changed 2026-10-07: `Governor` now defaults to `detection="generative"`; the hybrid is opt-in (`detection="hybrid"`). Reason: on real 30-metric telemetry the hybrid's traditional layer alarms on about 99.9% of steps (docs/BASELINE_COMPARISON.md).
+
 **Problem:** Phase 9 built hybrid traditional + generative detection; Governor still primarily uses per-boundary AdaptiveAnomalyDetector + pattern path for scalar observations.
 
 ### Design

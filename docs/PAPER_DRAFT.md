@@ -17,7 +17,7 @@ Adaptive adversaries, generative/evolutionary attacks, semantic spoofing, baseli
 
 ## 3. Architecture
 
-Immutable principles; versioned boundaries; event log; multi-signal and hybrid detection; anti-spoof semantic filter; authority cut-point; usability floor at 20% of original limit.
+Immutable principles; versioned boundaries; event log; multi-signal detection (hybrid is opt-in; the default is generative-only after the real-data comparison in `docs/BASELINE_COMPARISON.md`); anti-spoof semantic filter; authority cut-point; usability floor at 20% of original limit.
 
 ## 4. Evaluation
 

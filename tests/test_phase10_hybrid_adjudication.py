@@ -8,8 +8,19 @@ from src.governance.phase9_integration import HybridDetectorPipeline
 
 
 class TestPhase10BHybridDefault:
-    def test_ingest_uses_hybrid_pipeline(self):
-        gov = Governor(store_path="/tmp/p10b_hybrid", use_semantic=False)
+    def test_default_ingest_uses_generative_pipeline(self):
+        # The default was switched from hybrid to generative-only after the real-data comparison
+        # (docs/BASELINE_COMPARISON.md): the hybrid's traditional layer alarms on ~every step of
+        # real many-metric telemetry.
+        from src.governance.phase9_integration import GenerativePipeline
+        gov = Governor(store_path="/tmp/p10b_generative", use_semantic=False)
+        gov.boundaries.create_boundary("svc", "cpu", 100)
+        for i in range(25):
+            gov.ingest_metrics("svc", 1000.0 + i, {"cpu": 40.0 + (i % 3), "mem": 50.0})
+        assert isinstance(gov.detector_pipelines["svc"], GenerativePipeline)
+
+    def test_ingest_uses_hybrid_pipeline_when_requested(self):
+        gov = Governor(store_path="/tmp/p10b_hybrid", use_semantic=False, detection="hybrid")
         gov.boundaries.create_boundary("svc", "cpu", 100)
         for i in range(25):
             gov.ingest_metrics("svc", 1000.0 + i, {"cpu": 40.0 + (i % 3), "mem": 50.0})

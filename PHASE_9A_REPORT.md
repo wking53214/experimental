@@ -23,7 +23,7 @@ Detail and numbers are in `PHASE9_EXPERIMENT_RESULTS.md`.
 About 0.06 ms per observation (detect plus ingest, 5 metrics, one machine, pure Python and NumPy). The covariance and its inverse are recomputed on every call, because the cache-validity flag is never set.
 
 ## Integration
-Used by `HybridDetectorPipeline` (Phase 9B), which the `Governor` creates per boundary. Nothing else imports it.
+Used by `HybridDetectorPipeline` (Phase 9B) and, alone, by `GenerativePipeline`, which the `Governor` now creates per boundary by default (the hybrid is opt-in). Nothing else imports it.
 
 ## Limitations
 - Assumes roughly Gaussian data; all experiments used synthetic Gaussian data.

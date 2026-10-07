@@ -42,6 +42,8 @@ python scripts/run_multiseed.py --seeds 10 --out results/multiseed_summary.json
 
 ## 10B — HybridDetectorPipeline Default Path ✅
 
+> **Superseded.** Default changed 2026-10-07: `Governor` now defaults to `detection="generative"`; the hybrid is opt-in (`detection="hybrid"`). Reason: on real 30-metric telemetry the hybrid's traditional layer alarms on about 99.9% of steps (docs/BASELINE_COMPARISON.md). The text below records what Phase 10 delivered at the time.
+
 ### Implementation
 
 - `Governor.ingest_metrics` constructs **`HybridDetectorPipeline`** (not base `DetectorPipeline`) per boundary.

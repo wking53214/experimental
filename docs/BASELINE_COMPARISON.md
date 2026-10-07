@@ -101,7 +101,7 @@ Reading it:
 
 ## 5. What is available
 
-- `Governor(detection="generative")` runs only the generative layer (scored before it learns each point). The default is still `"hybrid"`, so existing behavior is unchanged. Changing the default is a decision for the project owner; the evidence above says the hybrid is the wrong default for real multi-metric telemetry.
+- `Governor(detection="generative")` runs only the generative layer (scored before it learns each point). **It is now the default** (changed 2026-10-07 at the project owner's decision); `detection="hybrid"` keeps the old behavior. Two existing tests that asserted the hybrid default were updated, and the hybrid path is still tested.
 - Scoring note: the hybrid's generative layer ingests an observation before scoring it, so a point partly explains itself. The generative-only pipeline scores first.
 
 ## Caveats

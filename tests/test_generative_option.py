@@ -15,8 +15,9 @@ def _feed(g, n, rng, shift=0.0, start=0):
     return alarms
 
 
-def test_default_detection_is_hybrid_and_bad_value_rejected(tmp_path):
-    assert Governor(store_path=str(tmp_path)).detection == "hybrid"
+def test_default_detection_is_generative_and_bad_value_rejected(tmp_path):
+    assert Governor(store_path=str(tmp_path)).detection == "generative"
+    assert Governor(store_path=str(tmp_path), detection="hybrid").detection == "hybrid"
     with pytest.raises(ValueError):
         Governor(store_path=str(tmp_path), detection="nope")
 

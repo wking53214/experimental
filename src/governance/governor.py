@@ -27,7 +27,7 @@ class Governor:
     def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = False,
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
                  max_auto_tightenings: Optional[int] = None, clock=time.time,
-                 detection: str = "hybrid"):
+                 detection: str = "generative"):
         """Optional limits on automatic tightening (all off by default; see docs/THREAT_MODEL.md).
 
         require_fresh_evidence: a new tightening needs a pattern in violations recorded since
@@ -93,7 +93,7 @@ class Governor:
                 execution = self.events.record_execution(
                     boundary_id=boundary_id, boundary_version=boundary.version,
                     observed_value=detection_result.get("anomaly_score", 0.0),
-                    context={"detection_type": "hybrid_multi_metric"},
+                    context={"detection_type": f"{self.detection}_multi_metric"},
                 )
                 violation = self.events.record_violation(
                     execution_id=execution.execution_id, boundary_id=boundary_id,
@@ -318,7 +318,7 @@ class Governor:
                     execution = self.events.record_execution(
                         boundary_id=boundary_id, boundary_version=boundary.version,
                         observed_value=result.get("anomaly_score", 1.0),
-                        context={"source": "hybrid_pipeline"},
+                        context={"source": f"{self.detection}_pipeline"},
                     )
                     self.events.record_violation(
                         execution_id=execution.execution_id, boundary_id=boundary_id,
