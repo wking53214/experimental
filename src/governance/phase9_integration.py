@@ -50,9 +50,9 @@ class HybridDetectorPipeline(BaseDetectorPipeline):
         traditional = super().detect_anomalies()
 
         # Layer 2: Generative detection
-        generative = self.generative_detector.detect_anomaly(
-            self.stream.recent_observation() if hasattr(self.stream, 'recent_observation') else {}
-        )
+        latest = self.stream.get_latest()
+        latest_metrics = latest[1] if latest else {}
+        generative = self.generative_detector.detect_anomaly(latest_metrics)
 
         # Composite scoring
         traditional_score = traditional.get("anomaly_score", 0.0)

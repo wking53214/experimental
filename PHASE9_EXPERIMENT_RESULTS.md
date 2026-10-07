@@ -9,18 +9,19 @@ Script: `experiments/phase9_end_to_end.py` (`python -m experiments.phase9_end_to
 - Damage = sum of `|magnitude - 1| * duration`, normalized to [0, 1]. This is my own definition; 9C does not specify one.
 - 9C runs 20 attacks x 10 generations per detector per seed, averaged over 5 seeds.
 - "Calibrated" means the Mahalanobis threshold is set to the 99.9th percentile of chi-square with 5 degrees of freedom (4.53) instead of the default 3.0.
-- "Hybrid fixed" is an experiment-local subclass that feeds the generative layer the real latest observation. The repo code is unchanged.
+- "Hybrid fixed" is an experiment-local subclass that feeds the generative layer the real latest observation. The repo's `HybridDetectorPipeline` now does the same.
 
 ## Findings
 
-### 1. The shipped hybrid detector is broken
-`HybridDetectorPipeline.detect_anomalies` calls `self.stream.recent_observation()`, which does not exist on `MetricStream`. A `hasattr` guard hides this and passes `{}`. Missing metrics default to 0, so the Mahalanobis distance is huge on every step.
+### 1. The shipped hybrid detector was broken (now fixed)
+`HybridDetectorPipeline.detect_anomalies` called `self.stream.recent_observation()`, which does not exist on `MetricStream`. A `hasattr` guard hid this and passed `{}`. Missing metrics default to 0, so the Mahalanobis distance was huge on every step.
 
 | | step false-positive rate |
 |---|---|
-| hybrid as shipped | **100%** (flags every step) |
+| hybrid as shipped (before the fix) | **100%** (flagged every step) |
+| hybrid after the fix | 10.6% |
 
-Its 100% detection rate in the table below is meaningless.
+The fix uses `self.stream.get_latest()`. The "hybrid as shipped" rows in the table below were measured before the fix and are meaningless; the "hybrid fixed" rows describe the code as it now behaves. The remaining 10.6% comes from the loose combined cutoff, see finding 3.
 
 ### 2. The default Mahalanobis threshold of 3.0 is wrong for multivariate data
 3.0 is a univariate 3-sigma rule. With 5 metrics, about 11% of normal observations exceed it by chance, so the default generative detector alarms constantly.
@@ -58,7 +59,7 @@ Its 100% detection rate in the table below is meaningless.
 - 9D and 9E are exercised standalone. The repo has no wiring between 9B, 9C, 9D and 9E, so this experiment composes them by hand.
 
 ## Suggested fixes (not applied)
-1. Fix `HybridDetectorPipeline` to use `self.stream.get_latest()` and add a test with clean data that asserts a low false-positive rate.
+1. ~~Fix `HybridDetectorPipeline` wiring~~ (done, with regression tests).
 2. Default the Mahalanobis threshold from chi-square quantiles for the metric count.
 3. Use the traditional layer's own 0.85 cutoff (or tune the combined cutoff) in the hybrid.
 4. In 9D, refresh the reference distribution and classify drift by rate, not just size.

@@ -76,3 +76,35 @@ class TestPhase9C:
         fitness1 = adversary.evaluate_fitness(chromosome, damage=0.8, detected=False)
         fitness2 = adversary.evaluate_fitness(chromosome, damage=0.8, detected=True)
         assert fitness1 > fitness2
+
+
+class TestHybridGenerativeWiring:
+    """The generative layer must score the real latest observation."""
+
+    @staticmethod
+    def _sample(rng):
+        return {"a": float(rng.normal(100, 5)), "b": float(rng.normal(50, 3))}
+
+    def test_clean_data_not_flagged_by_generative_layer(self):
+        rng = np.random.default_rng(1)
+        det = HybridDetectorPipeline("w", history_window=100)
+        flags = 0
+        for i in range(200):
+            det.ingest_metrics(1000.0 + i, self._sample(rng))
+            if i >= 40:
+                flags += det.detect_anomalies()["generative_detection"]["anomaly_detected"]
+        assert flags / 160 < 0.25
+
+    def test_generative_layer_sees_anomalous_observation(self):
+        rng = np.random.default_rng(2)
+        det = HybridDetectorPipeline("w", history_window=100)
+        for i in range(60):
+            det.ingest_metrics(1000.0 + i, self._sample(rng))
+        det.ingest_metrics(2000.0, {"a": 100.0 + 8 * 5, "b": 50.0 - 8 * 3})
+        r = det.detect_anomalies()
+        assert r["generative_score"] > 0.5
+        assert r["mahalanobis_distance"] > 3.0
+
+    def test_empty_stream_does_not_crash(self):
+        r = HybridDetectorPipeline("w").detect_anomalies()
+        assert r["anomaly_detected"] is False
