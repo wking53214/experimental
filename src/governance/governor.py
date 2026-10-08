@@ -35,7 +35,7 @@ class Governor:
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
                  max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
                  detection: str = "generative", operators: Optional[OperatorRegistry] = None,
-                 audit_path: Optional[str] = None):
+                 audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
@@ -45,6 +45,9 @@ class Governor:
         operators: an OperatorRegistry. When given, operator decisions need a credential that
             authenticates for the operator_id (docs/THREAT_MODEL.md, T9).
         audit_path: file for the hash-chained audit log (docs/THREAT_MODEL.md, T8); in memory if None.
+        baseline_check_at: with detection='generative', check each boundary's first N observations
+            for contamination once (docs/BASELINE_POISONING.md); the result goes to the audit log and,
+            if suspicious, to `baseline_reviews` for a person. Off by default.
 
         require_fresh_evidence: a new tightening needs a pattern in violations recorded since
             the last change to that boundary, not just the old ones again.
@@ -65,6 +68,9 @@ class Governor:
         self._last_auto_tighten_at: dict = {}
         self._auto_tightenings: dict = {}
         self.tightening_holds: list = []
+        self.baseline_check_at = baseline_check_at
+        self.baseline_reviews: list = []
+        self._baseline_logged: set = set()
         self.principles = PrincipleStore()
         self.boundaries = BoundaryStore()
         self.events = EventStore()
@@ -99,10 +105,20 @@ class Governor:
 
     def ingest_metrics(self, boundary_id: str, timestamp: float, metrics: dict):
         if boundary_id not in self.detector_pipelines:
-            cls = GenerativePipeline if self.detection == "generative" else HybridDetectorPipeline
-            self.detector_pipelines[boundary_id] = cls(boundary_id)
+            if self.detection == "generative":
+                self.detector_pipelines[boundary_id] = GenerativePipeline(
+                    boundary_id, baseline_check_at=self.baseline_check_at)
+            else:
+                self.detector_pipelines[boundary_id] = HybridDetectorPipeline(boundary_id)
         pipeline = self.detector_pipelines[boundary_id]
         pipeline.ingest_metrics(timestamp, metrics)
+        report = getattr(pipeline, "baseline_report", None)
+        if report is not None and boundary_id not in self._baseline_logged:
+            self._baseline_logged.add(boundary_id)
+            self.audit.append("baseline_check", {"boundary_id": boundary_id, "suspicious": report["suspicious"],
+                                               "flags": report["flags"]})
+            if report["suspicious"]:
+                self.baseline_reviews.append({"boundary_id": boundary_id, "flags": report["flags"]})
         detection_result = pipeline.detect_anomalies()
         violations = []
         if detection_result.get("anomaly_detected"):

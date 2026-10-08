@@ -139,13 +139,22 @@ class GenerativePipeline:
     Each observation is scored against the model BEFORE it is added to it (the hybrid scores after,
     which lets the point partly explain itself). On real 30-metric telemetry this is the only layer
     of the hybrid that does not alarm on nearly every step; see docs/BASELINE_COMPARISON.md.
+
+    baseline_check_at: after this many observations, run baseline_check.check_baseline once on them
+    and keep the result in `baseline_report` (docs/BASELINE_POISONING.md). It never blocks anything:
+    a person decides what to do with a flagged baseline. Off by default.
     """
 
-    def __init__(self, boundary_id: str, mahalanobis_threshold: Optional[float] = None, **_ignored):
+    def __init__(self, boundary_id: str, mahalanobis_threshold: Optional[float] = None,
+                 baseline_check_at: Optional[int] = None, **_ignored):
         self.boundary_id = boundary_id
         self.generative_detector = GenerativeAnomalyDetector(
             boundary_id, min_observations=20, mahalanobis_threshold=mahalanobis_threshold)
         self._last: Dict = {"anomaly_detected": False, "anomaly_score": 0.0}
+        self._check_at = baseline_check_at
+        self._names: Optional[list] = None
+        self._rows: list = []
+        self.baseline_report: Optional[Dict] = None
 
     def ingest_metrics(self, timestamp: float, metrics: Dict[str, float]) -> None:
         result = self.generative_detector.detect_anomaly(dict(metrics))
@@ -155,6 +164,15 @@ class GenerativePipeline:
             "anomaly_score": float(result.get("anomaly_score", 0.0)),
             "generative_detection": result,
         }
+        if self._check_at and self.baseline_report is None:
+            if self._names is None:
+                self._names = sorted(metrics)
+            self._rows.append([float(metrics.get(n, 0.0)) for n in self._names])
+            if len(self._rows) >= self._check_at:
+                import numpy as np
+                from .baseline_check import check_baseline
+                self.baseline_report = check_baseline(np.array(self._rows))
+                self._rows = []
 
     def detect_anomalies(self) -> Dict:
         return dict(self._last)

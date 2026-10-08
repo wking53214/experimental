@@ -19,7 +19,7 @@ import numpy as np
 class CalibratedMahalanobisDetector:
     def __init__(self, target_fpr: float = 0.01, decay: float = 0.0, holdout_fraction: float = 0.3,
                  recompute_every: int = 50, ridge: float = 1e-6, min_fit: int = 50,
-                 reject_mult: float = 1.0):
+                 reject_mult: float = 1.0, trim: float = 0.0):
         if not 0.0 < target_fpr < 1.0:
             raise ValueError("target_fpr must be in (0, 1)")
         self.target_fpr, self.decay = target_fpr, decay
@@ -29,6 +29,12 @@ class CalibratedMahalanobisDetector:
         # steps (can get stuck after a level shift); larger values let the model follow a shift
         # while still refusing gross outliers
         self.reject_mult = reject_mult
+        # Robust fit against a contaminated baseline: refit without the `trim` fraction of points
+        # furthest from the model, and set the threshold from the median score instead of the upper
+        # tail (Gaussian assumption; see docs/BASELINE_POISONING.md).
+        if not 0.0 <= trim < 0.5:
+            raise ValueError("trim must be in [0, 0.5)")
+        self.trim = trim
         self.fitted = False
         self.threshold = float("inf")
 
@@ -58,8 +64,15 @@ class CalibratedMahalanobisDetector:
             self._refresh()
 
     # ---- API ----
-    def fit(self, X) -> "CalibratedMahalanobisDetector":
+    def fit(self, X, require_clean: bool = False) -> "CalibratedMahalanobisDetector":
+        """require_clean: refuse a baseline that check_baseline() flags (Gaussian assumption)."""
         X = np.asarray(X, dtype=float)
+        self.baseline_report = None
+        if require_clean:
+            from .baseline_check import check_baseline
+            self.baseline_report = check_baseline(X)
+            if self.baseline_report["suspicious"]:
+                raise ValueError("baseline looks contaminated (" + ", ".join(self.baseline_report["flags"]) + ")")
         self.keep = X.std(0) > 1e-9
         X = X[:, self.keep]
         n = len(X)
@@ -67,13 +80,32 @@ class CalibratedMahalanobisDetector:
             raise ValueError(f"need at least {self.min_fit} baseline observations")
         k = min(max(int(n * (1.0 - self.holdout_fraction)), self.min_fit // 2), n - 1)
         self._set_model(X[:k])
+        for _ in range(3 if self.trim else 0):
+            fit_scores = np.array([self._score(r) for r in X[:k]])
+            kept = X[:k][fit_scores <= np.quantile(fit_scores, 1.0 - self.trim)]
+            if len(kept) < max(self.min_fit // 2, X.shape[1] + 2):
+                break
+            self._set_model(kept)
         scores = []
         for row in X[k:]:  # prequential: score first, then adapt, exactly as in service
             sc = self._score(row)
             scores.append(sc)
             if self.decay > 0 and sc <= self._cap(scores):
                 self._adapt(row)
-        self.threshold = float(np.quantile(scores, 1.0 - self.target_fpr))
+        if self.trim:
+            # Contamination inflates the upper tail of the calibration scores, so do not read the
+            # threshold from it. Scale a chi-square cutoff by the MEDIAN score, which contamination
+            # barely moves. This assumes roughly Gaussian metrics (it is the Gaussian formula again,
+            # with a robust scale), so it does not carry the empirical calibration's real-data benefit.
+            from statistics import NormalDist
+            from .multivariate import calibrated_mahalanobis_threshold
+            k = X.shape[1]
+            median_chi = (k * (1.0 - 2.0 / (9.0 * k)) ** 3) ** 0.5
+            scale = float(np.median(scores)) / median_chi
+            self.threshold = scale * calibrated_mahalanobis_threshold(
+                k, NormalDist().inv_cdf(1.0 - self.target_fpr))
+        else:
+            self.threshold = float(np.quantile(scores, 1.0 - self.target_fpr))
         self.fitted = True
         return self
 

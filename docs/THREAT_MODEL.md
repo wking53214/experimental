@@ -35,7 +35,7 @@ Scope: the claim this project makes and who it holds against. Each row says what
 | # | Threat | Attacker | Status | Evidence |
 |---|---|---|---|---|
 | T1 | **Evasion**: stay under the detectors | A1 | Partly mitigated. Evolved attacks still evade at weak strengths. A temporal layer roughly halves the weakest detectable shift, at the cost of absorbing slow attacks as drift (T5). | `PHASE9_EXPERIMENT_RESULTS.md`, `experiments/phase9_power_curves.py` |
-| T2 | **Baseline poisoning**: attacker is present while the baseline is learned | A1 | **Not evaluated.** The baseline is assumed clean. | none |
+| T2 | **Baseline poisoning**: attacker is present while the baseline is learned | A1 | **Real, measured, only partly mitigated.** 5% contamination of the baseline cuts detection of a 2 sd shift from 100% to 13% to 36%; 20% cuts a 3 sd shift to 3% to 12%; a slow ramp to 3% to 5%. A baseline check flags light and moderate contamination (94% to 100%) and ramps (100%) but is blind to heavy (40%) contamination and variance inflation, and flags about 8% of clean baselines. Robust fitting helps at 10% contamination and not at 40%, a ramp or inflation. The default detector learns from its first observations with no clean window; `Governor(baseline_check_at=N)` is opt-in. | `docs/BASELINE_POISONING.md`, `tests/test_baseline_poisoning.py` |
 | T3 | **Tightening as denial of service**: feed over-limit values so the system tightens itself to the floor | A1 | **Real, now measured.** Opt-in mitigation reduces it. See below. | `experiments/dos_tightening.py`, `tests/test_tightening_limits.py` |
 | T4 | **Spoofing "expected" load** so that real violations are excused | A2 | **Weak.** Patterns marked untrusted are ignored, but registration defaults to `trusted=True`, so any caller who can register a pattern is trusted. Only tests in `tests/test_sprint1_semantic.py`. Semantic classification is on by default, but only excuses a violation inside a range someone registered. | `src/governance/workload.py` |
 | T5 | **Slow attack absorbed as drift** | A1 | **Open trade-off.** A change slower than the drift window is indistinguishable from legitimate drift. The temporal layer is off by default for this reason. | `PHASE_9F_REPORT.md` |
@@ -72,7 +72,7 @@ What this says:
 
 1. Anchor storage (T8): the log only helps against a rewrite if its head hash is kept somewhere the governor cannot write. Nothing here does that for you.
 2. Asymmetric operator signatures (T9) for real non-repudiation; needs a crypto library the project does not depend on yet.
-3. T2 baseline poisoning: measure how much a short attacker presence during training shifts later detection.
+3. T2 follow-up: procedural controls (no learning while exposed to an untrusted party, a person confirms the baseline window); the check and robust fit are partial. Not measured: poison smaller than the attack, poison placed at the end of the window, real telemetry.
 4. T4: require operator approval to register an expected-load pattern.
 5. T10 TLS, T11 memory bounds.
 6. A6: a rule that high-impact loosenings need two operators.
