@@ -25,7 +25,7 @@ Meaning: with the current detector, the system cannot run unattended on real man
 
 ### 2. On clean synthetic data the same leak exists in a milder form
 
-30 independent Gaussian metrics, 3,000 clean steps, 8 seeds, with 0.3% to 0.6% false alarms: the defaults tighten 3 times in every seed (the breaker cap). Evidence never expires, so any three violations ever are a pattern. With `evidence_window=100` and `require_fresh_evidence` the count falls to 0 or 1 per run (0 in 4 of 8 seeds; a window of 50 gives 0 in 6 of 8). Both options stay **off by default**: turning them on breaks three tests that pin the old behavior on purpose, so the choice is yours. I recommend turning them on.
+30 independent Gaussian metrics, 3,000 clean steps, 8 seeds (false alarms were 0.3% to 0.6% in a separate 1,500-step check): the defaults tighten 3 times in every seed (the breaker cap). Evidence never expires, so any three violations ever are a pattern. With `evidence_window=100` and `require_fresh_evidence` the count falls to 0 or 1 per run (0 in 3 of 8 seeds; a window of 50 gives 0 in 6 of 8). Both options stay **off by default**: turning them on breaks three tests that pin the old behavior on purpose, so the choice is yours. I recommend turning them on.
 
 ### 3. Defects found and fixed
 
