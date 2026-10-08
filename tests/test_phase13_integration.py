@@ -219,3 +219,21 @@ class TestHoldLogging:
         assert len(g.tightening_holds) == 2
         assert len(g.audit.find("tightening_held")) == 2
         assert g.verify_governance_integrity()[0]
+
+
+class TestKnownGapRestart:
+    def test_known_gap_a_restart_resets_tightened_limits(self, tmp_path):
+        """Documents threat T13: boundaries are held in memory only, so a restart discards the
+        tightening and the application re-creates the boundary at its configured value. That is a
+        loosening with no grant and no audit record. Not fixed yet: when it is, this test must be
+        rewritten to assert the limit survives."""
+        g = Governor(store_path=str(tmp_path))
+        g.boundaries.create_boundary("api", "rate", 100.0)
+        flood(g, 30)
+        assert g.boundaries.get_boundary("api").current_limit < 100.0
+        g2 = Governor(store_path=str(tmp_path))  # a restart with the same store path
+        with pytest.raises(KeyError):
+            g2.boundaries.get_boundary("api")
+        g2.boundaries.create_boundary("api", "rate", 100.0)
+        assert g2.boundaries.get_boundary("api").current_limit == 100.0
+        assert g2.verify_governance_integrity()[0], "and nothing notices"

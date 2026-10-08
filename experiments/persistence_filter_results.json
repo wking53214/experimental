@@ -1,0 +1,623 @@
+{
+  "per_machine": {
+    "1-of-1": {
+      "machine-1-1": {
+        "step_fpr": 0.08772542175683537,
+        "episodes": 143,
+        "event_rec": 1.0,
+        "point_rec": 0.6425389755011136
+      },
+      "machine-2-1": {
+        "step_fpr": 0.055096785650861305,
+        "episodes": 144,
+        "event_rec": 1.0,
+        "point_rec": 0.26495726495726496
+      },
+      "machine-3-1": {
+        "step_fpr": 0.14109608340377572,
+        "episodes": 118,
+        "event_rec": 1.0,
+        "point_rec": 0.9545454545454546
+      },
+      "machine-1-6": {
+        "step_fpr": 0.13968269856363547,
+        "episodes": 87,
+        "event_rec": 0.9666666666666667,
+        "point_rec": 0.8055555555555556
+      },
+      "machine-1-2": {
+        "step_fpr": 0.06871976503109882,
+        "episodes": 148,
+        "event_rec": 1.0,
+        "point_rec": 0.5738007380073801
+      },
+      "machine-1-3": {
+        "step_fpr": 0.07030498995018788,
+        "episodes": 91,
+        "event_rec": 1.0,
+        "point_rec": 0.44063647490820074
+      },
+      "machine-1-4": {
+        "step_fpr": 0.08226388828468265,
+        "episodes": 76,
+        "event_rec": 1.0,
+        "point_rec": 0.48055555555555557
+      },
+      "machine-2-2": {
+        "step_fpr": 0.08127665692241338,
+        "episodes": 71,
+        "event_rec": 1.0,
+        "point_rec": 0.08542181433109777
+      },
+      "machine-2-3": {
+        "step_fpr": 0.05546541417591802,
+        "episodes": 51,
+        "event_rec": 1.0,
+        "point_rec": 0.8550185873605948
+      },
+      "machine-2-4": {
+        "step_fpr": 0.06719709024778359,
+        "episodes": 81,
+        "event_rec": 1.0,
+        "point_rec": 0.34887839433293977
+      },
+      "machine-3-2": {
+        "step_fpr": 0.07988846596441533,
+        "episodes": 275,
+        "event_rec": 0.9,
+        "point_rec": 0.0739404869251578
+      },
+      "machine-3-3": {
+        "step_fpr": 0.0336786441853409,
+        "episodes": 96,
+        "event_rec": 1.0,
+        "point_rec": 0.3829113924050633
+      }
+    },
+    "3-of-5": {
+      "machine-1-1": {
+        "step_fpr": 0.07585805700988947,
+        "episodes": 38,
+        "event_rec": 1.0,
+        "point_rec": 0.6388270230141054
+      },
+      "machine-2-1": {
+        "step_fpr": 0.022065352512875155,
+        "episodes": 39,
+        "event_rec": 0.9230769230769231,
+        "point_rec": 0.21196581196581196
+      },
+      "machine-3-1": {
+        "step_fpr": 0.10319808396731474,
+        "episodes": 68,
+        "event_rec": 1.0,
+        "point_rec": 0.9285714285714286
+      },
+      "machine-1-6": {
+        "step_fpr": 0.11621039987988589,
+        "episodes": 44,
+        "event_rec": 0.7666666666666667,
+        "point_rec": 0.8271305285868392
+      },
+      "machine-1-2": {
+        "step_fpr": 0.03261057360055287,
+        "episodes": 92,
+        "event_rec": 0.9,
+        "point_rec": 0.5202952029520295
+      },
+      "machine-1-3": {
+        "step_fpr": 0.057764572227562705,
+        "episodes": 23,
+        "event_rec": 0.8333333333333334,
+        "point_rec": 0.40758873929008566
+      },
+      "machine-1-4": {
+        "step_fpr": 0.0723887414625658,
+        "episodes": 24,
+        "event_rec": 0.9166666666666666,
+        "point_rec": 0.4625
+      },
+      "machine-2-2": {
+        "step_fpr": 0.02956821776009968,
+        "episodes": 57,
+        "event_rec": 0.5454545454545454,
+        "point_rec": 0.017649135192375574
+      },
+      "machine-2-3": {
+        "step_fpr": 0.027284372331340734,
+        "episodes": 39,
+        "event_rec": 0.7,
+        "point_rec": 0.8327137546468402
+      },
+      "machine-2-4": {
+        "step_fpr": 0.05914980677426688,
+        "episodes": 21,
+        "event_rec": 0.35,
+        "point_rec": 0.2874852420306966
+      },
+      "machine-3-2": {
+        "step_fpr": 0.05722758254403824,
+        "episodes": 187,
+        "event_rec": 0.8,
+        "point_rec": 0.05320108205590622
+      },
+      "machine-3-3": {
+        "step_fpr": 0.02388279658445668,
+        "episodes": 50,
+        "event_rec": 0.23076923076923078,
+        "point_rec": 0.31645569620253167
+      }
+    },
+    "5-of-10": {
+      "machine-1-1": {
+        "step_fpr": 0.07694395966647276,
+        "episodes": 29,
+        "event_rec": 0.625,
+        "point_rec": 0.6443949517446177
+      },
+      "machine-2-1": {
+        "step_fpr": 0.021354999112058248,
+        "episodes": 27,
+        "event_rec": 0.6923076923076923,
+        "point_rec": 0.20598290598290597
+      },
+      "machine-3-1": {
+        "step_fpr": 0.10129613975767822,
+        "episodes": 40,
+        "event_rec": 1.0,
+        "point_rec": 0.9058441558441559
+      },
+      "machine-1-6": {
+        "step_fpr": 0.12041439367399029,
+        "episodes": 32,
+        "event_rec": 0.6333333333333333,
+        "point_rec": 0.8514023732470335
+      },
+      "machine-1-2": {
+        "step_fpr": 0.027600207325501037,
+        "episodes": 54,
+        "event_rec": 0.8,
+        "point_rec": 0.48523985239852396
+      },
+      "machine-1-3": {
+        "step_fpr": 0.059075417285676834,
+        "episodes": 20,
+        "event_rec": 0.8333333333333334,
+        "point_rec": 0.4173806609547124
+      },
+      "machine-1-4": {
+        "step_fpr": 0.07508591812763736,
+        "episodes": 18,
+        "event_rec": 0.8333333333333334,
+        "point_rec": 0.4666666666666667
+      },
+      "machine-2-2": {
+        "step_fpr": 0.026069871088321272,
+        "episodes": 34,
+        "event_rec": 0.45454545454545453,
+        "point_rec": 0.013766325450052947
+      },
+      "machine-2-3": {
+        "step_fpr": 0.027028181041844578,
+        "episodes": 29,
+        "event_rec": 0.4,
+        "point_rec": 0.8066914498141264
+      },
+      "machine-2-4": {
+        "step_fpr": 0.06192316435553535,
+        "episodes": 19,
+        "event_rec": 0.3,
+        "point_rec": 0.282172373081464
+      },
+      "machine-3-2": {
+        "step_fpr": 0.03965654598565991,
+        "episodes": 21,
+        "event_rec": 0.1,
+        "point_rec": 0.0009017132551848512
+      },
+      "machine-3-3": {
+        "step_fpr": 0.0198951064106454,
+        "episodes": 28,
+        "event_rec": 0.19230769230769232,
+        "point_rec": 0.31329113924050633
+      }
+    },
+    "8-of-10": {
+      "machine-1-1": {
+        "step_fpr": 0.06251696722900911,
+        "episodes": 26,
+        "event_rec": 0.625,
+        "point_rec": 0.5237564959168522
+      },
+      "machine-2-1": {
+        "step_fpr": 0.01021133013674303,
+        "episodes": 8,
+        "event_rec": 0.3076923076923077,
+        "point_rec": 0.12307692307692308
+      },
+      "machine-3-1": {
+        "step_fpr": 0.07685263454494223,
+        "episodes": 24,
+        "event_rec": 1.0,
+        "point_rec": 0.8636363636363636
+      },
+      "machine-1-6": {
+        "step_fpr": 0.08302887743356188,
+        "episodes": 23,
+        "event_rec": 0.36666666666666664,
+        "point_rec": 0.6672060409924487
+      },
+      "machine-1-2": {
+        "step_fpr": 0.007947477539737388,
+        "episodes": 26,
+        "event_rec": 0.6,
+        "point_rec": 0.38191881918819187
+      },
+      "machine-1-3": {
+        "step_fpr": 0.04413178362317574,
+        "episodes": 10,
+        "event_rec": 0.5833333333333334,
+        "point_rec": 0.2692778457772338
+      },
+      "machine-1-4": {
+        "step_fpr": 0.05624918432157306,
+        "episodes": 14,
+        "event_rec": 0.5833333333333334,
+        "point_rec": 0.29444444444444445
+      },
+      "machine-2-2": {
+        "step_fpr": 0.010782575358221115,
+        "episodes": 22,
+        "event_rec": 0.2727272727272727,
+        "point_rec": 0.004588775150017649
+      },
+      "machine-2-3": {
+        "step_fpr": 0.013578138343296327,
+        "episodes": 17,
+        "event_rec": 0.4,
+        "point_rec": 0.7397769516728625
+      },
+      "machine-2-4": {
+        "step_fpr": 0.043282564219140715,
+        "episodes": 18,
+        "event_rec": 0.05,
+        "point_rec": 0.22255017709563163
+      },
+      "machine-3-2": {
+        "step_fpr": 0.013410639992918473,
+        "episodes": 13,
+        "event_rec": 0.0,
+        "point_rec": 0.0
+      },
+      "machine-3-3": {
+        "step_fpr": 0.01027263664340514,
+        "episodes": 15,
+        "event_rec": 0.11538461538461539,
+        "point_rec": 0.15981012658227847
+      }
+    },
+    "10-of-20": {
+      "machine-1-1": {
+        "step_fpr": 0.07558658134574366,
+        "episodes": 23,
+        "event_rec": 0.625,
+        "point_rec": 0.6121009651076467
+      },
+      "machine-2-1": {
+        "step_fpr": 0.014695435979399752,
+        "episodes": 9,
+        "event_rec": 0.38461538461538464,
+        "point_rec": 0.1564102564102564
+      },
+      "machine-3-1": {
+        "step_fpr": 0.09640039447731756,
+        "episodes": 26,
+        "event_rec": 1.0,
+        "point_rec": 0.8506493506493507
+      },
+      "machine-1-6": {
+        "step_fpr": 0.11145588308893449,
+        "episodes": 27,
+        "event_rec": 0.23333333333333334,
+        "point_rec": 0.8492448759439051
+      },
+      "machine-1-2": {
+        "step_fpr": 0.017493089149965446,
+        "episodes": 26,
+        "event_rec": 0.8,
+        "point_rec": 0.4059040590405904
+      },
+      "machine-1-3": {
+        "step_fpr": 0.05557983046403915,
+        "episodes": 14,
+        "event_rec": 0.75,
+        "point_rec": 0.379436964504284
+      },
+      "machine-1-4": {
+        "step_fpr": 0.0738678383434115,
+        "episodes": 16,
+        "event_rec": 0.5833333333333334,
+        "point_rec": 0.4041666666666667
+      },
+      "machine-2-2": {
+        "step_fpr": 0.0158144438587243,
+        "episodes": 19,
+        "event_rec": 0.2727272727272727,
+        "point_rec": 0.008471584892340275
+      },
+      "machine-2-3": {
+        "step_fpr": 0.02493595217762596,
+        "episodes": 22,
+        "event_rec": 0.4,
+        "point_rec": 0.7434944237918215
+      },
+      "machine-2-4": {
+        "step_fpr": 0.06005910434189589,
+        "episodes": 18,
+        "event_rec": 0.1,
+        "point_rec": 0.23907910271546634
+      },
+      "machine-3-2": {
+        "step_fpr": 0.029344073647871116,
+        "episodes": 12,
+        "event_rec": 0.0,
+        "point_rec": 0.0
+      },
+      "machine-3-3": {
+        "step_fpr": 0.014216982358805426,
+        "episodes": 11,
+        "event_rec": 0.11538461538461539,
+        "point_rec": 0.2626582278481013
+      }
+    },
+    "15-of-30": {
+      "machine-1-1": {
+        "step_fpr": 0.07426798526274966,
+        "episodes": 18,
+        "event_rec": 0.625,
+        "point_rec": 0.6061618411284335
+      },
+      "machine-2-1": {
+        "step_fpr": 0.012431184514295862,
+        "episodes": 5,
+        "event_rec": 0.3076923076923077,
+        "point_rec": 0.14786324786324787
+      },
+      "machine-3-1": {
+        "step_fpr": 0.09453367145674837,
+        "episodes": 22,
+        "event_rec": 1.0,
+        "point_rec": 0.788961038961039
+      },
+      "machine-1-6": {
+        "step_fpr": 0.10334818077173315,
+        "episodes": 17,
+        "event_rec": 0.23333333333333334,
+        "point_rec": 0.8578748651564185
+      },
+      "machine-1-2": {
+        "step_fpr": 0.01403766413268832,
+        "episodes": 16,
+        "event_rec": 0.6,
+        "point_rec": 0.3339483394833948
+      },
+      "machine-1-3": {
+        "step_fpr": 0.05422529057065455,
+        "episodes": 10,
+        "event_rec": 0.4166666666666667,
+        "point_rec": 0.3561811505507956
+      },
+      "machine-1-4": {
+        "step_fpr": 0.07051811893679036,
+        "episodes": 10,
+        "event_rec": 0.4166666666666667,
+        "point_rec": 0.35833333333333334
+      },
+      "machine-2-2": {
+        "step_fpr": 0.012076484401207649,
+        "episodes": 9,
+        "event_rec": 0.09090909090909091,
+        "point_rec": 0.008118602188492764
+      },
+      "machine-2-3": {
+        "step_fpr": 0.022502134927412466,
+        "episodes": 14,
+        "event_rec": 0.4,
+        "point_rec": 0.6691449814126395
+      },
+      "machine-2-4": {
+        "step_fpr": 0.060104569220277335,
+        "episodes": 17,
+        "event_rec": 0.1,
+        "point_rec": 0.22727272727272727
+      },
+      "machine-3-2": {
+        "step_fpr": 0.027263875365141188,
+        "episodes": 12,
+        "event_rec": 0.0,
+        "point_rec": 0.0
+      },
+      "machine-3-3": {
+        "step_fpr": 0.011616314854145897,
+        "episodes": 8,
+        "event_rec": 0.038461538461538464,
+        "point_rec": 0.2674050632911392
+      }
+    },
+    "25-of-40": {
+      "machine-1-1": {
+        "step_fpr": 0.06441729687802986,
+        "episodes": 15,
+        "event_rec": 0.625,
+        "point_rec": 0.5129918337045286
+      },
+      "machine-2-1": {
+        "step_fpr": 0.010388918486947256,
+        "episodes": 2,
+        "event_rec": 0.15384615384615385,
+        "point_rec": 0.11623931623931624
+      },
+      "machine-3-1": {
+        "step_fpr": 0.08386165116934348,
+        "episodes": 15,
+        "event_rec": 1.0,
+        "point_rec": 0.6590909090909091
+      },
+      "machine-1-6": {
+        "step_fpr": 0.08633201541464391,
+        "episodes": 8,
+        "event_rec": 0.16666666666666666,
+        "point_rec": 0.767529665587918
+      },
+      "machine-1-2": {
+        "step_fpr": 0.005399101589495508,
+        "episodes": 8,
+        "event_rec": 0.5,
+        "point_rec": 0.23616236162361623
+      },
+      "machine-1-3": {
+        "step_fpr": 0.045136764834396575,
+        "episodes": 6,
+        "event_rec": 0.25,
+        "point_rec": 0.2631578947368421
+      },
+      "machine-1-4": {
+        "step_fpr": 0.0599469265236873,
+        "episodes": 8,
+        "event_rec": 0.3333333333333333,
+        "point_rec": 0.29583333333333334
+      },
+      "machine-2-2": {
+        "step_fpr": 0.007332151243590358,
+        "episodes": 5,
+        "event_rec": 0.09090909090909091,
+        "point_rec": 0.0024708789269325803
+      },
+      "machine-2-3": {
+        "step_fpr": 0.01251067463706234,
+        "episodes": 8,
+        "event_rec": 0.3,
+        "point_rec": 0.5241635687732342
+      },
+      "machine-2-4": {
+        "step_fpr": 0.04578313253012048,
+        "episodes": 15,
+        "event_rec": 0.05,
+        "point_rec": 0.21310507674144039
+      },
+      "machine-3-2": {
+        "step_fpr": 0.01248118969637957,
+        "episodes": 9,
+        "event_rec": 0.0,
+        "point_rec": 0.0
+      },
+      "machine-3-3": {
+        "step_fpr": 0.00745524684669065,
+        "episodes": 5,
+        "event_rec": 0.038461538461538464,
+        "point_rec": 0.1439873417721519
+      }
+    }
+  },
+  "summary": {
+    "1-of-1": {
+      "dev": {
+        "step_fpr": 0.10590024734377697,
+        "episodes": 123.0,
+        "event_rec": 0.9916666666666667,
+        "point_rec": 0.6668993126398473
+      },
+      "heldout": {
+        "step_fpr": 0.06734936434523008,
+        "episodes": 111.125,
+        "event_rec": 0.9875,
+        "point_rec": 0.40514543047824875
+      }
+    },
+    "3-of-5": {
+      "dev": {
+        "step_fpr": 0.07933297334249131,
+        "episodes": 47.25,
+        "event_rec": 0.9224358974358975,
+        "point_rec": 0.6516236980345463
+      },
+      "heldout": {
+        "step_fpr": 0.04498458291061044,
+        "episodes": 61.625,
+        "event_rec": 0.659527972027972,
+        "point_rec": 0.36223610654630817
+      }
+    },
+    "5-of-10": {
+      "dev": {
+        "step_fpr": 0.08000237305254987,
+        "episodes": 32.0,
+        "event_rec": 0.7376602564102565,
+        "point_rec": 0.6519060967046783
+      },
+      "heldout": {
+        "step_fpr": 0.042041801452602716,
+        "episodes": 27.875,
+        "event_rec": 0.48918997668997666,
+        "point_rec": 0.34826377260765473
+      }
+    },
+    "8-of-10": {
+      "dev": {
+        "step_fpr": 0.058152452336064066,
+        "episodes": 20.25,
+        "event_rec": 0.5748397435897435,
+        "point_rec": 0.5444189559056469
+      },
+      "heldout": {
+        "step_fpr": 0.024956875005183496,
+        "episodes": 16.875,
+        "event_rec": 0.3255973193473194,
+        "point_rec": 0.2590458924888326
+      }
+    },
+    "10-of-20": {
+      "dev": {
+        "step_fpr": 0.07453457372284887,
+        "episodes": 21.25,
+        "event_rec": 0.5607371794871795,
+        "point_rec": 0.6171013620277896
+      },
+      "heldout": {
+        "step_fpr": 0.03641391429279235,
+        "episodes": 17.25,
+        "event_rec": 0.3776806526806527,
+        "point_rec": 0.3054013786824088
+      }
+    },
+    "15-of-30": {
+      "dev": {
+        "step_fpr": 0.07114525550138176,
+        "episodes": 15.5,
+        "event_rec": 0.5415064102564102,
+        "point_rec": 0.6002152482772847
+      },
+      "heldout": {
+        "step_fpr": 0.03404305655103972,
+        "episodes": 12.0,
+        "event_rec": 0.25783799533799534,
+        "point_rec": 0.27755052469156527
+      }
+    },
+    "25-of-40": {
+      "dev": {
+        "step_fpr": 0.06124997048724112,
+        "episodes": 10.0,
+        "event_rec": 0.4863782051282051,
+        "point_rec": 0.5139629311556679
+      },
+      "heldout": {
+        "step_fpr": 0.024505648487677847,
+        "episodes": 8.0,
+        "event_rec": 0.19533799533799534,
+        "point_rec": 0.20986005698844384
+      }
+    }
+  },
+  "selected_on_dev": "3-of-5"
+}

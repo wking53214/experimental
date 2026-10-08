@@ -1,0 +1,118 @@
+{
+  "per_cell": {
+    "attack-free | static": {
+      "damage_mean": 0.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.0,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "attack-free | adaptive": {
+      "damage_mean": 0.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.00014877574321600762,
+      "tightenings": 0.3,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": 401.5
+    },
+    "attack-free | adaptive+window": {
+      "damage_mean": 0.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.0,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "attack-free | human, 30 steps": {
+      "damage_mean": 0.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.0,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "attack-free | human, 120 steps": {
+      "damage_mean": 0.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.0,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "attack-free | oracle": {
+      "damage_mean": 0.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.0,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "step +40, 600 steps | static": {
+      "damage_mean": 17974.93534947691,
+      "damage_ci": 3.7490848213179255,
+      "shed_fraction": 0.13461314910509792,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "step +40, 600 steps | adaptive": {
+      "damage_mean": 5039.336000000001,
+      "damage_ci": 8.540046333674944,
+      "shed_fraction": 0.4220709124268069,
+      "tightenings": 3.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": 301.0
+    },
+    "step +40, 600 steps | adaptive+window": {
+      "damage_mean": 5094.568000000001,
+      "damage_ci": 4.798290593553895,
+      "shed_fraction": 0.4208435346490291,
+      "tightenings": 3.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": 302.0
+    },
+    "step +40, 600 steps | human, 30 steps": {
+      "damage_mean": 6639.193639457136,
+      "damage_ci": 0.7666221162712266,
+      "shed_fraction": 0.3865185204388706,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "step +40, 600 steps | human, 120 steps": {
+      "damage_mean": 8434.615313836024,
+      "damage_ci": 2.0988891335554696,
+      "shed_fraction": 0.3466202610082286,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    },
+    "step +40, 600 steps | oracle": {
+      "damage_mean": 6000.0,
+      "damage_ci": 0.0,
+      "shed_fraction": 0.40072282353791805,
+      "tightenings": 0.0,
+      "unsafe_loosenings": 0,
+      "integrity_ok": true,
+      "first_tighten_median": null
+    }
+  },
+  "summary": {
+    "damage_reduction_vs_static": 0.7196465020862146,
+    "legit_blocked_clean": 0.00014877574321600762,
+    "unsafe_loosenings": 0,
+    "all_integrity_ok": true
+  }
+}

@@ -20,3 +20,18 @@ Criteria deliberately left out because they cannot be measured with the data ava
 ## Known status when this was written
 
 Criterion 1 holds. Criteria 2, 3 and 4 are expected to fail with the current detector (Phase 13 found 3 unjustified tightenings on every machine). Criterion 5 had never been measured. Criterion 6 holds for the trimmed fit by the earlier experiment.
+
+## Results (2026-10-08, first scoring)
+
+`PYTHONPATH=. python -m experiments.scorecard`
+
+| # | Result | What the pass or fail actually means |
+|---|---|---|
+| 1 Safety | PASS (36 of 36 soak runs, tests green) | Not falsified within the stated threat model. Found T13 afterwards (a restart resets limits), which this criterion did not look for. |
+| 2 Detection vs baseline | PASS, bare minimum (6 of 8 machines) | The detector is at or above a plain Mahalanobis baseline on 6 of 8 and ahead clearly on none (recall within 0.05 on most). It matches the simplest alternative; it does not beat it. |
+| 3 No crying wolf | **FAIL** (0 of 12 machines) | Every machine had 3 unjustified tightenings. |
+| 4 Responds to real trouble | **FAIL** (0 of 6 eligible machines) | The breaker is spent on noise before real anomalies arrive. |
+| 5 Value over alternatives | PASS, narrowly (43% against 40%) | The 43% is the breaker cap's arithmetic ((40 - 22.9) / 40), not detection quality. A human with perfect discrimination did better on sustained attacks (damage 6,960 to 9,664 against 13,783 for the system); the system wins only in the window before a slow human responds (a 100-step attack: 3,352 against 5,006). The clean-run cost was 0% because the key has 2x headroom; at 1.5x it was 0.41%. |
+| 6 Poisoning | PASS (100%) | Only for the opt-in trimmed calibrated detector (Gaussian assumption). The default detector detects the 3 sd probe 38% of the time at 10% contamination. |
+
+Criterion 3 was also tried with an alarm-persistence filter (`experiments/persistence_filter.py`): it did not help. Raw false alarms are sustained stretches caused by non-stationary data, not blips: a 3-of-5 filter cut held-out false alarms from 6.7% to 4.5% but dropped event recall from 0.99 to 0.66, and the strictest filter still left about 8 false episodes per machine at 0.20 recall.

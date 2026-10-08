@@ -50,6 +50,8 @@ Scope caveat on T6 and T7: the grant mechanism stops bugs and API misuse. Python
 
 | T12 | **False alarms exhaust the system's autonomy** (no attacker needed) | none | **Real, measured.** On 12 real machines (6% median false-alarm rate) the closed loop reached the breaker cap on every machine within 8,000 steps, all of it unjustified; with the breaker off every machine reached the floor. The evidence-window and fresh-evidence options (off by default) fix the clean-data case, not the real-data case. | `docs/PHASE_13_REPORT.md`, `experiments/phase13_soak.py` |
 
+| T13 | **A restart resets the ratchet**: limits live in memory only, so after a restart the application re-creates each boundary at its configured value | none (operational) | **Real, demonstrated, not fixed.** The tightening is lost, the loosening has no grant and no audit record, and the integrity check passes. Needs durable boundary state restored (and verified against the audit log) at startup. | `tests/test_phase13_integration.py::TestKnownGapRestart` |
+
 ## T3 in detail: the denial-of-service lever
 
 Setup: one boundary with limit 100. Legitimate traffic is roughly N(50, 5). The attacker sends values 5% above the current limit and nothing else. Each value is a genuine violation, so the pattern detector tightens by 10% as designed. Results from `experiments/dos_tightening.py`:
