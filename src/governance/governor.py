@@ -35,7 +35,8 @@ class Governor:
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
                  max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
                  detection: str = "generative", operators: Optional[OperatorRegistry] = None,
-                 audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None):
+                 audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None,
+                 strict_patterns: bool = False, evidence_window: Optional[int] = None):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
@@ -45,6 +46,13 @@ class Governor:
         operators: an OperatorRegistry. When given, operator decisions need a credential that
             authenticates for the operator_id (docs/THREAT_MODEL.md, T9).
         audit_path: file for the hash-chained audit log (docs/THREAT_MODEL.md, T8); in memory if None.
+        evidence_window: only violations among the boundary's most recent N executions count toward
+            a tightening. Without it evidence never expires, so a few false alarms spread over a long
+            time add up to a tightening (on clean 30-metric data: 3 tightenings in 1500 steps).
+        strict_patterns: only patterns registered through register_expected_pattern() (an
+            authenticated, audited operator action) excuse violations; a pattern registered
+            directly on the classifier is kept but ignored (docs/THREAT_MODEL.md, T4). Off by
+            default, which leaves the classifier open to anyone who can call it.
         baseline_check_at: with detection='generative', check each boundary's first N observations
             for contamination once (docs/BASELINE_POISONING.md); the result goes to the audit log and,
             if suspicious, to `baseline_reviews` for a person. Off by default.
@@ -68,7 +76,11 @@ class Governor:
         self._last_auto_tighten_at: dict = {}
         self._auto_tightenings: dict = {}
         self.tightening_holds: list = []
+        self._hold_open: set = set()  # boundaries with an unreported hold in progress
         self.baseline_check_at = baseline_check_at
+        self.evidence_window = evidence_window
+        self._step: dict = {}            # observations seen per boundary
+        self._violation_step: dict = {}  # violation_id -> the observation it came from
         self.baseline_reviews: list = []
         self._baseline_logged: set = set()
         self.principles = PrincipleStore()
@@ -82,6 +94,9 @@ class Governor:
         self.validations = ValidationStore()
         self.use_semantic = use_semantic
         self.classifier = WorkloadClassifier() if use_semantic else None
+        self._approved_patterns: set = set()
+        if strict_patterns and self.classifier is not None:
+            self.classifier.approval_gate = lambda p: p.pattern_id in self._approved_patterns
         self.smart_patterns = SmartPatternDetector(self.classifier, self.patterns) if use_semantic else None
         self.metrics_tracker = MetricsTracker()
         self.baseline = BaselineComparator()
@@ -111,6 +126,7 @@ class Governor:
             else:
                 self.detector_pipelines[boundary_id] = HybridDetectorPipeline(boundary_id)
         pipeline = self.detector_pipelines[boundary_id]
+        step = self._tick(boundary_id)
         pipeline.ingest_metrics(timestamp, metrics)
         report = getattr(pipeline, "baseline_report", None)
         if report is not None and boundary_id not in self._baseline_logged:
@@ -135,6 +151,7 @@ class Governor:
                     observed_value=detection_result.get("anomaly_score", 0.0),
                     limit_value=0.85, context=detection_result,
                 )
+                self._violation_step[violation.violation_id] = step
                 violations.append({
                     "violation_id": violation.violation_id,
                     "boundary_id": boundary_id,
@@ -149,6 +166,7 @@ class Governor:
             boundary = self.boundaries.get_boundary(boundary_id)
         except KeyError:
             raise ValueError(f"Boundary {boundary_id} not found")
+        step = self._tick(boundary_id)
         execution = self.events.record_execution(
             boundary_id=boundary_id, boundary_version=boundary.version,
             observed_value=observed_value, context=context,
@@ -178,6 +196,7 @@ class Governor:
                 boundary_version=boundary.version, observed_value=observed_value,
                 limit_value=boundary.current_limit, context=context,
             )
+            self._violation_step[violation.violation_id] = step
             try:
                 self.file_store.write_violation_event(violation.violation_id, {
                     "violation_id": violation.violation_id, "boundary_id": violation.boundary_id,
@@ -192,14 +211,23 @@ class Governor:
         violations = self.events.get_violations_for_boundary(boundary_id)
         if self.require_fresh_evidence:
             violations = violations[self._evidence_cursor.get(boundary_id, 0):]
+        if self.evidence_window and violations:
+            now = self._step.get(boundary_id, 0)
+            violations = [v for v in violations
+                          if self._violation_step.get(v.violation_id, now) > now - self.evidence_window]
         if not violations:
             return None
         hold = self._tightening_hold(boundary_id)
         if hold:
-            self.tightening_holds.append({"boundary_id": boundary_id, "reason": hold,
-                                          "timestamp": self.clock()})
-            self.audit.append("tightening_held", {"boundary_id": boundary_id, "reason": hold})
+            # One record per hold episode. Logging every step while held filled the audit log and
+            # this list with thousands of copies of the same fact (7,997 in 8,000 real steps).
+            if boundary_id not in self._hold_open:
+                self._hold_open.add(boundary_id)
+                self.tightening_holds.append({"boundary_id": boundary_id, "reason": hold,
+                                              "timestamp": self.clock()})
+                self.audit.append("tightening_held", {"boundary_id": boundary_id, "reason": hold})
             return None
+        self._hold_open.discard(boundary_id)
         pattern_detected = False
         boundary_count = len(self.boundaries.list_boundaries())
         adapted_threshold = max(2, min(3, boundary_count // 25)) if self.adaptive_threshold_enabled and boundary_count >= 20 else 3
@@ -246,6 +274,10 @@ class Governor:
             direction=AdaptationDirection.TIGHTEN,
         )
 
+    def _tick(self, boundary_id: str) -> int:
+        self._step[boundary_id] = self._step.get(boundary_id, 0) + 1
+        return self._step[boundary_id]
+
     def _tightening_hold(self, boundary_id: str) -> Optional[str]:
         if (self.max_auto_tightenings is not None
                 and self._auto_tightenings.get(boundary_id, 0) >= self.max_auto_tightenings):
@@ -262,8 +294,25 @@ class Governor:
             raise ValueError("operator_id is required")
         verified = self._authenticate_operator(operator_id, credential)
         self._auto_tightenings[boundary_id] = 0
+        self._hold_open.discard(boundary_id)
         self.audit.append("tightening_acknowledged", {
             "boundary_id": boundary_id, "operator_id": operator_id, "identity_verified": verified})
+
+    def register_expected_pattern(self, pattern, operator_id: str, credential: Optional[str] = None,
+                                  rationale: str = "") -> None:
+        """Register an expected-load pattern as a named operator's decision: authenticated when an
+        operator registry exists, always audited. This is the path strict_patterns trusts."""
+        if self.classifier is None:
+            raise ValueError("semantic classification is off (use_semantic=False)")
+        if not operator_id or not str(operator_id).strip():
+            raise ValueError("operator_id is required")
+        verified = self._authenticate_operator(operator_id, credential)
+        self._approved_patterns.add(pattern.pattern_id)
+        self.classifier.register_expected_pattern(pattern, trusted=True)
+        self.audit.append("pattern_registered", {
+            "pattern_id": pattern.pattern_id, "boundary_id": pattern.boundary_id,
+            "value_range": list(pattern.expected_value_range), "operator_id": operator_id,
+            "identity_verified": verified, "rationale": rationale})
 
     def _authenticate_operator(self, operator_id: str, credential: Optional[str]) -> bool:
         """True when a registry is configured and the credential authenticates; raises if a

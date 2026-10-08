@@ -206,6 +206,14 @@ class GenerativeAnomalyDetector:
         self.model_locked = False
         self.regularization = regularization
 
+    def required_observations(self) -> int:
+        """Observations needed before the model is trusted: at least min_observations, and at least
+        5 per metric. A d-dimensional covariance cannot be estimated from a handful of points:
+        with 30 metrics, locking at 20 observations false-alarmed on 48% of the first 100 steps,
+        and 5 per metric brings that to about 1%."""
+        n_metrics = len(self.model.metric_names) if self.model is not None else 0
+        return max(self.min_observations, 5 * n_metrics)
+
     def ingest_observation(self, observation: Dict[str, float]) -> None:
         if self.model is None:
             self.model = MultivariateGaussian(list(observation.keys()), regularization=self.regularization)
@@ -215,7 +223,7 @@ class GenerativeAnomalyDetector:
         self.model.update(observation)
         self.invariant_learner.add_observation(observation)
         self.observation_count += 1
-        if self.observation_count >= self.min_observations and not self.model_locked:
+        if self.observation_count >= self.required_observations() and not self.model_locked:
             self.model_locked = True
             self.invariant_learner.learn_invariants()
 
@@ -226,7 +234,7 @@ class GenerativeAnomalyDetector:
         if not self.model_locked:
             return {"anomaly_detected": False, "anomaly_score": 0.0,
                     "mahalanobis_distance": 0.0,
-                    "reason": f"Baseline learning ({self.observation_count}/{self.min_observations})"}
+                    "reason": f"Baseline learning ({self.observation_count}/{self.required_observations()})"}
         md = self.model.mahalanobis_distance(observation)
         anomaly_score = self.scorer.score(md)
         invariant_violation = self.invariant_learner.check_invariant_violation(observation)

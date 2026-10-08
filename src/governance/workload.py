@@ -62,11 +62,18 @@ class WorkloadClassifier:
     def __init__(self):
         self.expected_patterns: dict = {}
         self.classification_history = []
+        self.approval_gate = None  # callable(pattern) -> bool; set by Governor(strict_patterns=True)
+        self.unapproved: list = []
 
     def register_expected_pattern(self, pattern: ExpectedLoadPattern, *, trusted: bool = True) -> None:
         if pattern.pattern_id in self.expected_patterns:
             raise ValueError(f"Pattern {pattern.pattern_id} already registered")
         notes = dict(getattr(pattern, "notes", None) or {})
+        # With an approval gate (Governor(strict_patterns=True)), "trusted" is not the caller's
+        # say-so: only patterns the gate approves are honored, the rest are kept but ignored.
+        if trusted and self.approval_gate is not None and not self.approval_gate(pattern):
+            trusted = False
+            self.unapproved.append(pattern.pattern_id)
         if not trusted or notes.get("attacker"):
             notes["_untrusted"] = True
         pattern.notes = notes
