@@ -23,6 +23,10 @@ from typing import Any, Optional
 GENESIS = "0" * 64
 
 
+class AuditIntegrityError(RuntimeError):
+    """The log failed verification, or replaying it would break a safety rule."""
+
+
 def _canonical(obj: Any) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str)
 
@@ -35,6 +39,7 @@ def _entry_hash(prev_hash: str, seq: int, ts: float, kind: str, payload: Any) ->
 class AuditLog:
     def __init__(self, path: Optional[str] = None):
         self.path = path
+        self.truncated_tail = False
         self.entries: list = []
         if path and os.path.exists(path):
             self._load(path)
@@ -88,7 +93,21 @@ class AuditLog:
         return [e for e in self.entries if kind is None or e["kind"] == kind]
 
     def _load(self, path: str) -> None:
+        """Read the file. A final line that does not parse is a write that was cut off by a crash:
+        it never became durable, so it is dropped and the file is repaired. A bad line anywhere
+        else is corruption and raises."""
         with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    self.entries.append(json.loads(line))
+            lines = [l for l in f.read().split("\n") if l.strip()]
+        for i, line in enumerate(lines):
+            try:
+                self.entries.append(json.loads(line))
+            except ValueError:
+                if i != len(lines) - 1:
+                    raise AuditIntegrityError(f"line {i + 1} of {path} is corrupt")
+                self.truncated_tail = True
+                tmp = path + ".repair"
+                with open(tmp, "w", encoding="utf-8") as g:
+                    g.write("".join(_canonical(e) + "\n" for e in self.entries))
+                    g.flush()
+                    os.fsync(g.fileno())
+                os.replace(tmp, path)

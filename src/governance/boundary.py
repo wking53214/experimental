@@ -84,6 +84,9 @@ class BoundaryStore:
         self.boundaries: dict[str, BoundaryHistory] = {}
         # (boundary_id, version) of every version created by an authorized loosening
         self.authorized_loosenings: dict[tuple, str] = {}
+        # Called as on_event("boundary_version", payload) BEFORE a new version takes effect. If it
+        # raises, the change does not happen (fail closed). Used to make the audit log durable.
+        self.on_event = None
 
     def create_boundary(
         self,
@@ -105,6 +108,10 @@ class BoundaryStore:
             parent_version=None,
         )
 
+        if self.on_event:
+            self.on_event("boundary_version", {
+                "boundary_id": boundary_id, "version": 1, "resource": resource_or_action,
+                "limit": initial_limit, "grant_id": None})
         history = BoundaryHistory(boundary_id=boundary_id)
         history.add_version(version)
         self.boundaries[boundary_id] = history
@@ -141,6 +148,12 @@ class BoundaryStore:
                     f"{new_limit} without an authorization grant")
             grant.consume(boundary_id, new_limit)
 
+        if self.on_event:
+            self.on_event("boundary_version", {
+                "boundary_id": boundary_id, "version": current.version + 1,
+                "resource": current.resource_or_action, "limit": new_limit,
+                "grant_id": grant.grant_id if loosening else None})
+
         # Mark previous version as superseded
         old_version = BoundaryVersion(
             boundary_id=current.boundary_id,
@@ -168,6 +181,37 @@ class BoundaryStore:
             self.authorized_loosenings[(boundary_id, new_version.version)] = grant.grant_id
 
         return new_version
+
+    def restore_version(self, boundary_id: str, version: int, resource: str, limit: Any,
+                        grant_id: Optional[str], created_at: float) -> BoundaryVersion:
+        """Rebuild history from a verified log. Not a way to change a limit: versions must arrive in
+        order, and a step that raises the limit without a recorded grant is refused."""
+        history = self.boundaries.get(boundary_id)
+        if version == 1:
+            if history is not None:
+                raise ValueError(f"boundary {boundary_id} restored twice")
+            history = BoundaryHistory(boundary_id=boundary_id)
+            self.boundaries[boundary_id] = history
+            parent = None
+        else:
+            if history is None or history.get_active_version().version != version - 1:
+                raise ValueError(f"boundary {boundary_id}: version {version} out of order")
+            current = history.get_active_version()
+            if is_loosening(current.current_limit, limit):
+                if not grant_id:
+                    raise PermissionError(
+                        f"boundary {boundary_id} v{version} raises the limit with no grant on record")
+                self.authorized_loosenings[(boundary_id, version)] = grant_id
+            history.versions[current.version] = BoundaryVersion(
+                boundary_id=boundary_id, version=current.version, resource_or_action=current.resource_or_action,
+                current_limit=current.current_limit, status=BoundaryStatus.SUPERSEDED,
+                created_at=current.created_at, parent_version=current.parent_version)
+            parent = current.version
+        v = BoundaryVersion(boundary_id=boundary_id, version=version, resource_or_action=resource,
+                            current_limit=limit, status=BoundaryStatus.ACTIVE,
+                            created_at=created_at, parent_version=parent)
+        history.add_version(v)
+        return v
 
     def unauthorized_loosenings(self) -> list:
         """Audit the version history itself: every step that raises a limit must have a

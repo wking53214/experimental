@@ -66,9 +66,19 @@ def c6():
     return ("PASS" if v >= 0.80 else "FAIL"), f"3 sd detection with 10% contamination and trimmed fit: {v:.0%} (need 80%)"
 
 
+def c7():
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "tests/test_durable_state.py"],
+                       capture_output=True, text=True)
+    last = (r.stdout.strip().splitlines() or [""])[-1]
+    return ("PASS" if r.returncode == 0 else "FAIL"), last
+
+
 if __name__ == "__main__":
     rows = [("1 safety", c1), ("2 detection vs baseline", c2), ("3 no crying wolf", c3),
-            ("4 responds to real trouble", c4), ("5 value over alternatives", c5), ("6 poisoning survivable", c6)]
+            ("4 responds to real trouble", c4), ("5 value over alternatives", c5), ("6 poisoning survivable", c6),
+            ("7 restart never loosens", c7)]
     for name, fn in rows:
         status, detail = fn()
         print(f"{status:13s} {name:28s} {detail}")

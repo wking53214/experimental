@@ -30,7 +30,7 @@ Distinctive is not the same as valuable. Measured value so far: against a sustai
 
 ## What is not ready for a stack
 
-1. **Limits are not persisted** (T13): a restart resets every tightened limit.
+1. ~~Limits are not persisted (T13)~~ **Fixed 2026-10-08 when `audit_path` is set** (`docs/DURABLE_STATE.md`): limits, the breaker count and the decision list are rebuilt from the verified audit log at startup. It is opt-in, and it needs `ensure_boundary` instead of `create_boundary` at startup.
 2. **The built-in detector is not usable unattended on real telemetry** (Phase 13): use your own signal and feed it in.
 3. Single process, in-memory state; the HTTP server is a demo with no TLS; Python only.
 4. The audit log needs an external anchor to mean anything against a determined rewrite.

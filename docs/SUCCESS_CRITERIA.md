@@ -12,6 +12,7 @@ What "works" means here, in plain terms: the system must (a) never let automatio
 | 4 | **It responds to real trouble** | Same soak: a tightening occurs within 100 steps after a labeled anomaly begins, before the breaker is spent | True on at least 8 of 12 machines (machines with at least 3 labeled anomaly events in the window) |
 | 5 | **Value over the alternatives** | `experiments/value_vs_alternatives.py`: damage admitted to a compromised key under the adaptive system versus a static limit and versus a human who acts after a delay, and legitimate traffic blocked in attack-free runs | **Primary scenario, fixed before running:** a key whose usage is normally 50 +/- 5 (limit 100) is compromised at step 300 and its usage rises by +40 for 600 steps; damage is the sum of admitted usage above 50; 30 seeds, default `Governor`. Pass: at least 40% less damage than the static limit, **and** legitimate traffic blocked at most 1% of steps in attack-free runs, **and** no unsafe loosening. Other attack shapes are reported but do not decide the criterion. |
 | 6 | **Baseline poisoning is survivable in the recommended configuration** | `baseline_poisoning` experiment, calibrated detector with the trimmed fit, 10% contaminated baseline | Detection of the 3 sd probe at least 80% |
+| 7 | **A restart never loosens a limit** (added 2026-10-08, after the first scoring found the gap) | `tests/test_durable_state.py` (restart keeps limits and breaker state, refuses a tampered or forged log, fails closed if the log write fails) | All tests pass |
 
 Not in scope of any criterion, and so not claimed: protection against code running inside the process, network attackers, malicious operators, or attackers who stay below every limit and every detector.
 
@@ -35,3 +36,5 @@ Criterion 1 holds. Criteria 2, 3 and 4 are expected to fail with the current det
 | 6 Poisoning | PASS (100%) | Only for the opt-in trimmed calibrated detector (Gaussian assumption). The default detector detects the 3 sd probe 38% of the time at 10% contamination. |
 
 Criterion 3 was also tried with an alarm-persistence filter (`experiments/persistence_filter.py`): it did not help. Raw false alarms are sustained stretches caused by non-stationary data, not blips: a 3-of-5 filter cut held-out false alarms from 6.7% to 4.5% but dropped event recall from 0.99 to 0.66, and the strictest filter still left about 8 false episodes per machine at 0.20 recall.
+
+**Criterion 7** was added after the first scoring, when Phase 13 and the positioning work showed that limits were not persisted. It is a test-based criterion, scored by running that file.

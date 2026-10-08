@@ -12,7 +12,7 @@ from .boundary import BoundaryStore, BoundaryVersion
 from .event import EventStore
 from .pattern import PatternDetector
 from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
-from .audit_log import AuditLog
+from .audit_log import AuditLog, AuditIntegrityError
 from .authority import AuthorityModel, AuthorizationResult
 from .operators import OperatorRegistry
 from .grant import is_loosening
@@ -36,7 +36,8 @@ class Governor:
                  max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
                  detection: str = "generative", operators: Optional[OperatorRegistry] = None,
                  audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None,
-                 strict_patterns: bool = False, evidence_window: Optional[int] = None):
+                 strict_patterns: bool = False, evidence_window: Optional[int] = None,
+                 audit_anchor: Optional[dict] = None):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
@@ -46,6 +47,13 @@ class Governor:
         operators: an OperatorRegistry. When given, operator decisions need a credential that
             authenticates for the operator_id (docs/THREAT_MODEL.md, T9).
         audit_path: file for the hash-chained audit log (docs/THREAT_MODEL.md, T8); in memory if None.
+            Setting it also makes limits DURABLE (T13): boundaries, version history, the breaker count
+            and the decision list are rebuilt from the log at startup. The log is verified first and
+            the governor refuses to start (AuditIntegrityError) if it is broken or if replaying it
+            would raise a limit without a recorded grant. Limits must be JSON values (numbers).
+            Not restored: pending proposals, unused grants, registered expected-load patterns.
+        audit_anchor: a value from audit_anchor() stored earlier; startup fails if the log's history
+            no longer matches it (catches truncation and full rewrites).
         evidence_window: only violations among the boundary's most recent N executions count toward
             a tightening. Without it evidence never expires, so a few false alarms spread over a long
             time add up to a tightening (on clean 30-metric data: 3 tightenings in 1500 steps).
@@ -112,6 +120,69 @@ class Governor:
         self.file_store = ImmutableFileStore(store_path)
         self.rollback = RollbackExecutor(self)
         self.telemetry_errors: list = []
+        self.restored: Optional[dict] = None
+        if self.audit.entries:
+            self._restore(audit_anchor)
+        elif audit_anchor is not None and audit_anchor.get("length"):
+            raise AuditIntegrityError("an anchor was given but the audit log is empty")
+        self.boundaries.on_event = self._log_boundary_version
+
+    def _log_boundary_version(self, kind: str, payload: dict) -> None:
+        # Write-ahead: the store calls this before the version takes effect. If the write fails the
+        # change does not happen.
+        self.audit.append(kind, payload)
+
+    def _restore(self, anchor: Optional[dict]) -> None:
+        """Rebuild durable state from the audit log. The log is verified first; any replayed step that
+        would raise a limit without a recorded grant aborts startup."""
+        from .authority import AuthorizationDecision
+        from .proposal import AdaptationDirection
+        ok, problem = self.audit.verify(anchor)
+        if not ok:
+            raise AuditIntegrityError(f"audit log failed verification at startup: {problem}")
+        versions = 0
+        try:
+            for e in self.audit.entries:
+                p, kind = e["payload"], e["kind"]
+                if kind == "boundary_version":
+                    self.boundaries.restore_version(p["boundary_id"], p["version"], p["resource"],
+                                                    p["limit"], p.get("grant_id"), e["ts"])
+                    versions += 1
+                elif kind == "authority_decision":
+                    eff = p.get("effective_direction")
+                    self.authority.decisions.append(AuthorizationDecision(
+                        proposal_id=p["proposal_id"], direction=AdaptationDirection(p["direction"]),
+                        result=AuthorizationResult(p["result"]), reason=p.get("reason", ""),
+                        timestamp=e["ts"], decided_by=p["decided_by"],
+                        effective_direction=AdaptationDirection(eff) if eff else None,
+                        grant_id=p.get("grant_id"), identity_verified=p.get("identity_verified", False)))
+                elif kind == "boundary_update" and p.get("decision") == AuthorizationResult.AUTO_APPROVED.value:
+                    b = p["boundary_id"]
+                    self._auto_tightenings[b] = self._auto_tightenings.get(b, 0) + 1
+                    self._last_auto_tighten_at[b] = e["ts"]
+                elif kind == "tightening_acknowledged":
+                    self._auto_tightenings[e["payload"]["boundary_id"]] = 0
+        except (ValueError, PermissionError, KeyError) as ex:
+            raise AuditIntegrityError(f"replaying the audit log failed: {ex}") from ex
+        if self.boundaries.unauthorized_loosenings():
+            raise AuditIntegrityError("replayed history contains an unauthorized loosening")
+        self.restored = {"entries": len(self.audit.entries), "boundaries": len(self.boundaries.boundaries),
+                         "versions": versions, "truncated_tail_repaired": self.audit.truncated_tail}
+        self.audit.append("restored", dict(self.restored))
+
+    def ensure_boundary(self, boundary_id: str, resource_or_action: str, configured_limit):
+        """The start-up call for durable deployments: create the boundary if it does not exist,
+        otherwise keep the restored limit. A configured limit higher than the restored one is
+        IGNORED (and noted in the audit log), because applying it would loosen without a grant."""
+        try:
+            current = self.boundaries.get_boundary(boundary_id)
+        except KeyError:
+            return self.boundaries.create_boundary(boundary_id, resource_or_action, configured_limit)
+        if is_loosening(current.current_limit, configured_limit):
+            self.audit.append("configured_limit_ignored", {
+                "boundary_id": boundary_id, "restored_limit": current.current_limit,
+                "configured_limit": configured_limit})
+        return current
 
     def _record_telemetry_error(self, where: str, exc: Exception) -> None:
         self.telemetry_errors.append({
