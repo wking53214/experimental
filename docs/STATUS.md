@@ -38,6 +38,10 @@ FAIL: 3 no crying wolf, 4 responds to real trouble.
 
 The trap-loop work (rate rule, drift rule) is not part of the pre-registered criteria; it has no pass bar and was developed after seeing results. The trace-replay predictions were written before each run and are scored in `docs/TRACE_TEST_PLAN.md`.
 
+## Decision recorded: cold-start agents are an accepted limit
+
+An agent that is slow from its first task has no earlier baseline, so it is treated like any other high-trap agent and tightened (up to the 27% breaker cap) until a named person loosens it. In the traces this affected 3 agents (2 in the first trace, 1 in the held-out trace; timeouts roughly doubled, e.g. 15.2% to 33.3%). A learning period that holds tightening for a new agent's first ~1,250 tasks was considered and not built: it would remove those false tightenings but also delay real protection for every new agent by the same period. Revisit if slow-from-the-start agents turn out to be common.
+
 ## Known open issues, in the order I would worry about them
 
 1. **Nothing has run on real traffic.** Every closed-loop number comes from simulated durations. The 1% rate threshold and 1.5x drift factor are untested outside it.
