@@ -137,10 +137,56 @@
     "automatic_tightenings_since_acknowledgement": 3,
     "held": true
    }
+  },
+  "agent-regressed": {
+   "profile": "regressed",
+   "static": {
+    "tasks": 30000,
+    "legit": 30000,
+    "legit_failed": 3070,
+    "bad": 0,
+    "bad_caught": 0,
+    "total_ns": 1485125643035,
+    "bad_ns": 0
+   },
+   "governed": {
+    "tasks": 30000,
+    "legit": 30000,
+    "legit_failed": 6861,
+    "bad": 0,
+    "bad_caught": 0,
+    "total_ns": 1359533831088,
+    "bad_ns": 0
+   },
+   "legit_fail_rate_static": 0.10233333333333333,
+   "legit_fail_rate_governed": 0.2287,
+   "legit_fail_rate_governed_last_half": 0.35173333333333334,
+   "legit_fail_rate_static_last_half": 0.1544,
+   "budget_trajectory_ms": [
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9
+   ],
+   "final_status": {
+    "limit": 72900000.0,
+    "version": 4,
+    "automatic_tightenings_since_acknowledgement": 3,
+    "held": true
+   }
   }
  },
  "min_rate": 0.01,
+ "drift_factor": null,
  "bridge_counts": {
-  "below_rate": 8768
+  "below_rate": 13915
  }
 }

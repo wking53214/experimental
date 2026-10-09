@@ -194,3 +194,101 @@ class TestRatePolicy:
         g, b = make(tmp_path, policy=self.policy())
         b.observe_transactions("agent-7", n)
         assert b.ingest([trap() for _ in range(50)]) == []
+
+
+class TestDriftRule:
+    """drift_factor: a high trap rate while completed tasks have slowed against the agent's own baseline is a
+    regression for a person to look at, not a runaway to tighten."""
+
+    MS = 1_000_000
+
+    def pol(self, **kw):
+        return TrapPolicy(min_rate=0.01, drift_factor=1.5, **kw)
+
+    def round(self, b, median_ms, traps=25, tasks=500, agent="agent-7"):
+        b.observe_transactions(agent, tasks, completed_median_ns=median_ms * self.MS)
+        return b.ingest([trap(agent=agent) for _ in range(traps)])
+
+    def baseline(self, b, agent="agent-7"):
+        for _ in range(5):
+            self.round(b, 20, traps=0, agent=agent)
+
+    def slow_down(self, b, median_ms=60):
+        """Two quiet slow reports: the median of the last three reports now exceeds the baseline."""
+        for _ in range(2):
+            self.round(b, median_ms, traps=0)
+
+    def test_a_high_rate_with_stable_completions_still_tightens(self, tmp_path):
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        replies = self.round(b, 21)
+        assert replies and replies[0]["status"] == "applied"
+
+    def test_a_high_rate_with_slowed_completions_is_held_not_tightened(self, tmp_path):
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        self.slow_down(b)
+        for _ in range(4):
+            assert self.round(b, 60) == []
+        assert b.limit_for("agent-7", "token_exhausted") == 100.0
+        assert b.counts["drift_held"] > 0
+
+    def test_it_is_recorded_once_per_episode_in_the_audit_log(self, tmp_path):
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        self.slow_down(b)
+        for _ in range(4):
+            self.round(b, 60)
+        held = [e for e in g.audit.find("signal") if e["payload"].get("kind") == "drift_held"]
+        assert len(held) == 1 and held[0]["payload"]["recent_median_ns"] == 60 * self.MS
+
+    def test_off_by_default(self, tmp_path):
+        g, b = make(tmp_path, policy=TrapPolicy(min_rate=0.01))
+        self.baseline(b)
+        assert self.round(b, 60) != []
+
+    def test_an_agent_that_was_slow_from_the_start_has_no_baseline_to_drift_from(self, tmp_path):
+        g, b = make(tmp_path, policy=self.pol())
+        for _ in range(5):
+            self.round(b, 60, traps=0)
+        assert self.round(b, 60) != []                         # documented limit: treated as before
+
+    def test_a_limit_already_tightened_gets_a_restore_request_for_a_person(self, tmp_path):
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        self.round(b, 20)                                       # tightens to 90
+        assert b.limit_for("agent-7", "token_exhausted") == pytest.approx(90.0)
+        self.slow_down(b)
+        for _ in range(3):
+            self.round(b, 60)
+        pending = g.list_pending_review()
+        assert [p.proposed_value for p in pending] == [100.0]
+        assert b.limit_for("agent-7", "token_exhausted") == pytest.approx(90.0)   # nothing changed by itself
+
+    def test_it_clears_when_completions_recover(self, tmp_path):
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        self.slow_down(b)
+        for _ in range(3):
+            assert self.round(b, 60) == []
+        for _ in range(2):
+            self.round(b, 20, traps=0)                          # completions recover
+        replies = self.round(b, 20)
+        assert replies and replies[0]["status"] == "applied"
+
+    @pytest.mark.parametrize("bad", [0, -5, float("nan"), float("inf"), True, "20", None])
+    def test_bad_medians_are_ignored(self, tmp_path, bad):
+        g, b = make(tmp_path, policy=self.pol())
+        for _ in range(6):
+            b.observe_transactions("agent-7", 500, completed_median_ns=bad)
+        assert b.drifting("agent-7") is False and not b._baseline
+
+    def test_a_restart_with_a_drift_entry_in_the_audit_log_still_loads(self, tmp_path):
+        g, b = make(tmp_path, durable=True, policy=self.pol())
+        self.baseline(b)
+        self.slow_down(b)
+        for _ in range(3):
+            self.round(b, 60)
+        assert g.audit.find("signal")
+        g2, b2 = make(tmp_path, durable=True, policy=self.pol())
+        assert g2.audit.verify()[0]

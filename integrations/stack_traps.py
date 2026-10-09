@@ -23,6 +23,8 @@ this core only orders numbers), so they are counted as "unmapped" and change not
 from __future__ import annotations
 
 import hashlib
+import math
+import statistics
 import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -52,6 +54,14 @@ class TrapPolicy:
     # TrapBridge.observe_transactions; without it no rate can be computed and nothing tightens (fails safe).
     min_rate: Optional[float] = None
     rate_window_tasks: int = 2000
+    # Drift rule (off by default). A high trap rate while the agent's COMPLETED tasks have also slowed against its own
+    # baseline looks like a regression, not a runaway: hold instead of tightening, and let a person decide. The
+    # baseline is the median of the first baseline_reports completed-duration medians, then frozen. Needs
+    # observe_transactions(..., completed_median_ns=...). An agent that was slow from the start has no earlier
+    # baseline to drift from and is treated as before.
+    drift_factor: Optional[float] = None
+    baseline_reports: int = 5
+    drift_recent_reports: int = 3
 
 
 def _agent_key(agent_id: Any) -> Optional[str]:
@@ -74,6 +84,9 @@ class TrapBridge:
         self.max_agents, self.is_expected = max_agents, is_expected
         self._recent: Dict[str, Deque[str]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
         self._stamps: Dict[str, Deque[int]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
+        self._medians: Dict[str, list] = defaultdict(list)   # completed-duration medians reported per agent
+        self._baseline: Dict[str, float] = {}
+        self._drifting: set = set()
         self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
         self.counts = defaultdict(int)  # skipped_malformed, unmapped, expected, duplicate, agent_cap, ...
@@ -88,11 +101,46 @@ class TrapBridge:
             return None
         return float(self.gov.boundaries.get_boundary(self.boundary_id(key, spec[0])).current_limit)
 
-    def observe_transactions(self, agent_id: str, n: int) -> None:
-        """Report that the agent ran n more transactions (traps or not). Call before ingesting their traps."""
+    def observe_transactions(self, agent_id: str, n: int, completed_median_ns: Optional[float] = None) -> None:
+        """Report that the agent ran n more transactions (traps or not), and optionally the median duration of the
+        ones that completed. Call before ingesting their traps."""
         key = _agent_key(agent_id)
-        if key is not None and isinstance(n, int) and not isinstance(n, bool) and n > 0:
-            self._tasks[key] += n
+        if key is None or not isinstance(n, int) or isinstance(n, bool) or n <= 0:
+            return
+        self._tasks[key] += n
+        m = completed_median_ns
+        if isinstance(m, (int, float)) and not isinstance(m, bool) and math.isfinite(m) and m > 0:
+            reports = self._medians[key]
+            reports.append(float(m))
+            if key not in self._baseline and len(reports) >= self.policy.baseline_reports:
+                self._baseline[key] = statistics.median(reports[: self.policy.baseline_reports])
+            del reports[: max(0, len(reports) - 1000)]
+
+    def drifting(self, agent_key: str) -> bool:
+        """True if the agent's recent completed tasks are slower than its frozen baseline by drift_factor."""
+        base, reports = self._baseline.get(agent_key), self._medians.get(agent_key)
+        if self.policy.drift_factor is None or base is None or not reports:
+            return False
+        recent = statistics.median(reports[-self.policy.drift_recent_reports:])
+        return recent > base * self.policy.drift_factor
+
+    def _report_drift(self, agent: str, suffix: str, reason: str) -> None:
+        """Once per episode: record it in the audit log, and if the limit was already tightened, ask a person to
+        restore it. Nothing is changed here."""
+        bid = self.boundary_id(agent, suffix)
+        base, recent = self._baseline[agent], statistics.median(self._medians[agent][-self.policy.drift_recent_reports:])
+        info = {"kind": "drift_held", "source": self.source, "boundary_id": bid, "trap_reason": reason,
+                "baseline_median_ns": base, "recent_median_ns": recent}
+        self.gov.audit.append("signal", info)
+        current = float(self.gov.boundaries.get_boundary(bid).current_limit)
+        if current < float(self.defaults[suffix]):
+            try:
+                self.gov.request_loosening(
+                    bid, requested_by=self.source, credential=self.credential, new_limit=float(self.defaults[suffix]),
+                    reason="completed tasks are slower than this agent's baseline: looks like a regression, "
+                           "not a runaway", evidence=info, idempotency_key=f"drift-{agent}-{suffix}-{int(recent)}")
+            except (ValueError, KeyError):
+                self.counts["rejected_input"] += 1
 
     def ingest(self, events: Iterable[dict]) -> List[dict]:
         """Process trap events in order. Never raises on a bad event; returns the governor's replies."""
@@ -151,6 +199,14 @@ class TrapBridge:
             if recent < self.policy.min_traps or recent / span < self.policy.min_rate:
                 self.counts["below_rate"] += 1
                 return None
+        if self.policy.drift_factor is not None:
+            if self.drifting(agent):
+                self.counts["drift_held"] += 1
+                if agent not in self._drifting:
+                    self._drifting.add(agent)
+                    self._report_drift(agent, suffix, reason)
+                return None
+            self._drifting.discard(agent)
         evidence = {k: ev.get(k) for k in ("trap_id", "agent_id", "boundary_layer", "trap_reason", "trap_outcome",
                                             "tokens_deficit", "nanoseconds_since_deadline", "memory_requested_bytes")}
         evidence["traps_in_window"] = len(window)

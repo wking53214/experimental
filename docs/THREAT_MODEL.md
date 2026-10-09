@@ -54,6 +54,8 @@ Scope caveat on T6 and T7: the grant mechanism stops bugs and API misuse. Python
 
 | T14 | **A buggy or compromised signal source** drives limits down through `propose_tightening` | A1/A3 | **Bounded, not prevented.** A source can spend the whole automatic budget (3 steps by default, about 27% of the limit) immediately; after that every call is `held` and logged once. It cannot raise a limit, go below the floor, decide a proposal, or touch the audit log (a source credential is boxed in; verified over HTTP). Give each source its own credential to attribute and revoke it. | `tests/test_signal_interface.py`, `docs/INTEGRATION.md` |
 
+| T15 | **Drift reports as a lever**: inflated `completed_median_ns`, or a baseline learned while the agent is already misbehaving, makes the drift rule hold tightening that a runaway deserves | A1/A3 | **Open, bounded.** It can only suppress automatic tightening (never loosen). No defence yet; the baseline is the same weakness as T2. | `docs/STACK_CLOSED_LOOP.md` |
+
 ## T3 in detail: the denial-of-service lever
 
 Setup: one boundary with limit 100. Legitimate traffic is roughly N(50, 5). The attacker sends values 5% above the current limit and nothing else. Each value is a genuine violation, so the pattern detector tightens by 10% as designed. Results from `experiments/dos_tightening.py`:

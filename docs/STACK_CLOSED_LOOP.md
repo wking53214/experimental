@@ -32,6 +32,23 @@ Added after the result above: tighten only if traps are at least 1% of the agent
 
 So the rate rule removes the harm to the healthy agent at no cost to the runaway benefit. It does nothing for the slowed agent: 15% timeouts looks exactly like an attack from the trap stream. That case needs a person, or a signal that is not trap counts (for example, a latency shift that the agent's own history explains).
 
+## Drift rule (`TrapPolicy(drift_factor=1.5)`, off by default)
+
+For the slowed agent. The kernel also reports the median duration of the tasks that completed (`observe_transactions(..., completed_median_ns=)`). The bridge freezes a baseline from an agent's first 5 reports. If the agent's recent completed tasks are slower than that baseline by `drift_factor` while traps are high, it is a regression: the bridge does not tighten, writes a `drift_held` entry to the audit log once per episode, and, if the limit was already tightened, files a loosening request back to the configured value for a person. A runaway looks different: its completed tasks stay at baseline while the killed ones push the trap rate up.
+
+New agent `regressed`: healthy for 20 rounds, then every task is 3x slower. With the rate rule on in all rows:
+
+| Variant | regressed: legit timeouts (static 10.2%) | regressed: final budget | restore request waiting |
+|---|---|---|---|
+| rate rule only | 22.9% | 72.9 ms | no |
+| drift, median of last 3 reports | 22.9% | 72.9 ms | **yes (1)** |
+| drift, latest report only | **10.2%** | **100 ms (untouched)** | none needed |
+
+- **Why smoothing failed:** one slow round carries about 75 traps, enough to spend the whole breaker cap before a 3-report median moves. The unsmoothed variant works because the report arrives before that round's traps are processed. I tried the unsmoothed variant after seeing the smoothed one fail; the reason is mechanical, but it is a choice made on this result.
+- **No effect on the other agents:** healthy stays untouched (rate rule), the runaway still gets its 27% saving (its completed tasks did not slow, so it is not held).
+- **The slowed agent is still harmed (34%).** It is slow from the first round, so it has no earlier baseline to drift from. The drift rule needs history.
+- **New attack surface:** whoever controls the reported medians can suppress tightening by inflating them (this only removes autonomy, never loosens a limit), and a baseline learned while the agent is already misbehaving is poisoned (the same weakness found in `docs/BASELINE_POISONING.md`). Neither is mitigated here.
+
 ## Not tested
 
-The rate rule's threshold on other workloads or other seeds. Token and memory limits are not enforced by the kernel yet, so only the deadline was exercised. Durations are simulated; real workloads have different tails.
+The rate rule's threshold and the drift factor on other workloads or other seeds (one seed throughout). Token and memory limits are not enforced by the kernel yet, so only the deadline was exercised. Durations are simulated; real workloads have different tails.
