@@ -1,0 +1,18 @@
+{
+ "name": "stack_trace_inflate_v1",
+ "seed": 20261009,
+ "agents": 7,
+ "tasks_per_agent": 8000,
+ "rows": 56000,
+ "slice_tasks": 250,
+ "defaults": {
+  "deadline_ns": 100000000,
+  "tokens_capacity": 4000,
+  "memory_capacity_bytes": 536870912
+ },
+ "sha256": {
+  "stack_trace_inflate_v1.csv": "778c8e6996c014614c9e5ddd25626abc41863ec1ba41429aa15704dcbae32515",
+  "stack_agents_inflate_v1.csv": "49b8fe6e294a03dc23a2b7f8b3b810a30a699dd221d064bc1d7eb986f83090f1"
+ },
+ "synthetic": true
+}

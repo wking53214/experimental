@@ -54,8 +54,10 @@ def main():
     ap.add_argument("--slice", type=int, default=250); ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--policies", default=",".join(POLICIES))
     a = ap.parse_args()
-    manifest = json.loads((Path(a.csv).parent / "MANIFEST.json").read_text()); defaults = manifest["defaults"]
-    agents = list(csv.DictReader(open(Path(a.csv).parent / "stack_agents_v1.csv")))
+    tag = Path(a.csv).stem.replace("stack_trace_", "")
+    d = Path(a.csv).parent
+    manifest = json.loads((d / ("MANIFEST.json" if tag == "v1" else f"MANIFEST_{tag}.json")).read_text()); defaults = manifest["defaults"]
+    agents = list(csv.DictReader(open(d / f"stack_agents_{tag}.csv")))
     n_slices = manifest["tasks_per_agent"] // a.slice
     pool = ThreadPoolExecutor(a.workers)
 
@@ -99,7 +101,7 @@ def main():
         results["policies"][pname] = {"agents": per, "bridge_counts": dict(bridge.counts),
                                       "audit_chain_intact": srv.GOV.audit.verify()[0]}
         httpd.shutdown()
-    Path(ROOT / "experiments" / "stack_trace_replay_results.json").write_text(json.dumps(results, indent=1))
+    Path(ROOT / "experiments" / ("stack_trace_replay_results.json" if tag == "v1" else f"stack_trace_replay_results_{tag}.json")).write_text(json.dumps(results, indent=1))
     report(results)
 
 

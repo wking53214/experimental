@@ -41,3 +41,11 @@ def test_expected_load_is_only_the_scheduled_batch_agents():
     with open(D / "stack_trace_v1.csv") as f:
         flagged = {r["agent_id"] for r in csv.DictReader(f) if r["expected_load"] == "1"}
     assert flagged == {"batchjob-0", "batchjob-1"}
+
+
+def test_the_drift_suppression_trace_matches_its_manifest():
+    m = json.loads((D / "MANIFEST_inflate_v1.json").read_text())
+    for name, sha in m["sha256"].items():
+        assert hashlib.sha256((D / name).read_bytes()).hexdigest() == sha, name
+    with open(D / "stack_trace_inflate_v1.csv") as f:
+        assert sum(1 for _ in f) - 1 == m["rows"] == m["agents"] * m["tasks_per_agent"]

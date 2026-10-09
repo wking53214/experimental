@@ -1,0 +1,8 @@
+agent_id,profile,should_tighten,team,description
+inflate-first-0,attacker_inflate_first,1,ext,"doubles completed durations at 3000, hangs 4% from 4000"
+inflate-first-1,attacker_inflate_first,1,ext,"doubles completed durations at 1500, hangs 4% from 2500"
+inflate-ramp,attacker_inflate_first,1,ext,"ramps completed durations to 2.2x over 2000 tasks from 2000, hangs 4% from 4000"
+inflate-from-start,attacker_inflate_first,1,ext,"doubles from task 0 (baseline poisoned), hangs 4% from 3000"
+control-regressed,regressed,0,web,"3x slower from 3000, no hangs (the legitimate look-alike)"
+control-runaway,runaway_episode,1,batch,"4% hangs from 4000, completions unchanged"
+control-healthy,healthy,0,core,inside its limits

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate testdata/traces/stack_trace_v1.csv (+ agents + manifest). Deterministic. See testdata/traces/README.md.
 
-usage: python experiments/gen_trace.py [--tasks 8000] [--seed 20261009]
+usage: python experiments/gen_trace.py [--set v1|inflate_v1] [--tasks 8000] [--seed 20261009]
 """
 import argparse, csv, hashlib, json, math
 from pathlib import Path
@@ -41,6 +41,24 @@ ROSTER = [
     ("attacker-lowslow", "attacker_lowslow", 1, "ext", "hangs 0.8% of tasks, below a 1% rate rule",
      dict(median_ms=20, sigma=.5, p=0.008)),
 ]
+# Targeted set for the drift-suppression weakness (T15): the attacker slows its completed tasks AFTER the drift
+# baseline is learned (first 5 slices = 1250 tasks) and starts hanging tasks LATER, so the breaker is not yet spent.
+ROSTER_INFLATE = [
+    ("inflate-first-0", "attacker_inflate_first", 1, "ext", "doubles completed durations at 3000, hangs 4% from 4000",
+     dict(median_ms=20, sigma=.5, p=0.04, infl_at=3000, hang_at=4000)),
+    ("inflate-first-1", "attacker_inflate_first", 1, "ext", "doubles completed durations at 1500, hangs 4% from 2500",
+     dict(median_ms=20, sigma=.5, p=0.04, infl_at=1500, hang_at=2500)),
+    ("inflate-ramp", "attacker_inflate_first", 1, "ext", "ramps completed durations to 2.2x over 2000 tasks from 2000, hangs 4% from 4000",
+     dict(median_ms=20, sigma=.5, p=0.04, infl_at=2000, hang_at=4000, ramp=2000)),
+    ("inflate-from-start", "attacker_inflate_first", 1, "ext", "doubles from task 0 (baseline poisoned), hangs 4% from 3000",
+     dict(median_ms=20, sigma=.5, p=0.04, infl_at=0, hang_at=3000)),
+    ("control-regressed", "regressed", 0, "web", "3x slower from 3000, no hangs (the legitimate look-alike)",
+     dict(median_ms=20, sigma=.5, at=3000, until=None)),
+    ("control-runaway", "runaway_episode", 1, "batch", "4% hangs from 4000, completions unchanged",
+     dict(median_ms=20, sigma=.5, p=0.04, lo=4000, hi=8000)),
+    ("control-healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
+]
+ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
@@ -73,6 +91,12 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         hang = rng.random(n) < p
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = {"attacker_inflate": "inflated", "attacker_lowslow": "lowslow"}.get(profile, "runaway")
+    if profile == "attacker_inflate_first":
+        f = 1 + 1.2 * np.clip((seq - prm["infl_at"]) / float(prm.get("ramp", 1)), 0, 1)
+        dur *= np.where(seq >= prm["infl_at"], f, 1.0)
+        hang = (rng.random(n) < prm["p"]) & (seq >= prm["hang_at"])
+        dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
+        bad[hang] = 1; regime[hang] = "inflated"
     if profile == "memory_leak":
         t = np.clip((seq - prm["start"]) / float(prm["restart"] - prm["start"]), 0, 1)
         t[seq >= prm["restart"]] = 0.0
@@ -105,25 +129,27 @@ HEADER = ["task_id", "agent_id", "seq", "ts_s", "day_index", "hour_of_day", "tea
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--tasks", type=int, default=8000)
-    ap.add_argument("--seed", type=int, default=20261009); a = ap.parse_args()
+    ap.add_argument("--seed", type=int, default=20261009)
+    ap.add_argument("--set", default="v1", choices=sorted(ROSTERS)); a = ap.parse_args()
+    roster = ROSTERS[a.set]; tag = a.set
     OUT.mkdir(parents=True, exist_ok=True)
     rng_master = np.random.SeedSequence(a.seed)
-    seeds = rng_master.spawn(len(ROSTER))
+    seeds = rng_master.spawn(len(roster))
     total = 0
-    with open(OUT / "stack_trace_v1.csv", "w", newline="") as f:
+    with open(OUT / f"stack_trace_{tag}.csv", "w", newline="") as f:
         w = csv.writer(f, lineterminator="\n"); w.writerow(HEADER)
-        for idx, ((name, profile, _s, team, _d, prm), ss) in enumerate(zip(ROSTER, seeds)):
+        for idx, ((name, profile, _s, team, _d, prm), ss) in enumerate(zip(roster, seeds)):
             rows = gen_agent(name, profile, prm, a.tasks, np.random.default_rng(ss), idx, team)
             w.writerows(rows); total += len(rows)
-    with open(OUT / "stack_agents_v1.csv", "w", newline="") as f:
+    with open(OUT / f"stack_agents_{tag}.csv", "w", newline="") as f:
         w = csv.writer(f, lineterminator="\n"); w.writerow(["agent_id", "profile", "should_tighten", "team", "description"])
-        for name, profile, st, team, desc, _ in ROSTER: w.writerow([name, profile, st, team, desc])
+        for name, profile, st, team, desc, _ in roster: w.writerow([name, profile, st, team, desc])
     sha = lambda p: hashlib.sha256((OUT / p).read_bytes()).hexdigest()
-    (OUT / "MANIFEST.json").write_text(json.dumps({
-        "name": "stack_trace_v1", "seed": a.seed, "agents": len(ROSTER), "tasks_per_agent": a.tasks, "rows": total,
+    (OUT / ("MANIFEST.json" if tag == "v1" else f"MANIFEST_{tag}.json")).write_text(json.dumps({
+        "name": f"stack_trace_{tag}", "seed": a.seed, "agents": len(roster), "tasks_per_agent": a.tasks, "rows": total,
         "slice_tasks": 250, "defaults": {"deadline_ns": DEADLINE_NS, "tokens_capacity": TOKENS_CAP,
                                          "memory_capacity_bytes": MEM_CAP},
-        "sha256": {"stack_trace_v1.csv": sha("stack_trace_v1.csv"), "stack_agents_v1.csv": sha("stack_agents_v1.csv")},
+        "sha256": {f"stack_trace_{tag}.csv": sha(f"stack_trace_{tag}.csv"), f"stack_agents_{tag}.csv": sha(f"stack_agents_{tag}.csv")},
         "synthetic": True}, indent=1))
     print("rows", total)
 
