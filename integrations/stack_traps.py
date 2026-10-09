@@ -47,6 +47,11 @@ class TrapPolicy:
     window_events: int = 50
     factor: float = 0.9
     count_outcomes: tuple = ("RETRY", "TERMINAL_BREACH", "HALT")
+    # Rate rule (off by default). With min_rate set, tightening also needs the traps among the agent's last
+    # rate_window_tasks transactions to be at least min_rate of them. The kernel must report activity through
+    # TrapBridge.observe_transactions; without it no rate can be computed and nothing tightens (fails safe).
+    min_rate: Optional[float] = None
+    rate_window_tasks: int = 2000
 
 
 def _agent_key(agent_id: Any) -> Optional[str]:
@@ -68,6 +73,8 @@ class TrapBridge:
         self.policy, self.source, self.credential = policy or TrapPolicy(), source, credential
         self.max_agents, self.is_expected = max_agents, is_expected
         self._recent: Dict[str, Deque[str]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
+        self._stamps: Dict[str, Deque[int]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
+        self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
         self.counts = defaultdict(int)  # skipped_malformed, unmapped, expected, duplicate, agent_cap, ...
 
@@ -80,6 +87,12 @@ class TrapBridge:
         if key is None or spec is None or key not in self._agents:
             return None
         return float(self.gov.boundaries.get_boundary(self.boundary_id(key, spec[0])).current_limit)
+
+    def observe_transactions(self, agent_id: str, n: int) -> None:
+        """Report that the agent ran n more transactions (traps or not). Call before ingesting their traps."""
+        key = _agent_key(agent_id)
+        if key is not None and isinstance(n, int) and not isinstance(n, bool) and n > 0:
+            self._tasks[key] += n
 
     def ingest(self, events: Iterable[dict]) -> List[dict]:
         """Process trap events in order. Never raises on a bad event; returns the governor's replies."""
@@ -124,8 +137,20 @@ class TrapBridge:
             self.counts["duplicate"] += 1
             return None
         window.append(trap_id)
+        stamps = self._stamps[f"{agent}|{reason}"]
+        stamps.append(self._tasks[agent])
         if len(window) < self.policy.min_traps:     # the window already holds only the last window_events
             return None
+        if self.policy.min_rate is not None:
+            total = self._tasks[agent]
+            if total <= 0:
+                self.counts["no_activity"] += 1
+                return None
+            span = min(total, self.policy.rate_window_tasks)
+            recent = sum(1 for st in stamps if st > total - span)
+            if recent < self.policy.min_traps or recent / span < self.policy.min_rate:
+                self.counts["below_rate"] += 1
+                return None
         evidence = {k: ev.get(k) for k in ("trap_id", "agent_id", "boundary_layer", "trap_reason", "trap_outcome",
                                             "tokens_deficit", "nanoseconds_since_deadline", "memory_requested_bytes")}
         evidence["traps_in_window"] = len(window)
@@ -138,4 +163,5 @@ class TrapBridge:
             self.counts["rejected_input"] += 1
             return None
         window.clear()  # the next tightening needs a fresh pattern
+        stamps.clear()
         return reply

@@ -144,3 +144,53 @@ class TestRobustness:
         e = g.audit.find("signal")[-1]["payload"]
         assert e["source"] == "stack-sentinel" and e["evidence"]["trap_reason"] == "token_exhausted"
         assert e["evidence"]["traps_in_window"] == 5 and e["idempotency_key"] == "trap-e4"
+
+
+class TestRatePolicy:
+    """min_rate: a few traps among very many transactions is a healthy agent, not a pattern."""
+
+    def policy(self, **kw):
+        return TrapPolicy(min_rate=0.01, rate_window_tasks=2000, **kw)
+
+    def feed(self, b, traps_per_round, rounds, tasks=500):
+        out = []
+        for _ in range(rounds):
+            b.observe_transactions("agent-7", tasks)
+            out += b.ingest([trap() for _ in range(traps_per_round)])
+        return out
+
+    def test_a_low_rate_never_tightens_however_long_it_runs(self, tmp_path):
+        g, b = make(tmp_path, policy=self.policy())
+        assert self.feed(b, 1, 200) == []                      # 0.2% for 100,000 transactions
+        assert b.limit_for("agent-7", "token_exhausted") == 100.0
+        assert b.counts["below_rate"] > 0
+
+    def test_the_default_policy_tightens_that_same_low_rate_agent(self, tmp_path):
+        g, b = make(tmp_path)
+        assert self.feed(b, 1, 20) != []                       # why the rate rule exists
+
+    def test_a_high_rate_tightens(self, tmp_path):
+        g, b = make(tmp_path, policy=self.policy())
+        replies = self.feed(b, 25, 4)                           # 5% of transactions
+        assert [r["status"] for r in replies][:1] == ["applied"]
+        assert b.limit_for("agent-7", "token_exhausted") == pytest.approx(72.9)   # 100 traps: stopped by the breaker
+
+    def test_without_activity_reports_nothing_tightens(self, tmp_path):
+        g, b = make(tmp_path, policy=self.policy())
+        assert b.ingest([trap() for _ in range(50)]) == []
+        assert b.counts["no_activity"] > 0
+        assert b.limit_for("agent-7", "token_exhausted") == 100.0
+
+    def test_the_rate_is_over_the_recent_window_not_all_time(self, tmp_path):
+        g, b = make(tmp_path, policy=self.policy())
+        b.observe_transactions("agent-7", 100_000)             # a long quiet history
+        assert b.ingest([trap() for _ in range(5)]) == []      # 5 traps / 2000 = 0.25%: below 1%
+        b.observe_transactions("agent-7", 500)
+        replies = b.ingest([trap() for _ in range(20)])        # now 25 / 2000 = 1.25%
+        assert replies and replies[0]["status"] == "applied"
+
+    @pytest.mark.parametrize("n", [0, -5, True, "7", None, 2.5])
+    def test_bad_activity_reports_are_ignored(self, tmp_path, n):
+        g, b = make(tmp_path, policy=self.policy())
+        b.observe_transactions("agent-7", n)
+        assert b.ingest([trap() for _ in range(50)]) == []

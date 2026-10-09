@@ -20,6 +20,18 @@ Audit chain intact at the end. Raw numbers: `experiments/stack_closed_loop_resul
 3. **The default trap policy punishes healthy and merely slow agents.** `TrapPolicy` counts "5 traps among the last 50 trap events", not a rate. A healthy agent with a 0.05% natural timeout rate eventually collects five traps and gets tightened to the breaker cap, which multiplied its legitimate timeouts about 10x. A legitimately slowed agent had its failures more than doubled.
 4. **Trap events do not escape the false-alarm problem.** I expected real enforcement events to avoid the detector's false alarms (they are real, not statistical guesses). The first half of that holds: the traps are real. But a real trap is not evidence of an attack, and the policy cannot tell a runaway from a slow-but-legitimate agent. Only a person can, which is the design's answer (the breaker holds, a human loosens) but it means the autonomy buys little here.
 
+## Rate rule (`TrapPolicy(min_rate=0.01)`, off by default)
+
+Added after the result above: tighten only if traps are at least 1% of the agent's last 2,000 transactions. The kernel must report activity (`TrapBridge.observe_transactions`); without it nothing tightens. Same workload and seed (`experiments/stack_closed_loop_results_rate.json`). The 1% threshold was chosen from what I knew of the workload (0.05% vs 5% vs 15%) before running, not swept, but it is still a number picked for this simulation.
+
+| Agent | Legit timeouts, static -> default policy -> rate rule | Final budget (default -> rate) |
+|---|---|---|
+| healthy | 0.05% -> 0.28% -> **0.05%** | 72.9 ms -> **100 ms (untouched)** |
+| runaway | 0.07% -> 0.42% -> 0.42% (same benefit: 147.5 s -> 108.3 s) | 72.9 -> 72.9 ms |
+| slowed | 15.1% -> 34.2% -> 34.2% | 72.9 -> 72.9 ms |
+
+So the rate rule removes the harm to the healthy agent at no cost to the runaway benefit. It does nothing for the slowed agent: 15% timeouts looks exactly like an attack from the trap stream. That case needs a person, or a signal that is not trap counts (for example, a latency shift that the agent's own history explains).
+
 ## Not tested
 
-A rate-based policy (traps per second or per task) would likely stop the healthy-agent case, since 0.05% and 5% differ 100x. It would not separate the runaway from the slowed agent (5% vs 15% timeouts are both "high"). Not built or measured. Token and memory limits are not enforced by the kernel yet, so only the deadline was exercised. Durations are simulated; real workloads have different tails.
+The rate rule's threshold on other workloads or other seeds. Token and memory limits are not enforced by the kernel yet, so only the deadline was exercised. Durations are simulated; real workloads have different tails.

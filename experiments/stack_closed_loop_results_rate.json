@@ -1,0 +1,146 @@
+{
+ "rounds": 60,
+ "tasks_per_round": 500,
+ "default_budget_ns": 100000000,
+ "agents": {
+  "agent-healthy": {
+   "profile": "healthy",
+   "static": {
+    "tasks": 30000,
+    "legit": 30000,
+    "legit_failed": 15,
+    "bad": 0,
+    "bad_caught": 0,
+    "total_ns": 680437939688,
+    "bad_ns": 0
+   },
+   "governed": {
+    "tasks": 30000,
+    "legit": 30000,
+    "legit_failed": 15,
+    "bad": 0,
+    "bad_caught": 0,
+    "total_ns": 680437939688,
+    "bad_ns": 0
+   },
+   "legit_fail_rate_static": 0.0005,
+   "legit_fail_rate_governed": 0.0005,
+   "legit_fail_rate_governed_last_half": 0.00046666666666666666,
+   "legit_fail_rate_static_last_half": 0.00046666666666666666,
+   "budget_trajectory_ms": [
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0
+   ],
+   "final_status": {
+    "limit": 100000000.0,
+    "version": 1,
+    "automatic_tightenings_since_acknowledgement": 0,
+    "held": false
+   }
+  },
+  "agent-runaway": {
+   "profile": "runaway",
+   "static": {
+    "tasks": 30000,
+    "legit": 28525,
+    "legit_failed": 19,
+    "bad": 1475,
+    "bad_caught": 1475,
+    "total_ns": 793456042515,
+    "bad_ns": 147500000000
+   },
+   "governed": {
+    "tasks": 30000,
+    "legit": 28525,
+    "legit_failed": 119,
+    "bad": 1475,
+    "bad_caught": 1475,
+    "total_ns": 752913448085,
+    "bad_ns": 108313400000
+   },
+   "legit_fail_rate_static": 0.0006660823838737949,
+   "legit_fail_rate_governed": 0.0041717791411042945,
+   "legit_fail_rate_governed_last_half": 0.0036478428621536303,
+   "legit_fail_rate_static_last_half": 0.0004910557699052964,
+   "budget_trajectory_ms": [
+    100.0,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9
+   ],
+   "final_status": {
+    "limit": 72900000.0,
+    "version": 4,
+    "automatic_tightenings_since_acknowledgement": 3,
+    "held": true
+   }
+  },
+  "agent-slowed": {
+   "profile": "slowed",
+   "static": {
+    "tasks": 30000,
+    "legit": 30000,
+    "legit_failed": 4534,
+    "bad": 0,
+    "bad_caught": 0,
+    "total_ns": 1882154969927,
+    "bad_ns": 0
+   },
+   "governed": {
+    "tasks": 30000,
+    "legit": 30000,
+    "legit_failed": 10261,
+    "bad": 0,
+    "bad_caught": 0,
+    "total_ns": 1693390520325,
+    "bad_ns": 0
+   },
+   "legit_fail_rate_static": 0.15113333333333334,
+   "legit_fail_rate_governed": 0.34203333333333336,
+   "legit_fail_rate_governed_last_half": 0.3464,
+   "legit_fail_rate_static_last_half": 0.14886666666666667,
+   "budget_trajectory_ms": [
+    100.0,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9,
+    72.9
+   ],
+   "final_status": {
+    "limit": 72900000.0,
+    "version": 4,
+    "automatic_tightenings_since_acknowledgement": 3,
+    "held": true
+   }
+  }
+ },
+ "min_rate": 0.01,
+ "bridge_counts": {
+  "below_rate": 8768
+ }
+}
