@@ -75,10 +75,21 @@ def c7():
     return ("PASS" if r.returncode == 0 else "FAIL"), last
 
 
+def c8():
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "tests/test_signal_interface.py",
+                        "tests/test_adjudication_server_hardening.py", "-k", "Signal or signal or never or example"],
+                       capture_output=True, text=True)
+    last = (r.stdout.strip().splitlines() or [""])[-1]
+    return ("PASS" if r.returncode == 0 else "FAIL"), last
+
+
 if __name__ == "__main__":
     rows = [("1 safety", c1), ("2 detection vs baseline", c2), ("3 no crying wolf", c3),
             ("4 responds to real trouble", c4), ("5 value over alternatives", c5), ("6 poisoning survivable", c6),
-            ("7 restart never loosens", c7)]
+            ("7 restart never loosens", c7),
+            ("8 signals never loosen", c8)]
     for name, fn in rows:
         status, detail = fn()
         print(f"{status:13s} {name:28s} {detail}")

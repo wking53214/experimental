@@ -13,6 +13,9 @@ info:
       operator is taken from the credential; a different `operator_id` in the body is a 403.
       Once any operator token exists, the shared token can no longer decide (403), and the
       operator is also authenticated inside the governor's `OperatorRegistry`.
+    - `ADJUDICATION_SOURCE_TOKENS=monitor=tok1,supervisor=tok2`: machine sources. A source token can call only
+      `POST /signals/tighten`, `POST /signals/loosen-request`, `GET /boundaries/{id}` and `GET /health`;
+      everything else is a 403. See docs/INTEGRATION.md.
     - `ADJUDICATION_AUDIT_LOG=<path>`: write the hash-chained audit log to this file.
 
     Errors are JSON `{"error": "..."}`: 400 invalid input (bad JSON, missing field, non-finite
@@ -30,6 +33,38 @@ paths:
       responses:
         "200":
           description: OK
+  /signals/tighten:
+    post:
+      summary: Ask for a tighter limit (it can never raise one)
+      description: |
+        Body: `boundary_id`, exactly one of `new_limit` or `factor` (0 < factor < 1), optional `reason`
+        (500 chars), `evidence` (JSON, 4 KB), `idempotency_key`, `source` (taken from the credential for a
+        source token). Always 200 for a policy outcome; read `status`: applied, applied_clamped, held,
+        at_floor, rejected; `duplicate: true` on a repeated key. 400 bad input, 403 cannot authenticate,
+        404 unknown boundary.
+      responses:
+        "200":
+          description: Outcome in `status`
+  /signals/loosen-request:
+    post:
+      summary: Ask a human to consider raising a limit (never applied by this call)
+      description: Body as above with `new_limit` higher than the current limit. Result `pending_review` with a `proposal_id`; an operator decides it through `/proposals/{id}/decide`.
+      responses:
+        "200":
+          description: Outcome in `status`
+  /boundaries/{id}:
+    get:
+      summary: Read-only boundary status (limit, floor, breaker budget left, held, pending requests)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Status
+        "404":
+          description: Unknown boundary
   /audit:
     get:
       summary: Audit-log head hash, length, and whether the hash chain verifies (authenticated)

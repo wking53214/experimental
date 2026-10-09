@@ -15,6 +15,7 @@ from .proposal import ProposalStore, AdaptationProposal, AdaptationDirection
 from .audit_log import AuditLog, AuditIntegrityError
 from .authority import AuthorityModel, AuthorizationResult
 from .operators import OperatorRegistry
+from .signals import SignalInterface
 from .grant import is_loosening
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
@@ -37,7 +38,7 @@ class Governor:
                  detection: str = "generative", operators: Optional[OperatorRegistry] = None,
                  audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None,
                  strict_patterns: bool = False, evidence_window: Optional[int] = None,
-                 audit_anchor: Optional[dict] = None):
+                 audit_anchor: Optional[dict] = None, signal_sources: Optional[OperatorRegistry] = None):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
@@ -52,6 +53,8 @@ class Governor:
             the governor refuses to start (AuditIntegrityError) if it is broken or if replaying it
             would raise a limit without a recorded grant. Limits must be JSON values (numbers).
             Not restored: pending proposals, unused grants, registered expected-load patterns.
+        signal_sources: an OperatorRegistry of machine sources allowed to call propose_tightening and
+            request_loosening; without one, the source name is a claim (docs/INTEGRATION.md).
         audit_anchor: a value from audit_anchor() stored earlier; startup fails if the log's history
             no longer matches it (catches truncation and full rewrites).
         evidence_window: only violations among the boundary's most recent N executions count toward
@@ -121,6 +124,8 @@ class Governor:
         self.rollback = RollbackExecutor(self)
         self.telemetry_errors: list = []
         self.restored: Optional[dict] = None
+        self._signal_context: Optional[dict] = None
+        self.signals = SignalInterface(self, signal_sources)
         if self.audit.entries:
             self._restore(audit_anchor)
         elif audit_anchor is not None and audit_anchor.get("length"):
@@ -129,7 +134,10 @@ class Governor:
 
     def _log_boundary_version(self, kind: str, payload: dict) -> None:
         # Write-ahead: the store calls this before the version takes effect. If the write fails the
-        # change does not happen.
+        # change does not happen. A tightening that came from an outside signal carries its source and
+        # idempotency key in the same entry, so a retry after a crash cannot tighten twice.
+        if self._signal_context:
+            payload = {**payload, **{k: v for k, v in self._signal_context.items() if v is not None}}
         self.audit.append(kind, payload)
 
     def _restore(self, anchor: Optional[dict]) -> None:
@@ -148,6 +156,10 @@ class Governor:
                     self.boundaries.restore_version(p["boundary_id"], p["version"], p["resource"],
                                                     p["limit"], p.get("grant_id"), e["ts"])
                     versions += 1
+                    if p.get("signal_key"):
+                        self.signals._remember(p["signal_key"], {
+                            "status": "applied", "boundary_id": p["boundary_id"], "limit_after": p["limit"],
+                            "version": p["version"], "source": p.get("source"), "restored": True})
                 elif kind == "authority_decision":
                     eff = p.get("effective_direction")
                     self.authority.decisions.append(AuthorizationDecision(
@@ -169,6 +181,17 @@ class Governor:
         self.restored = {"entries": len(self.audit.entries), "boundaries": len(self.boundaries.boundaries),
                          "versions": versions, "truncated_tail_repaired": self.audit.truncated_tail}
         self.audit.append("restored", dict(self.restored))
+
+    def propose_tightening(self, boundary_id: str, **kw) -> dict:
+        """See SignalInterface.propose_tightening."""
+        return self.signals.propose_tightening(boundary_id, **kw)
+
+    def request_loosening(self, boundary_id: str, **kw) -> dict:
+        """See SignalInterface.request_loosening."""
+        return self.signals.request_loosening(boundary_id, **kw)
+
+    def boundary_status(self, boundary_id: str) -> dict:
+        return self.signals.boundary_status(boundary_id)
 
     def ensure_boundary(self, boundary_id: str, resource_or_action: str, configured_limit):
         """The start-up call for durable deployments: create the boundary if it does not exist,

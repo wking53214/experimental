@@ -37,6 +37,9 @@ def _parse_operator_tokens(spec: str) -> dict:
 
 
 OPERATOR_TOKENS = _parse_operator_tokens(os.environ.get("ADJUDICATION_OPERATOR_TOKENS", ""))
+# ADJUDICATION_SOURCE_TOKENS="monitor=tok1,agent-supervisor=tok2": machine sources that may only send
+# tightening signals and loosening REQUESTS. They can never decide a proposal or create boundaries.
+SOURCE_TOKENS = _parse_operator_tokens(os.environ.get("ADJUDICATION_SOURCE_TOKENS", ""))
 
 
 _REGISTRY_CACHE: dict = {"key": None, "registry": None}
@@ -55,6 +58,21 @@ def _sync_operators():
                 registry.register(name, token)
         _REGISTRY_CACHE.update(key=key, registry=registry)
     GOV.authority.operators = _REGISTRY_CACHE["registry"]
+
+
+_SOURCE_CACHE: dict = {"key": None, "registry": None}
+
+
+def _sync_sources():
+    key = tuple(sorted(SOURCE_TOKENS.items()))
+    if key != _SOURCE_CACHE["key"]:
+        registry = None
+        if SOURCE_TOKENS:
+            registry = OperatorRegistry(min_length=6)
+            for token, name in SOURCE_TOKENS.items():
+                registry.register(name, token)
+        _SOURCE_CACHE.update(key=key, registry=registry)
+    GOV.signals.sources = _SOURCE_CACHE["registry"]
 
 
 class BadRequest(Exception):
@@ -133,17 +151,50 @@ class Handler(BaseHTTPRequestHandler):
     def _auth(self):
         """Returns (authenticated, operator_id). operator_id is set only when the token
         belongs to one named operator (ADJUDICATION_OPERATOR_TOKENS)."""
-        if not ADJUDICATION_TOKEN and not OPERATOR_TOKENS:
+        if not ADJUDICATION_TOKEN and not OPERATOR_TOKENS and not SOURCE_TOKENS:
             return True, None
         presented = self._presented_token()
         if not presented:
             return False, None
+        for token, name in SOURCE_TOKENS.items():
+            if _eq(presented, token):
+                return True, None  # authenticated, but only as a source: see _source_name()
         for token, name in OPERATOR_TOKENS.items():
             if _eq(presented, token):
                 return True, name
         if ADJUDICATION_TOKEN and _eq(presented, ADJUDICATION_TOKEN):
             return True, None
         return False, None
+
+    def _source_name(self):
+        """The machine source this request's token belongs to, or None."""
+        presented = self._presented_token()
+        if presented:
+            for token, name in SOURCE_TOKENS.items():
+                if _eq(presented, token):
+                    return name
+        return None
+
+    def _check_source_scope(self, method, path):
+        """A source token reaches only the signal endpoints, boundary status and health."""
+        if self._source_name() is None:
+            return
+        ok = path == "/health" or (method == "POST" and path in ("/signals/tighten", "/signals/loosen-request")) \
+            or (method == "GET" and path.startswith("/boundaries/") and path.count("/") == 2)
+        if not ok:
+            raise BadRequest("a source credential may only send signals and read boundary status", 403)
+
+    def _signal_identity(self, data, token_operator):
+        """(source, credential) for a signal request."""
+        claimed = data.get("source")
+        bound = self._source_name()
+        if bound:
+            if claimed and str(claimed).strip() != bound:
+                raise BadRequest("source does not match the credential used", 403)
+            return bound, self._presented_token()
+        if token_operator and not claimed:
+            return token_operator, None
+        return _required_str(data, "source"), None
 
     def _unauthorized(self):
         return self._json(401, {
@@ -174,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
     def _get(self):
         path = urlparse(self.path).path
         authed, _ = self._auth()
-        auth_required = bool(ADJUDICATION_TOKEN or OPERATOR_TOKENS)
+        auth_required = bool(ADJUDICATION_TOKEN or OPERATOR_TOKENS or SOURCE_TOKENS)
         if path == "/health":
             body = {"status": "ok", "auth_required": auth_required, "demo": True}
             if authed:
@@ -182,6 +233,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, body)
         if not authed:
             return self._unauthorized()
+        self._check_source_scope("GET", path)
+        if path.startswith("/boundaries/") and path.count("/") == 2:
+            bid = path[len("/boundaries/"):]
+            try:
+                return self._json(200, GOV.boundary_status(bid))
+            except KeyError:
+                return self._json(404, {"error": f"boundary {bid} not found"})
         if path == "/audit":
             ok, problem = GOV.audit.verify()
             return self._json(200, {"length": len(GOV.audit.entries), "head": GOV.audit.head,
@@ -207,13 +265,34 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(404, {"error": f"proposal {pid} not found"})
         return self._json(404, {"error": "not found"})
 
+    def _signal(self, path, data, token_operator):
+        bid = _required_str(data, "boundary_id")
+        source, credential = self._signal_identity(data, token_operator)
+        common = {"reason": str(data.get("reason", "")), "evidence": data.get("evidence"),
+                  "credential": credential, "idempotency_key": data.get("idempotency_key")}
+        try:
+            if path == "/signals/tighten":
+                result = GOV.propose_tightening(bid, source=source, new_limit=data.get("new_limit"),
+                                                factor=data.get("factor"), **common)
+            else:
+                result = GOV.request_loosening(bid, requested_by=source, new_limit=data.get("new_limit"), **common)
+        except KeyError:
+            raise BadRequest(f"boundary {bid} not found", 404)
+        except ValueError as e:
+            raise BadRequest(str(e))
+        return self._json(200, result)
+
     def _post(self):
         _sync_operators()
+        _sync_sources()
         authed, token_operator = self._auth()
         if not authed:
             return self._unauthorized()
         path = urlparse(self.path).path
+        self._check_source_scope("POST", path)
         data = self._read_json()
+        if path in ("/signals/tighten", "/signals/loosen-request"):
+            return self._signal(path, data, token_operator)
         if path == "/boundaries":
             bid = _required_str(data, "boundary_id") if "boundary_id" in data else "demo"
             limit = _finite_positive(data, "initial_limit") if "initial_limit" in data else 100.0
@@ -285,7 +364,7 @@ def main():
         sys.exit(2)
     if public:
         print("WARNING: public bind %s — set ADJUDICATION_TOKEN." % host, file=sys.stderr)
-    if not ADJUDICATION_TOKEN and not OPERATOR_TOKENS:
+    if not ADJUDICATION_TOKEN and not OPERATOR_TOKENS and not SOURCE_TOKENS:
         print("WARNING: no token configured: every endpoint is unauthenticated (loopback only).", file=sys.stderr)
     elif ADJUDICATION_TOKEN and not OPERATOR_TOKENS:
         print("NOTE: one shared token: operator_id in the request body is self-asserted. "

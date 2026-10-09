@@ -210,3 +210,112 @@ def test_http_approved_loosening_passes_the_integrity_audit(port):
                 {"decision": "approve_loosen", "operator_id": "alice"})[0] == 200
     ok, _ = GOV.verify_governance_integrity()
     assert ok
+
+
+class TestSignalEndpoints:
+    """Bring-your-own-monitoring over HTTP (docs/INTEGRATION.md)."""
+
+    SRC = {"Authorization": "Bearer src-monitor-1"}
+    OP = {"Authorization": "Bearer tok-alice"}
+
+    def _mk(self, port, bid, limit=100):
+        """Creating a boundary needs an operator credential once any token is configured."""
+        code, _ = call(port, "POST", "/boundaries", {"boundary_id": bid, "initial_limit": limit}, headers=self.OP)
+        assert code in (200, 201), code
+
+    def test_a_source_can_tighten_and_read_status(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        self._mk(port, "sig_a")
+        code, body = call(port, "POST", "/signals/tighten",
+                          {"boundary_id": "sig_a", "factor": 0.9, "reason": "errors up", "evidence": {"e": 0.3},
+                           "idempotency_key": "k1"}, headers=self.SRC)
+        assert code == 200 and body["status"] == "applied" and body["source"] == "monitor"
+        assert body["identity_verified"] is True and body["limit_after"] == pytest.approx(90.0)
+        code, st = call(port, "GET", "/boundaries/sig_a", headers=self.SRC)
+        assert code == 200 and st["limit"] == pytest.approx(90.0) and st["remaining_before_breaker"] == 2
+
+    def test_a_retry_with_the_same_key_is_a_duplicate(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        self._mk(port, "sig_b")
+        a = call(port, "POST", "/signals/tighten", {"boundary_id": "sig_b", "factor": 0.9, "idempotency_key": "r1"}, headers=self.SRC)[1]
+        b = call(port, "POST", "/signals/tighten", {"boundary_id": "sig_b", "factor": 0.9, "idempotency_key": "r1"}, headers=self.SRC)[1]
+        assert a["status"] == "applied" and b["duplicate"] is True
+        assert GOV.boundaries.get_boundary("sig_b").current_limit == pytest.approx(90.0)
+
+    def test_a_source_credential_is_boxed_in(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        self._mk(port, "sig_c")
+        loosen = call(port, "POST", "/signals/loosen-request", {"boundary_id": "sig_c", "new_limit": 150}, headers=self.SRC)[1]
+        pid = loosen["proposal_id"]
+        for method, path, data in (
+                ("POST", f"/proposals/{pid}/decide", {"decision": "approve_loosen"}),
+                ("POST", "/boundaries", {"boundary_id": "evil", "initial_limit": 5}),
+                ("POST", "/proposals/loosen", {"boundary_id": "sig_c", "proposed_value": 500}),
+                ("GET", "/audit", None), ("GET", "/proposals/pending", None)):
+            code, body = call(port, method, path, data, headers=self.SRC)
+            assert code == 403, (path, body)
+        assert GOV.boundaries.get_boundary("sig_c").current_limit == 100
+
+    def test_a_source_cannot_claim_another_name(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        self._mk(port, "sig_d")
+        code, _ = call(port, "POST", "/signals/tighten", {"boundary_id": "sig_d", "factor": 0.9, "source": "someone-else"}, headers=self.SRC)
+        assert code == 403
+
+    def test_the_shared_token_cannot_masquerade_as_a_source_once_sources_exist(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        monkeypatch.setattr(srv, "ADJUDICATION_TOKEN", "t0ken")
+        self._mk_auth = {"Authorization": "Bearer t0ken"}
+        call(port, "POST", "/boundaries", {"boundary_id": "sig_e", "initial_limit": 100}, headers=self._mk_auth)
+        code, body = call(port, "POST", "/signals/tighten", {"boundary_id": "sig_e", "factor": 0.9, "source": "monitor"},
+                          headers=self._mk_auth)
+        assert code == 403, body
+        assert GOV.boundaries.get_boundary("sig_e").current_limit == 100
+
+    def test_bad_input_is_400_and_unknown_boundary_404_and_no_token_401(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        self._mk(port, "sig_f")
+        for bad in ({"factor": 2}, {"factor": -1}, {"new_limit": "x"}, {}, {"factor": 0.9, "new_limit": 50}):
+            code, _ = call(port, "POST", "/signals/tighten", {"boundary_id": "sig_f", **bad}, headers=self.SRC)
+            assert code == 400, bad
+        assert call(port, "POST", "/signals/tighten", {"boundary_id": "nope", "factor": 0.9}, headers=self.SRC)[0] == 404
+        assert call(port, "POST", "/signals/tighten", {"boundary_id": "sig_f", "factor": 0.9})[0] == 401
+        assert call(port, "POST", "/signals/tighten", {"boundary_id": "sig_f", "factor": 0.9},
+                    headers={"Authorization": "Bearer wrong"})[0] == 401
+        assert GOV.boundaries.get_boundary("sig_f").current_limit == 100
+
+    def test_a_loosening_request_waits_for_an_operator_who_then_decides(self, port, monkeypatch):
+        monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-monitor-1": "monitor"})
+        monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+        self._mk(port, "sig_g")
+        call(port, "POST", "/signals/tighten", {"boundary_id": "sig_g", "factor": 0.8}, headers=self.SRC)
+        r = call(port, "POST", "/signals/loosen-request", {"boundary_id": "sig_g", "new_limit": 100, "reason": "recovered"}, headers=self.SRC)[1]
+        assert r["status"] == "pending_review" and GOV.boundaries.get_boundary("sig_g").current_limit == pytest.approx(80.0)
+        code, body = call(port, "POST", f"/proposals/{r['proposal_id']}/decide", {"decision": "approve_loosen"}, headers=self.OP)
+        assert code == 200 and body["decided_by"] == "alice"
+        assert GOV.boundaries.get_boundary("sig_g").current_limit == 100
+
+
+def test_the_example_monitor_works_end_to_end_against_a_live_server(port, monkeypatch):
+    import random
+    from examples.external_monitor import call as ex_call, run as ex_run
+    monkeypatch.setattr(srv, "SOURCE_TOKENS", {"src-example-1": "example-monitor"})
+    monkeypatch.setattr(srv, "OPERATOR_TOKENS", {"tok-alice": "alice"})
+    call(port, "POST", "/boundaries", {"boundary_id": "ex_api", "initial_limit": 100}, headers={"Authorization": "Bearer tok-alice"})
+    rng = random.Random(1)
+    series = [rng.gauss(50, 5) for _ in range(300)] + [rng.gauss(95, 5) for _ in range(100)]
+    base = f"http://127.0.0.1:{port}"
+    replies = ex_run(base, "src-example-1", "ex_api", series)
+    assert replies and all(code == 200 for code, _ in replies)
+    assert replies[0][1]["status"] == "applied"
+    status = ex_call(base, "src-example-1", "GET", "/boundaries/ex_api")[1]
+    assert 20.0 <= status["limit"] < 100.0 and status["automatic_tightenings_since_acknowledgement"] <= 3
+    # the monitor can ask as often as it likes: the breaker, not the monitor, decides how far this goes
+    assert GOV.boundaries.get_boundary("ex_api").current_limit >= 72.9 - 1e-9
+    assert GOV.verify_governance_integrity()[0]
