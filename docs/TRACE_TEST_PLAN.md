@@ -81,3 +81,64 @@ All seven predictions held.
 **T15 is now demonstrated, not just argued.** An attacker that slows its completed tasks after the baseline is learned and before it starts hanging tasks gets the drift rule to hold tightening for the whole attack: no benefit at all against it (15.6 -> 15.6 s), while the same policy fully protects against an identical attacker that does not inflate (control-runaway) and holds the legitimate regression it was designed for. An attacker that inflates from the first task poisons the baseline in the other direction and is tightened normally, because there is no drift to hold on. The drift rule therefore trades one weakness for another: it fixes the legitimate regression case and opens a hole that a patient attacker can use.
 
 What the rule cannot tell apart, from these signals alone: a regression that happens to be followed by hung tasks, versus a regression only. The trap rate rises when hangs begin, but the rule never looks at the rise, only at the completed-task median. A rule that held only while the trap rate stays at the level the median shift explains would be the next thing to test; it is not built.
+
+## Third round: the "excess-rate" hold (design and predictions fixed before any code ran)
+
+**Treating the trace as the real workload.** There is no production data, so these two traces are the workload for every decision from here on. Because both are used for judging, parameters below are fixed from first principles now and not tuned; any later change will be recorded as a change made after seeing results.
+
+**Mechanism.** The kernel also reports quantiles (p50, p75, p90, p95, p99) of each slice's completed task durations. The bridge averages the first five slices' vectors into a baseline distribution. When drift is detected (latest median > 1.5x baseline median, factor f = latest / baseline), the bridge asks: if this agent's old distribution were scaled by f, what share of tasks would exceed the current deadline? (`explained = S0(deadline / f)`, survival function from the baseline quantiles, exponential tail beyond p99.) It compares that with the observed deadline-trap share over the last 4 slices. The hold is **released** (tightening allowed) only if `observed > explained + max(0.02, 0.5 x explained)`. Otherwise the drift hold stands.
+
+**Predictions.**
+
+| Agent | rate+drift now | with the excess rule (predicted) |
+|---|---|---|
+| inflate-first-0, -1, inflate-ramp | never tightened | released once the hangs begin; tightened late, partial benefit |
+| control-regressed, regressed-0/1/2 | held | still held (a 3x slowdown already explains its trap rate) |
+| drift-0, drift-1 (gradual) | held | still held; the closest call because the window lags a ramp |
+| control-runaway, runaway-* | tightened | unchanged |
+| slow from the start, healthy-tail | tightened (false) | unchanged (the rule does not touch them) |
+
+The rule is judged a success if it releases at least 2 of the 3 inflate-first attackers **and** releases none of the 7 legitimate drift/regression agents (5 in v1, 1 in the second trace's control, counting regressed-0/1/2, drift-0/1, control-regressed). A single false release counts as a failure of the "none" half.
+
+### Round 3, first result: the pre-registered check FAILED (2026-10-09)
+
+| Success criterion | Result |
+|---|---|
+| Releases at least 2 of 3 inflate-first attackers | **Met**: all 3 released (tightened at slices 17, 9, 18); hung-task time 89 s -> 69 s against 89 s -> 66 s for the plain rate rule |
+| Releases none of the legitimate drift/regression agents | **Not met**: all 6 (regressed-0/1/2, drift-0/1, control-regressed) were released and tightened late (slices 17-30). Tightening decisions on the 16 should-not agents in the first trace went from 3 wrong (rate+drift) to 8 wrong |
+
+**Diagnosis.** The slowdown factor was estimated as latest completed median / baseline median. Completed tasks exclude the ones the deadline killed, so that median is biased low and the bridge under-explains the trap share. Simulated check: at a true 3x slowdown the bridge explains 11.2% of tasks while the true trapped share is 15.2%, and the threshold (16.8%) sits barely above the truth, so ordinary sampling noise (250 tasks per slice) releases legitimate regressions. This is a modeling error in my design, not a threshold that needs loosening.
+
+**Change made after seeing the result (so no longer a clean test on these two traces):** estimate the slowdown by solving for the f at which the baseline distribution, scaled by f and truncated at the current deadline, has the observed completed median. Parameters (1.5x, 4 slices, 2 points + 50%) are unchanged. To keep the evaluation honest, a third trace with a different seed and different parameter ranges (`holdout_v1`) is generated **before** re-running and is run once.
+
+**Predictions for the rerun:** legitimate agents stay held (0 false releases on the two original traces and the held-out one); inflate-first attackers are still released (at least 2 of 3 on the second trace and the held-out equivalents).
+
+**Held-out trace** (`testdata/traces/stack_trace_holdout_v1.csv`, 14 agents, 112,000 tasks, seed 777, different medians, spreads and slowdown factors: legitimate regressions at 2x, 4x and 3x with wide spread, gradual drifts to 2x and 3.5x, attackers inflating 1.8x, 2.5x and a 2x ramp). Predictions recorded before any run with the corrected estimator:
+
+- Legitimate drift/regression agents (5 in the held-out set: 2x, 4x, 3x-wide, drift-2x, drift-3.5x): **at most 1 false release**. The 4x regression sits at the edge of what the estimator can identify (about 4x), so it is the one most likely to be wrongly released.
+- Inflate-first attackers (3 in the held-out set): **at least 2 released**.
+- On the two original traces: the corrected rule keeps all 6 legitimate agents held and still releases at least 2 of the 3 attackers.
+
+### Round 3, result with the corrected estimator (2026-10-09; all three traces, five policies)
+
+| | Legitimate drift/regression agents falsely released (tightened) | Inflate-first attackers released | Hung-task time saved |
+|---|---|---|---|
+| rate+drift (hold only) | 0 of 11 | 0 of 6 | 8-10% |
+| **rate+drift+excess (corrected)** | **1 of 11** | **6 of 6** | **21-22%** |
+| rate only (no drift hold) | 11 of 11 | 6 of 6 | 25-26% |
+
+By trace: first trace 1 of 5 legitimate released (`drift-0`, the gradual drift to 2.5x, at slice 21), second trace 0 of 1 legitimate and 3 of 3 attackers released, **held-out trace 0 of 5 legitimate and 3 of 3 attackers released** (including the 4x regression at the edge of the estimator's range, and the 2x and 3.5x gradual drifts). Cost to agents that should not be touched: 1.95 points on the first trace against 1.90 for hold-only, 0.00 on the second, 1.91 on the held-out trace (the false tightenings that remain there are the slow-from-start and the natural-tail agents, which this rule does not touch).
+
+**Scored against what I wrote down.**
+
+| Criterion / prediction | Outcome |
+|---|---|
+| First run: no legitimate agent released | **Failed** (6 of 6 released), diagnosed as truncation bias in the slowdown estimate |
+| After the correction, held-out: at most 1 of 5 legitimate released | **Met** (0 of 5) |
+| After the correction, held-out: at least 2 of 3 attackers released | **Met** (3 of 3) |
+| After the correction, original traces: all 6 legitimate held | **Not met** (1 of 6 released: `drift-0`) |
+| After the correction, original traces: at least 2 of the 3 attackers released | **Met** (3 of 3) |
+
+**What this means.** The excess-rate rule closes most of the T15 hole: against attackers who slow their completions first, tightening is delayed by about 3-6 slices instead of never happening, and 21-22% of hung time is saved against 8-10% with the plain hold. It does this at the price of occasional false releases on legitimate gradual drift (1 of 11 here). It is not a clean win: the one failure is in the data the design was developed on, and the held-out result is a single run.
+
+**Limits of the estimator (not all measured on a trace).** The slowdown factor is fitted from the five completed-duration quantiles and is accurate to about 4x. A simulation (not a trace) shows it saturating beyond that: at a true 6x slowdown it explains only 33% of tasks when 64% are killed, so a severe legitimate regression would be wrongly released. It also assumes the old distribution simply scales; a regression that changes the shape (for example a new slow code path hit by 20% of tasks) is not modeled. Both are open.

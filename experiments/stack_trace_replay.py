@@ -24,6 +24,9 @@ POLICIES = {
     "default": lambda: TrapPolicy(),
     "rate": lambda: TrapPolicy(min_rate=0.01),
     "rate_drift": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1),
+    "rate_drift_excess": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True),
+    "recommended": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
+                                      reasons=("deadline_exceeded",)),
 }
 SUFFIX = ("deadline_ns", "tokens_capacity", "memory_capacity_bytes")
 
@@ -80,7 +83,8 @@ def main():
             outs = list(pool.map(lambda ag: (ag["agent_id"], *run_slice(a.csv, ag["agent_id"], r, a.slice, defaults, port)), agents))
             for agent, traps, s in outs:      # ingest in a fixed order so runs are reproducible
                 gov[agent].append(s)
-                bridge.observe_transactions(agent, s["tasks"], completed_median_ns=s["completed_median_ns"])
+                bridge.observe_transactions(agent, s["tasks"], completed_median_ns=s["completed_median_ns"],
+                                            completed_quantiles=s["completed_q"])
                 bridge.ingest(traps)
                 if agent not in first and any(float(srv.GOV.boundary_status(f"stack.agent.{agent}.{x}")["limit"]) <
                                               float(defaults[x]) for x in SUFFIX if _has(f"stack.agent.{agent}.{x}")):

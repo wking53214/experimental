@@ -1,0 +1,15 @@
+agent_id,profile,should_tighten,team,description
+ho-healthy-0,healthy,0,core,fast and tight
+ho-healthy-1,healthy,0,core,wide spread
+ho-healthy-2,healthy,0,web,mid
+ho-regress-2x,regressed,0,web,"2x slower from 3500 (mild, tight)"
+ho-regress-4x,regressed,0,web,"4x slower from 3000 (severe, wide)"
+ho-regress-3x-wide,regressed,0,web,"3x slower from 4500, high spread"
+ho-drift-2x,drifting,0,ml,creeps to 2x over 4000
+ho-drift-3.5x,drifting,0,ml,creeps to 3.5x over 4000
+ho-runaway-3pct,runaway,1,batch,3% hang
+ho-inflate-mild,attacker_inflate_first,1,ext,"inflates 1.8x at 2000, hangs 3% from 3500"
+ho-inflate-strong,attacker_inflate_first,1,ext,"inflates 2.5x at 2500, hangs 6% from 4500"
+ho-inflate-ramp,attacker_inflate_first,1,ext,"ramps to 2x over 2500 from 2000, hangs 4% from 4500"
+ho-slowstart,slow_from_start,0,ml,slow from the first task
+ho-batch,scheduled_batch,0,data,declared heavy jobs

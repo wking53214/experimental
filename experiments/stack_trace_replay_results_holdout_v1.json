@@ -1,0 +1,3481 @@
+{
+ "csv": "testdata/traces/stack_trace_holdout_v1.csv",
+ "sha256": {
+  "stack_trace_holdout_v1.csv": "db0fcefdec4456a7752d925010632fbc37ee2b8d813c0bec9e5a362c58ad6378",
+  "stack_agents_holdout_v1.csv": "13e3c51e7ffbe1640d6ae7db62c000bf8f9c2ea71b4fe4762c825530133be9b4"
+ },
+ "slices": 32,
+ "slice_tasks": 250,
+ "defaults": {
+  "deadline_ns": 100000000,
+  "tokens_capacity": 4000,
+  "memory_capacity_bytes": 536870912
+ },
+ "policies": {
+  "default": {
+   "agents": {
+    "ho-healthy-0": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     }
+    },
+    "ho-healthy-1": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 118,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 118,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 276844168206
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 417,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 417,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 270849046550
+     }
+    },
+    "ho-healthy-2": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     }
+    },
+    "ho-regress-2x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 16,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 169,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 169,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 263569174888
+     }
+    },
+    "ho-regress-4x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 12,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 1590,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 1590,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 314808713475
+     }
+    },
+    "ho-regress-3x-wide": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 12,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 581,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 581,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 211168467917
+     }
+    },
+    "ho-drift-2x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 13,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 314,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 313,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 271083686590
+     }
+    },
+    "ho-drift-3.5x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 15,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 829,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 828,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 284125456701
+     }
+    },
+    "ho-runaway-3pct": {
+     "profile": "runaway",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 1,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 226,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 22600000000,
+      "total_ns": 159465548386
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 4,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 229,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 16786400000,
+      "total_ns": 153635581076
+     }
+    },
+    "ho-inflate-mild": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 10,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 24,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 160,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13600000000,
+      "total_ns": 257435230864
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 120,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 256,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 9914400000,
+      "total_ns": 252437490199
+     }
+    },
+    "ho-inflate-strong": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 10,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 113,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 326,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 21300000000,
+      "total_ns": 270343131620
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 400,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 613,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 15527700000,
+      "total_ns": 259164481097
+     }
+    },
+    "ho-inflate-ramp": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 11,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 149,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 283,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13400000000,
+      "total_ns": 289576172776
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 456,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 590,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 9768600000,
+      "total_ns": 278773310540
+     }
+    },
+    "ho-slowstart": {
+     "profile": "slow_from_start",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 996,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 996,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 467342128616
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 2227,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 2227,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 426810249427
+     }
+    },
+    "ho-batch": {
+     "profile": "scheduled_batch",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     }
+    }
+   },
+   "bridge_counts": {
+    "expected": 162
+   },
+   "audit_chain_intact": true
+  },
+  "rate": {
+   "agents": {
+    "ho-healthy-0": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     }
+    },
+    "ho-healthy-1": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 118,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 118,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 276844168206
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 417,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 417,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 270849046550
+     }
+    },
+    "ho-healthy-2": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     }
+    },
+    "ho-regress-2x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     }
+    },
+    "ho-regress-4x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 12,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 1578,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 1578,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 315357782958
+     }
+    },
+    "ho-regress-3x-wide": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 18,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 543,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 543,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 212155579787
+     }
+    },
+    "ho-drift-2x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 20,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 242,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 241,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 272739972714
+     }
+    },
+    "ho-drift-3.5x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 18,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 764,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 763,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 285426636793
+     }
+    },
+    "ho-runaway-3pct": {
+     "profile": "runaway",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 1,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 226,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 22600000000,
+      "total_ns": 159465548386
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 4,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 229,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 16786400000,
+      "total_ns": 153635581076
+     }
+    },
+    "ho-inflate-mild": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 15,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 24,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 160,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13600000000,
+      "total_ns": 257435230864
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 79,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 215,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 10668100000,
+      "total_ns": 253674625832
+     }
+    },
+    "ho-inflate-strong": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 13,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 113,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 326,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 21300000000,
+      "total_ns": 270343131620
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 324,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 537,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 15527700000,
+      "total_ns": 260478031161
+     }
+    },
+    "ho-inflate-ramp": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 16,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 149,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 283,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13400000000,
+      "total_ns": 289576172776
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 377,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 511,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 10054800000,
+      "total_ns": 280644537755
+     }
+    },
+    "ho-slowstart": {
+     "profile": "slow_from_start",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 996,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 996,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 467342128616
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 2227,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 2227,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 426810249427
+     }
+    },
+    "ho-batch": {
+     "profile": "scheduled_batch",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     }
+    }
+   },
+   "bridge_counts": {
+    "below_rate": 5286,
+    "expected": 162
+   },
+   "audit_chain_intact": true
+  },
+  "rate_drift": {
+   "agents": {
+    "ho-healthy-0": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     }
+    },
+    "ho-healthy-1": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 118,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 118,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 276844168206
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 417,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 417,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 270849046550
+     }
+    },
+    "ho-healthy-2": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     }
+    },
+    "ho-regress-2x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     }
+    },
+    "ho-regress-4x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     }
+    },
+    "ho-regress-3x-wide": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     }
+    },
+    "ho-drift-2x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     }
+    },
+    "ho-drift-3.5x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     }
+    },
+    "ho-runaway-3pct": {
+     "profile": "runaway",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 1,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 226,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 22600000000,
+      "total_ns": 159465548386
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 4,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 229,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 16786400000,
+      "total_ns": 153635581076
+     }
+    },
+    "ho-inflate-mild": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 24,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 160,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13600000000,
+      "total_ns": 257435230864
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 24,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 160,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13600000000,
+      "total_ns": 257435230864
+     }
+    },
+    "ho-inflate-strong": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 113,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 326,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 21300000000,
+      "total_ns": 270343131620
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 113,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 326,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 21300000000,
+      "total_ns": 270343131620
+     }
+    },
+    "ho-inflate-ramp": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 149,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 283,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13400000000,
+      "total_ns": 289576172776
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 149,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 283,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13400000000,
+      "total_ns": 289576172776
+     }
+    },
+    "ho-slowstart": {
+     "profile": "slow_from_start",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 996,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 996,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 467342128616
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 2227,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 2227,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 426810249427
+     }
+    },
+    "ho-batch": {
+     "profile": "scheduled_batch",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     }
+    }
+   },
+   "bridge_counts": {
+    "below_rate": 2111,
+    "expected": 162,
+    "drift_held": 2160
+   },
+   "audit_chain_intact": true
+  },
+  "rate_drift_excess": {
+   "agents": {
+    "ho-healthy-0": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     }
+    },
+    "ho-healthy-1": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 118,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 118,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 276844168206
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 417,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 417,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 270849046550
+     }
+    },
+    "ho-healthy-2": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     }
+    },
+    "ho-regress-2x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     }
+    },
+    "ho-regress-4x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     }
+    },
+    "ho-regress-3x-wide": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     }
+    },
+    "ho-drift-2x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     }
+    },
+    "ho-drift-3.5x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     }
+    },
+    "ho-runaway-3pct": {
+     "profile": "runaway",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 1,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 226,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 22600000000,
+      "total_ns": 159465548386
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 4,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 229,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 16786400000,
+      "total_ns": 153635581076
+     }
+    },
+    "ho-inflate-mild": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 16,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 1,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 24,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 160,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13600000000,
+      "total_ns": 257435230864
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 77,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 213,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 10928000000,
+      "total_ns": 253993308490
+     }
+    },
+    "ho-inflate-strong": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 18,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 3,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 113,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 326,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 21300000000,
+      "total_ns": 270343131620
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 278,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 491,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 16389800000,
+      "total_ns": 262360468595
+     }
+    },
+    "ho-inflate-ramp": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 19,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 5,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 149,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 283,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13400000000,
+      "total_ns": 289576172776
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 320,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 454,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 10892200000,
+      "total_ns": 283068495126
+     }
+    },
+    "ho-slowstart": {
+     "profile": "slow_from_start",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 996,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 996,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 467342128616
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 2227,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 2227,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 426810249427
+     }
+    },
+    "ho-batch": {
+     "profile": "scheduled_batch",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     }
+    }
+   },
+   "bridge_counts": {
+    "below_rate": 2516,
+    "expected": 162,
+    "drift_held": 2004,
+    "drift_released": 29
+   },
+   "audit_chain_intact": true
+  },
+  "recommended": {
+   "agents": {
+    "ho-healthy-0": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 86500269426
+     }
+    },
+    "ho-healthy-1": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 118,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 118,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 276844168206
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 417,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 417,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 270849046550
+     }
+    },
+    "ho-healthy-2": {
+     "profile": "healthy",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 0,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 157967421749
+     }
+    },
+    "ho-regress-2x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 29,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 29,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 265343259343
+     }
+    },
+    "ho-regress-4x": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 850,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 850,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 345594900266
+     }
+    },
+    "ho-regress-3x-wide": {
+     "profile": "regressed",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 289,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 288,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 221659616167
+     }
+    },
+    "ho-drift-2x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 85,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 84,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 275623020304
+     }
+    },
+    "ho-drift-3.5x": {
+     "profile": "drifting",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": {
+       "limit": 100000000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 313,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 312,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 297748843182
+     }
+    },
+    "ho-runaway-3pct": {
+     "profile": "runaway",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 1,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 226,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 22600000000,
+      "total_ns": 159465548386
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7774,
+      "legit_failed": 4,
+      "expected_trapped": 0,
+      "bad": 226,
+      "bad_caught": 226,
+      "deadline_traps": 229,
+      "token_traps": 1,
+      "memory_traps": 0,
+      "bad_ns": 16786400000,
+      "total_ns": 153635581076
+     }
+    },
+    "ho-inflate-mild": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 16,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 1,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 24,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 160,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13600000000,
+      "total_ns": 257435230864
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7864,
+      "legit_failed": 77,
+      "expected_trapped": 0,
+      "bad": 136,
+      "bad_caught": 136,
+      "deadline_traps": 213,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 10928000000,
+      "total_ns": 253993308490
+     }
+    },
+    "ho-inflate-strong": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 18,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 3,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 113,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 326,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 21300000000,
+      "total_ns": 270343131620
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7787,
+      "legit_failed": 278,
+      "expected_trapped": 0,
+      "bad": 213,
+      "bad_caught": 213,
+      "deadline_traps": 491,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 16389800000,
+      "total_ns": 262360468595
+     }
+    },
+    "ho-inflate-ramp": {
+     "profile": "attacker_inflate_first",
+     "should_tighten": 1,
+     "tightened": true,
+     "first_tightened_slice": 19,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 5,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 149,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 283,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 13400000000,
+      "total_ns": 289576172776
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 7866,
+      "legit_failed": 320,
+      "expected_trapped": 0,
+      "bad": 134,
+      "bad_caught": 134,
+      "deadline_traps": 454,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 10892200000,
+      "total_ns": 283068495126
+     }
+    },
+    "ho-slowstart": {
+     "profile": "slow_from_start",
+     "should_tighten": 0,
+     "tightened": true,
+     "first_tightened_slice": 0,
+     "limits": {
+      "deadline_ns": {
+       "limit": 72900000.0,
+       "held": true,
+       "pending": 0,
+       "tightenings": 3
+      },
+      "tokens_capacity": {
+       "limit": 4000.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      },
+      "memory_capacity_bytes": {
+       "limit": 536870912.0,
+       "held": false,
+       "pending": 0,
+       "tightenings": 0
+      }
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 996,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 996,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 467342128616
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 2227,
+      "expected_trapped": 0,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 2227,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 426810249427
+     }
+    },
+    "ho-batch": {
+     "profile": "scheduled_batch",
+     "should_tighten": 0,
+     "tightened": false,
+     "first_tightened_slice": null,
+     "limits": {
+      "deadline_ns": null,
+      "tokens_capacity": null,
+      "memory_capacity_bytes": null
+     },
+     "static": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     },
+     "governed": {
+      "tasks": 8000,
+      "legit": 8000,
+      "legit_failed": 0,
+      "expected_trapped": 162,
+      "bad": 0,
+      "bad_caught": 0,
+      "deadline_traps": 162,
+      "token_traps": 0,
+      "memory_traps": 0,
+      "bad_ns": 0,
+      "total_ns": 156298215244
+     }
+    }
+   },
+   "bridge_counts": {
+    "below_rate": 2516,
+    "expected": 162,
+    "reason_not_enforced": 4,
+    "drift_held": 2004,
+    "drift_released": 29
+   },
+   "audit_chain_intact": true
+  }
+ }
+}

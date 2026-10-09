@@ -1,5 +1,6 @@
 """STACK trap events -> governed per-agent limits (integrations/stack_traps.py). Events follow the P3.2 schema."""
 import itertools
+import math
 import random
 import uuid
 
@@ -292,3 +293,102 @@ class TestDriftRule:
         assert g.audit.find("signal")
         g2, b2 = make(tmp_path, durable=True, policy=self.pol())
         assert g2.audit.verify()[0]
+
+
+class TestExcessRelease:
+    """drift_excess: while drifting, release the hold only if traps exceed what the slowdown explains."""
+
+    MS = 1_000_000
+
+    @staticmethod
+    def lognormal_q(median_ms, sigma=0.5, deadline_ms=100.0):
+        """Quantiles of COMPLETED tasks: a lognormal truncated at the deadline, as the kernel reports them."""
+        from statistics import NormalDist
+        nd = NormalDist()
+        top = nd.cdf(math.log(deadline_ms / median_ms) / sigma)
+        return [median_ms * 1e6 * math.exp(sigma * nd.inv_cdf(p * top)) for p in (0.50, 0.75, 0.90, 0.95, 0.99)]
+
+    def pol(self, **kw):
+        return TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True, **kw)
+
+    def slice(self, b, median_ms, traps, tasks=250, agent="agent-7"):
+        b.observe_transactions(agent, tasks, completed_median_ns=median_ms * self.MS,
+                               completed_quantiles=self.lognormal_q(median_ms))
+        return b.ingest([trap(agent=agent, reason="deadline_exceeded") for _ in range(traps)])
+
+    def baseline(self, b):
+        for _ in range(5):
+            self.slice(b, 20, 0)
+
+    DEF = {**DEFAULTS, "deadline_ns": 100_000_000}
+
+    def bridge(self, tmp_path, policy):
+        ops = OperatorRegistry(iterations=1000); ops.register("alice", OPS)
+        g = Governor(store_path=str(tmp_path / "ev"), operators=ops)
+        return g, TrapBridge(g, defaults=self.DEF, policy=policy)
+
+    def make(self, tmp_path, **kw):
+        g, b = self.bridge(tmp_path, self.pol(**kw))
+        self.baseline(b)
+        return g, b
+
+    def test_the_survival_function_matches_the_lognormal_it_was_built_from(self, tmp_path):
+        g, b = self.make(tmp_path)
+        assert b._survival("agent-7", 45 * self.MS) == pytest.approx(0.053, abs=0.015)    # P(z > 1.62)
+        assert b._survival("agent-7", 100 * self.MS) < 0.005
+        xs = [10, 20, 30, 45, 60, 100, 200]
+        ys = [b._survival("agent-7", x * self.MS) for x in xs]
+        assert all(a >= c for a, c in zip(ys, ys[1:]))
+
+    def test_a_slowdown_that_explains_the_traps_stays_held(self, tmp_path):
+        g, b = self.make(tmp_path)                              # 3x slower: explained share at 100 ms about 15%
+        for _ in range(6):
+            assert self.slice(b, 60, 37) == []                  # 37/250 = 14.8%
+        assert b.counts["drift_released"] == 0 and b.counts["drift_held"] > 0
+
+    def test_traps_well_above_the_explained_share_release_the_hold(self, tmp_path):
+        g, b = self.make(tmp_path)
+        replies = []
+        for _ in range(6):
+            replies += self.slice(b, 60, 90)                    # 36%: far more than 15% explained
+        assert b.counts["drift_released"] > 0
+        assert replies and replies[0]["status"] == "applied"
+
+    def test_no_release_when_not_drifting_and_off_by_default(self, tmp_path):
+        g, b = self.bridge(tmp_path, TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1))
+        self.baseline(b)
+        for _ in range(6):
+            self.slice(b, 60, 90)
+        assert b.counts["drift_released"] == 0                  # drift_excess is off: held throughout
+        assert b.limit_for("agent-7", "deadline_exceeded") == 100_000_000.0
+
+    def test_the_window_averages_over_slices(self, tmp_path):
+        g, b = self.make(tmp_path)
+        self.slice(b, 60, 90)                                   # one noisy slice among calm ones
+        for _ in range(3):
+            self.slice(b, 60, 37)
+        assert b.counts["drift_released"] == 0                 # (90 + 37 x 3) / 1000 = 20% is inside 15% + 7.5%
+
+    @pytest.mark.parametrize("bad", [[1, 2, 3], [5, 4, 3, 2, 1], [0, 1, 2, 3, 4], [float("nan")] * 5, "abc", None, [1, 2, 3, 4, True]])
+    def test_malformed_quantiles_are_ignored(self, tmp_path, bad):
+        g, b = self.bridge(tmp_path, self.pol())
+        for _ in range(6):
+            b.observe_transactions("agent-7", 250, completed_median_ns=20 * self.MS, completed_quantiles=bad)
+        assert "agent-7" not in b._base_q
+        assert b.excess_released("agent-7", 100 * self.MS) is False
+
+    def test_reasons_limits_which_traps_can_tighten(self, tmp_path):
+        g, b = make(tmp_path, policy=TrapPolicy(reasons=("deadline_exceeded",)))
+        assert b.ingest([trap(reason="token_exhausted") for _ in range(20)]) == []
+        assert b.counts["reason_not_enforced"] == 20
+        assert b.ingest([trap(reason="deadline_exceeded") for _ in range(5)]) != []
+
+    @pytest.mark.parametrize("true_f", [1.5, 2.0, 3.0])
+    def test_the_slowdown_estimate_corrects_the_truncation_bias(self, tmp_path, true_f):
+        """Plain median / baseline median underestimates a 3x slowdown (about 2.7x) because killed tasks never complete."""
+        g, b = self.make(tmp_path)
+        rng = __import__("random").Random(5)
+        samples = [20.0 * true_f * math.exp(0.5 * rng.gauss(0, 1)) for _ in range(40000)]
+        done = sorted(x for x in samples if x <= 100.0)
+        q = [done[int(p * (len(done) - 1))] * 1e6 for p in (0.50, 0.75, 0.90, 0.95, 0.99)]
+        assert b._slowdown("agent-7", q, 100 * self.MS) == pytest.approx(true_f, rel=0.08)

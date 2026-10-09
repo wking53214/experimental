@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate testdata/traces/stack_trace_v1.csv (+ agents + manifest). Deterministic. See testdata/traces/README.md.
 
-usage: python experiments/gen_trace.py [--set v1|inflate_v1] [--tasks 8000] [--seed 20261009]
+usage: python experiments/gen_trace.py [--set v1|inflate_v1|holdout_v1] [--tasks 8000] [--seed 20261009]
 """
 import argparse, csv, hashlib, json, math
 from pathlib import Path
@@ -58,7 +58,28 @@ ROSTER_INFLATE = [
      dict(median_ms=20, sigma=.5, p=0.04, lo=4000, hi=8000)),
     ("control-healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
 ]
-ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE}
+# Held-out set: different seed (pass --seed 777) and different parameter ranges from v1/inflate_v1, generated BEFORE the
+# excess-rate rule was re-run, and used once.
+ROSTER_HOLDOUT = [
+    ("ho-healthy-0", "healthy", 0, "core", "fast and tight", dict(median_ms=10, sigma=.4)),
+    ("ho-healthy-1", "healthy", 0, "core", "wide spread", dict(median_ms=30, sigma=.55)),
+    ("ho-healthy-2", "healthy", 0, "web", "mid", dict(median_ms=18, sigma=.45)),
+    ("ho-regress-2x", "regressed", 0, "web", "2x slower from 3500 (mild, tight)", dict(median_ms=20, sigma=.35, at=3500, until=None, factor=2.0)),
+    ("ho-regress-4x", "regressed", 0, "web", "4x slower from 3000 (severe, wide)", dict(median_ms=14, sigma=.6, at=3000, until=None, factor=4.0)),
+    ("ho-regress-3x-wide", "regressed", 0, "web", "3x slower from 4500, high spread", dict(median_ms=12, sigma=.7, at=4500, until=None, factor=3.0)),
+    ("ho-drift-2x", "drifting", 0, "ml", "creeps to 2x over 4000", dict(median_ms=20, sigma=.45, start=1500, gain=1.0)),
+    ("ho-drift-3.5x", "drifting", 0, "ml", "creeps to 3.5x over 4000", dict(median_ms=15, sigma=.5, start=2000, gain=2.5)),
+    ("ho-runaway-3pct", "runaway", 1, "batch", "3% hang", dict(median_ms=16, sigma=.45, p=0.03)),
+    ("ho-inflate-mild", "attacker_inflate_first", 1, "ext", "inflates 1.8x at 2000, hangs 3% from 3500",
+     dict(median_ms=18, sigma=.4, p=0.03, infl_at=2000, hang_at=3500, factor=1.8)),
+    ("ho-inflate-strong", "attacker_inflate_first", 1, "ext", "inflates 2.5x at 2500, hangs 6% from 4500",
+     dict(median_ms=14, sigma=.5, p=0.06, infl_at=2500, hang_at=4500, factor=2.5)),
+    ("ho-inflate-ramp", "attacker_inflate_first", 1, "ext", "ramps to 2x over 2500 from 2000, hangs 4% from 4500",
+     dict(median_ms=20, sigma=.5, p=0.04, infl_at=2000, hang_at=4500, ramp=2500, factor=2.0)),
+    ("ho-slowstart", "slow_from_start", 0, "ml", "slow from the first task", dict(median_ms=55, sigma=.5)),
+    ("ho-batch", "scheduled_batch", 0, "data", "declared heavy jobs", dict(median_ms=15, sigma=.4, every=600)),
+]
+ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
@@ -75,9 +96,9 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
     if profile == "regressed":
         m = seq >= prm["at"]
         if prm["until"]: m &= seq < prm["until"]
-        med[m] *= 3; regime[m] = "regressed"
+        med[m] *= prm.get("factor", 3); regime[m] = "regressed"
     elif profile == "drifting":
-        f = np.clip((seq - prm["start"]) / 4000.0, 0, 1); med *= 1 + 1.5 * f; regime[f > 0.05] = "drifting"
+        f = np.clip((seq - prm["start"]) / 4000.0, 0, 1); med *= 1 + prm.get("gain", 1.5) * f; regime[f > 0.05] = "drifting"
     elif profile == "slow_from_start":
         regime[:] = "normal"
     dur = rng.lognormal(math.log(1.0), prm["sigma"], n) * med * diurnal * MS
@@ -92,7 +113,7 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = {"attacker_inflate": "inflated", "attacker_lowslow": "lowslow"}.get(profile, "runaway")
     if profile == "attacker_inflate_first":
-        f = 1 + 1.2 * np.clip((seq - prm["infl_at"]) / float(prm.get("ramp", 1)), 0, 1)
+        f = 1 + (prm.get("factor", 2.2) - 1) * np.clip((seq - prm["infl_at"]) / float(prm.get("ramp", 1)), 0, 1)
         dur *= np.where(seq >= prm["infl_at"], f, 1.0)
         hang = (rng.random(n) < prm["p"]) & (seq >= prm["hang_at"])
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS

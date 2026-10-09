@@ -1,0 +1,18 @@
+{
+ "name": "stack_trace_holdout_v1",
+ "seed": 777,
+ "agents": 14,
+ "tasks_per_agent": 8000,
+ "rows": 112000,
+ "slice_tasks": 250,
+ "defaults": {
+  "deadline_ns": 100000000,
+  "tokens_capacity": 4000,
+  "memory_capacity_bytes": 536870912
+ },
+ "sha256": {
+  "stack_trace_holdout_v1.csv": "db0fcefdec4456a7752d925010632fbc37ee2b8d813c0bec9e5a362c58ad6378",
+  "stack_agents_holdout_v1.csv": "13e3c51e7ffbe1640d6ae7db62c000bf8f9c2ea71b4fe4762c825530133be9b4"
+ },
+ "synthetic": true
+}

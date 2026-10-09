@@ -49,3 +49,10 @@ def test_the_drift_suppression_trace_matches_its_manifest():
         assert hashlib.sha256((D / name).read_bytes()).hexdigest() == sha, name
     with open(D / "stack_trace_inflate_v1.csv") as f:
         assert sum(1 for _ in f) - 1 == m["rows"] == m["agents"] * m["tasks_per_agent"]
+
+
+def test_the_held_out_trace_matches_its_manifest():
+    m = json.loads((D / "MANIFEST_holdout_v1.json").read_text())
+    for name, sha in m["sha256"].items():
+        assert hashlib.sha256((D / name).read_bytes()).hexdigest() == sha, name
+    assert m["seed"] == 777 and m["rows"] == m["agents"] * m["tasks_per_agent"]
