@@ -1,4 +1,4 @@
-# Where the project stands (2026-10-09)
+# Where the project stands (2026-10-09, updated after the trace replays)
 
 One page. Evidence is in the linked documents; nothing here is new measurement.
 
@@ -25,18 +25,24 @@ Can a governance layer that lets automation only **tighten** limits (and only a 
 | Works on production traffic | **Not tested** | No real trap data exists in the library. |
 | Fully integrated in the kernel | **Partly** | Only the deadline is enforced; token and memory limits are readable but not enforced; the C++ headers read nothing. |
 
+## Trace replays (`docs/TRACE_TEST_PLAN.md`)
+
+Two committed synthetic traces (`testdata/traces/`: 200,000 tasks over 25 agents, and 56,000 over 7 agents) replayed through the real Rust kernel. Of 16 agents that should not be tightened: default policy tightened 10, rate rule 8, rate+drift 3 (the remaining three: two agents slow from the first task, one with a 0.6% natural tail). All 9 agents that should be tightened were. Runaway cost down 24-25%. The drift rule can be defeated (T15): three attackers that inflate completions before they hang tasks were never tightened.
+
+**Recommended configuration today:** `TrapPolicy(min_rate=0.01)` with the expected-load hook; leave `drift_factor` unset unless regressions are common and attackers who slow their own tasks are not a concern; enforce only the deadline limit (tightening token and memory caps added collateral and no benefit in the trace). A trap-rate-aware hold (hold only while the trap rate stays at what the median shift explains) is the next thing to try and is not built.
+
 ## Scorecard (pre-registered, `experiments/scorecard.py`)
 
 PASS: 1 safety, 2 detection vs baseline (bare minimum), 5 value vs alternatives (43% vs 40% needed), 6 poisoning (opt-in trimmed fit only), 7 restart, 8 signals, 9 integrations.
 FAIL: 3 no crying wolf, 4 responds to real trouble.
 
-The trap-loop work (rate rule, drift rule) is not part of the pre-registered criteria; it has no pass bar and was developed after seeing results.
+The trap-loop work (rate rule, drift rule) is not part of the pre-registered criteria; it has no pass bar and was developed after seeing results. The trace-replay predictions were written before each run and are scored in `docs/TRACE_TEST_PLAN.md`.
 
 ## Known open issues, in the order I would worry about them
 
 1. **Nothing has run on real traffic.** Every closed-loop number comes from simulated durations. The 1% rate threshold and 1.5x drift factor are untested outside it.
 2. **The benefit is small and capped.** The design buys at most 27% on a runaway and needs a human for everything else.
-3. **Baselines can be poisoned** (T2, and T15 for the drift rule). Opt-in mitigation only.
+3. **Baselines can be poisoned** (T2), and the drift rule can be defeated by an attacker who inflates completions first (T15, demonstrated). Opt-in mitigation only.
 4. **Kernel coverage is thin.** Deadline only; C++ untouched; STACK-Kernel CI covers one crate.
 5. **Audit anchoring is undecided** (head hash must live somewhere the governor cannot write; DGK has the same open gap). Seven separate hash-chained ledgers exist in the library.
 6. **No TLS** on the adjudication server or the kernel's HTTP read (T10).

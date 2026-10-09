@@ -58,7 +58,8 @@ class TrapPolicy:
     # baseline looks like a regression, not a runaway: hold instead of tightening, and let a person decide. The
     # baseline is the median of the first baseline_reports completed-duration medians, then frozen. Needs
     # observe_transactions(..., completed_median_ns=...). An agent that was slow from the start has no earlier
-    # baseline to drift from and is treated as before.
+    # baseline to drift from and is treated as before. TRADE-OFF (docs/TRACE_TEST_PLAN.md): an attacker that slows its
+    # completed tasks after the baseline is learned and before it hangs tasks is held for the whole attack (T15).
     drift_factor: Optional[float] = None
     baseline_reports: int = 5
     drift_recent_reports: int = 3
