@@ -1,0 +1,26 @@
+agent_id,profile,should_tighten,team,description
+healthy-0,healthy,0,core,inside its limits almost always
+healthy-1,healthy,0,core,inside its limits almost always
+healthy-2,healthy,0,core,inside its limits almost always
+healthy-3,healthy,0,core,inside its limits almost always
+healthy-4,healthy,0,core,inside its limits almost always
+healthy-5,healthy,0,core,inside its limits almost always
+healthy-tail,healthy_tail,0,core,natural 0.6% timeout tail; a borderline for a 1% rate rule
+runaway-steady,runaway,1,batch,5% of tasks hang for the whole run
+runaway-mild,runaway,1,batch,2% of tasks hang
+runaway-episode,runaway_episode,1,batch,15% hang only between tasks 2000 and 3000
+regressed-0,regressed,0,web,3x slower from a point on (a deploy regression)
+regressed-1,regressed,0,web,3x slower from a point on (a deploy regression)
+regressed-2,regressed,0,web,3x slower from a point on (a deploy regression)
+drift-0,drifting,0,web,median creeps up 2.5x over 4000 tasks
+drift-1,drifting,0,web,median creeps up 2.5x over 4000 tasks
+slowstart-0,slow_from_start,0,ml,legitimately slow from the first task
+slowstart-1,slow_from_start,0,ml,legitimately slow from the first task
+leak-0,memory_leak,1,ml,memory grows from task 2000 until a restart at 6000
+leak-1,memory_leak,1,ml,memory grows from task 2000 until a restart at 6000
+burst-0,token_burst,1,ml,40-task bursts of 8x tokens every 1000 tasks
+burst-1,token_burst,1,ml,40-task bursts of 8x tokens every 1000 tasks
+batchjob-0,scheduled_batch,0,data,declared heavy jobs: 30 tasks at 6x duration every 500
+batchjob-1,scheduled_batch,0,data,declared heavy jobs: 30 tasks at 6x duration every 500
+attacker-inflate,attacker_inflate,1,ext,hangs 4% of tasks AND doubles all completed durations to hide in drift
+attacker-lowslow,attacker_lowslow,1,ext,"hangs 0.8% of tasks, below a 1% rate rule"

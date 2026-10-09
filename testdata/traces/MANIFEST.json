@@ -1,0 +1,18 @@
+{
+ "name": "stack_trace_v1",
+ "seed": 20261009,
+ "agents": 25,
+ "tasks_per_agent": 8000,
+ "rows": 200000,
+ "slice_tasks": 250,
+ "defaults": {
+  "deadline_ns": 100000000,
+  "tokens_capacity": 4000,
+  "memory_capacity_bytes": 536870912
+ },
+ "sha256": {
+  "stack_trace_v1.csv": "6a19c62b145b486654ea618d973cd84ce45d003b7310cf1c954ec55ebb317e65",
+  "stack_agents_v1.csv": "4d7736d80a3b4e5b217b7d89f51d53a10ae7991dc2d0b2e036e36606655bec34"
+ },
+ "synthetic": true
+}
