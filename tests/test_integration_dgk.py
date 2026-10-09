@@ -21,6 +21,21 @@ STRESS = {"latency": 450.0, "abort_rate": 0.22, "reentry_rate": 1.8, "load_depth
 OPS = "alice-secret-1"
 
 
+def _stock_has_defects():
+    """True for DGK before its telemetry validation fix (da256f3); False once it refuses NaN itself."""
+    import tempfile
+    k = dgk.Kernel(log_path=os.path.join(tempfile.mkdtemp(), "probe.log"))
+    tok = secrets.token_urlsafe(32)
+    k.callers.register("ops", tok, partitions=["p1"])
+    r = k.process_transaction("p1", {**CALM, "latency": float("nan")}, "hi", "ops", tok)
+    return r["transaction_status"] == "COMMITTED"
+
+
+STOCK_HAS_DEFECTS = _stock_has_defects()
+needs_unfixed_dgk = pytest.mark.skipif(
+    not STOCK_HAS_DEFECTS, reason="this DGK already validates telemetry (4a0ecd2 or later)")
+
+
 def kernel(tmp_path, name="k"):
     k = dgk.Kernel(log_path=str(tmp_path / f"{name}.log"))
     tok = secrets.token_urlsafe(32)
@@ -69,7 +84,9 @@ class TestGovernedLimits:
         assert tx(gk, tok, {"latency": 450.0})["transaction_status"] == "COMMITTED"
         g.propose_tightening("dgk.health.latency", source="ops-tool", new_limit=400.0, reason="test")
         r = tx(gk, tok, {"latency": 450.0})
-        assert r["transaction_status"] == "REJECTED" and "latency_fault" in r["exception_details"]
+        assert r["transaction_status"] == "REJECTED"
+        if STOCK_HAS_DEFECTS:  # fixed DGK refuses at the door before the check runs
+            assert "latency_fault" in r["exception_details"]
 
     def test_the_limits_cannot_be_raised_through_the_governor_by_a_signal(self, tmp_path):
         gk, g, k, tok = governed(tmp_path)
@@ -98,6 +115,7 @@ class TestGovernedLimits:
 
 
 class TestFailClosedTelemetry:
+    @needs_unfixed_dgk
     def test_stock_dgk_commits_a_nan_and_crashes_on_negatives_and_infinities(self, tmp_path):
         """Documents the defects in DGK itself (integrations/DGK_FINDINGS.md). Separate kernels, because
         the NaN corrupts the one it touches."""
@@ -108,11 +126,13 @@ class TestFailClosedTelemetry:
             with pytest.raises(ValueError):
                 fresh.process_transaction("p1", {**CALM, "latency": bad}, "hi", "ops", t2)
 
+    @needs_unfixed_dgk
     def test_stock_dgk_commits_small_negative_readings_as_if_valid(self, tmp_path):
         stock, tok = kernel(tmp_path, "neg")
         r = stock.process_transaction("p1", {**CALM, "latency": -600.0}, "hi", "ops", tok)
         assert r["transaction_status"] == "COMMITTED"      # a latency of minus 600 passes a "> 500" limit
 
+    @needs_unfixed_dgk
     def test_one_nan_permanently_corrupts_stock_dgks_statistics(self, tmp_path):
         stock, tok = kernel(tmp_path, "poisoned")
         stock.process_transaction("p1", {**CALM, "latency": float("nan")}, "hi", "ops", tok)
@@ -221,7 +241,9 @@ class TestCheckUsedOnItsOwn:
         k, tok = kernel(tmp_path, "solo")
         k.boundary_barrier = GovernedHealthLimitCheck(governor(tmp_path))
         r = k.process_transaction("p1", {**CALM, "latency": float("nan")}, "hi", "ops", tok)
-        assert r["transaction_status"] == "REJECTED" and "latency_fault" in r["exception_details"]
+        assert r["transaction_status"] == "REJECTED"
+        if STOCK_HAS_DEFECTS:  # fixed DGK refuses at the door before the check runs
+            assert "latency_fault" in r["exception_details"]
 
     def test_limits_are_read_from_the_governor_on_every_call(self, tmp_path):
         k, tok = kernel(tmp_path, "solo2")

@@ -16,12 +16,12 @@ Written 2026-10-09 after reading the library, not from memory.
 
 | Where | What was built | Status |
 |---|---|---|
-| **DGK** | `integrations/dgk_governed.py`: DGK's three hardcoded health limits (latency 500, abort rate 0.25, re-entry 2.0) become governed boundaries read on every transaction; a conservative sustained-stress policy asks for tighter limits; DGK's own regime recovery is left alone. Tested against the real DGK (46 tests, run in CI against a pinned commit). | Working. DGK itself is unchanged. |
-| **STACK-Kernel (P3.2 trap events)** | `integrations/stack_traps.py`: trap events in the P3.2 schema become per-agent tightening signals for the deadline, token-bucket and memory limits, with a repeated-pattern policy, replay protection per trap id, a cap on agents, and an "expected load" hook. Tested on synthetic events that follow the schema (16 tests). | Working at the Python level. **Not connected to real trap data** (there is none in the repository) and **the kernel does not yet read the governed limit** (see below). |
+| **DGK** | `integrations/dgk_governed.py`: DGK's three hardcoded health limits (latency 500, abort rate 0.25, re-entry 2.0) become governed boundaries read on every transaction; a conservative sustained-stress policy asks for tighter limits; DGK's own regime recovery is left alone. Tested against the real DGK (46 tests, run in CI against a pinned commit). | Working. The DGK defects it works around are fixed on a DGK branch (commit `4a0ecd2`, not merged); CI runs against both. |
+| **STACK-Kernel (P3.2 trap events)** | `integrations/stack_traps.py`: trap events in the P3.2 schema become per-agent tightening signals for the deadline, token-bucket and memory limits, with a repeated-pattern policy, replay protection per trap id, a cap on agents, and an "expected load" hook. Tested on synthetic events that follow the schema (16 tests). | Working at the Python level. **Not connected to real trap data** (there is none in the repository) and the Rust kernel can now read the governed deadline (STACK-Kernel branch `ccr-e916ef52-wh7751`, `crates/stack-p3-2/src/governed_limits.rs`; unmerged); token and memory limits are readable but not yet enforced, and the C++ headers do not read anything yet. |
 
 ## Defects found in the library while doing this
 
-DGK, run with hostile telemetry: a NaN reading is committed and bypasses the health limits; that NaN permanently corrupts the classifier (`lyapunov_energy` stays NaN); infinities and large negatives raise out of `process_transaction` before anything is recorded; small negatives are committed as valid. Full table, reproduction and a suggested fix: `integrations/DGK_FINDINGS.md`. Not fixed in DGK (this session cannot write to it).
+DGK, run with hostile telemetry: a NaN reading is committed and bypasses the health limits; that NaN permanently corrupts the classifier (`lyapunov_energy` stays NaN); infinities and large negatives raise out of `process_transaction` before anything is recorded; small negatives are committed as valid. Full table, reproduction and a suggested fix: `integrations/DGK_FINDINGS.md`. Fixed on DGK branch `ccr-e916ef52-wh7751` (`4a0ecd2`): telemetry is validated at the door and refused with cause `TELEMETRY_INVALID`; 41 regression tests, 37 fail on the old code. Not merged to DGK's `main`.
 
 ## Candidates, not built
 
@@ -42,9 +42,9 @@ At least seven separate hash-chained audit implementations exist in the library:
 
 ## What would make this real in the stack
 
-1. A small client in the kernel (C++ or Rust) that reads `GET /boundaries/stack.agent.<id>.<limit>` before an execution, with a short cache. Without this, the bridge adjusts numbers nobody reads.
+1. DONE for Rust and the deadline only (see above). Remaining: C++, and enforcing the token and memory limits. Original item: a small client in the kernel (C++ or Rust) that reads `GET /boundaries/stack.agent.<id>.<limit>` before an execution, with a short cache. Without this, the bridge adjusts numbers nobody reads.
 2. Real trap data, to set the policy (`min_traps`, `window_events`, `factor`) from evidence. Everything above uses the defaults of an educated guess, and the Phase 13 result warns what noise does to a tightening budget.
-3. Fixing the DGK defects, or at least adopting the fail-closed telemetry check.
+3. DONE on a DGK branch; merging it into DGK's `main` is the owner's call.
 4. Deciding where the audit anchor lives (see above).
 
 ## What this does not show
