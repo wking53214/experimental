@@ -1,0 +1,141 @@
+"""
+STACK trap events -> governed limits.
+
+The ≡TACK kernel's P3.2 layer records a trap event whenever a boundary refuses or halts a payload (schema in
+STACK-Kernel manual/sections/p3.2_schema_design.md). The research proposal (p3-2-governance-research) says
+those events are telemetry that may tighten the next boundary, and that tightening may be automatic while
+loosening never is. This module is that adaptation step, on top of the governance core:
+
+    trap events (Sentinel's analysis, or a stream)  ->  interpretation policy  ->  Governor.propose_tightening
+
+and the kernel reads the governed per-agent limit (GET /boundaries/<id>, or Governor.boundary_status) before
+its next execution. The kernel itself is not modified and nothing here is Rust or C++.
+
+Per-agent boundaries, one per numeric limit (every one an UPPER bound, so smaller is stricter):
+
+    deadline_exceeded -> stack.agent.<agent>.deadline_ns
+    token_exhausted   -> stack.agent.<agent>.tokens_capacity
+    memory_exceeded   -> stack.agent.<agent>.memory_capacity_bytes
+
+Not covered: capability_denied and signal_delivered have no numeric limit (a capability mask is a SET, and
+this core only orders numbers), so they are counted as "unmapped" and change nothing.
+"""
+from __future__ import annotations
+
+import hashlib
+import re
+from collections import defaultdict, deque
+from dataclasses import dataclass, field
+from typing import Any, Callable, Deque, Dict, Iterable, List, Optional
+
+REASON_TO_LIMIT = {
+    "deadline_exceeded": ("deadline_ns", "deadline_ns"),
+    "token_exhausted": ("tokens_capacity", "tokens_capacity"),
+    "memory_exceeded": ("memory_capacity_bytes", "memory_capacity_bytes"),
+}
+_SAFE_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+
+
+@dataclass
+class TrapPolicy:
+    """The interpretation layer's default: tighten only on a repeated pattern, not on a single trap.
+
+    min_traps trap events of the same reason for the same agent among that pair's last window_events events. This is
+    POLICY and the proposal's open question B: change it to suit the system.
+    """
+    min_traps: int = 5
+    window_events: int = 50
+    factor: float = 0.9
+    count_outcomes: tuple = ("RETRY", "TERMINAL_BREACH", "HALT")
+
+
+def _agent_key(agent_id: Any) -> Optional[str]:
+    if not isinstance(agent_id, str) or not agent_id:
+        return None
+    return agent_id if _SAFE_ID.match(agent_id) else "h-" + hashlib.sha256(agent_id.encode("utf-8", "replace")).hexdigest()[:24]
+
+
+class TrapBridge:
+    def __init__(self, governor, *, defaults: Dict[str, float], policy: Optional[TrapPolicy] = None,
+                 source: str = "stack-sentinel", credential: Optional[str] = None, max_agents: int = 1000,
+                 is_expected: Optional[Callable[[dict], bool]] = None):
+        """defaults: the configured starting limit for each of deadline_ns, tokens_capacity, memory_capacity_bytes
+        (a trap event's own execution context may supply a per-agent capacity, which is used instead)."""
+        missing = {s for _r, (s, _f) in REASON_TO_LIMIT.items()} - set(defaults)
+        if missing:
+            raise ValueError(f"defaults missing: {sorted(missing)}")
+        self.gov, self.defaults = governor, dict(defaults)
+        self.policy, self.source, self.credential = policy or TrapPolicy(), source, credential
+        self.max_agents, self.is_expected = max_agents, is_expected
+        self._recent: Dict[str, Deque[str]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
+        self._agents: set = set()
+        self.counts = defaultdict(int)  # skipped_malformed, unmapped, expected, duplicate, agent_cap, ...
+
+    def boundary_id(self, agent_key: str, suffix: str) -> str:
+        return f"stack.agent.{agent_key}.{suffix}"
+
+    def limit_for(self, agent_id: str, reason: str) -> Optional[float]:
+        """What the kernel should read before its next execution for this agent."""
+        key, spec = _agent_key(agent_id), REASON_TO_LIMIT.get(reason)
+        if key is None or spec is None or key not in self._agents:
+            return None
+        return float(self.gov.boundaries.get_boundary(self.boundary_id(key, spec[0])).current_limit)
+
+    def ingest(self, events: Iterable[dict]) -> List[dict]:
+        """Process trap events in order. Never raises on a bad event; returns the governor's replies."""
+        replies: List[dict] = []
+        for ev in events:
+            r = self._one(ev)
+            if r is not None:
+                replies.append(r)
+        return replies
+
+    def _one(self, ev: Any) -> Optional[dict]:
+        if not isinstance(ev, dict):
+            self.counts["skipped_malformed"] += 1
+            return None
+        agent, reason, trap_id = _agent_key(ev.get("agent_id")), ev.get("trap_reason"), ev.get("trap_id")
+        if agent is None or not isinstance(reason, str) or not isinstance(trap_id, str) or not trap_id:
+            self.counts["skipped_malformed"] += 1
+            return None
+        if ev.get("trap_outcome") not in self.policy.count_outcomes:
+            self.counts["skipped_outcome"] += 1
+            return None
+        if reason not in REASON_TO_LIMIT:
+            self.counts["unmapped"] += 1
+            return None
+        if self.is_expected is not None and self.is_expected(ev):
+            self.counts["expected"] += 1
+            return None
+        suffix, ctx_field = REASON_TO_LIMIT[reason]
+        if agent not in self._agents:
+            if len(self._agents) >= self.max_agents:
+                self.counts["agent_cap"] += 1
+                return None
+            self._agents.add(agent)
+            for _r, (s, f) in REASON_TO_LIMIT.items():
+                ctx = ev.get("context") if isinstance(ev.get("context"), dict) else {}
+                configured = ctx.get(f)
+                start = float(configured) if isinstance(configured, (int, float)) and not isinstance(configured, bool) \
+                    and configured > 0 else float(self.defaults[s])
+                self.gov.ensure_boundary(self.boundary_id(agent, s), "agent_limit", start)
+        window = self._recent[f"{agent}|{reason}"]
+        if trap_id in window:
+            self.counts["duplicate"] += 1
+            return None
+        window.append(trap_id)
+        if len(window) < self.policy.min_traps:     # the window already holds only the last window_events
+            return None
+        evidence = {k: ev.get(k) for k in ("trap_id", "agent_id", "boundary_layer", "trap_reason", "trap_outcome",
+                                            "tokens_deficit", "nanoseconds_since_deadline", "memory_requested_bytes")}
+        evidence["traps_in_window"] = len(window)
+        try:
+            reply = self.gov.propose_tightening(
+                self.boundary_id(agent, suffix), source=self.source, credential=self.credential,
+                factor=self.policy.factor, reason=f"{len(window)} {reason} traps for {agent}",
+                evidence=evidence, idempotency_key=f"trap-{trap_id}")
+        except (ValueError, KeyError):
+            self.counts["rejected_input"] += 1
+            return None
+        window.clear()  # the next tightening needs a fresh pattern
+        return reply

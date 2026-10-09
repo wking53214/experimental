@@ -27,3 +27,21 @@ jobs:
         run: python -m pytest tests/ -q --tb=line
       - name: Multi-seed smoke (N=3)
         run: python scripts/run_multiseed.py --seeds 3 --out results/multiseed_ci.json
+
+  integration-dgk:
+    # The adapter in integrations/dgk_governed.py is tested against the real DGK, pinned to a commit so a change
+    # in that repository cannot break this one by surprise. Kept separate from the core job on purpose.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies and DGK at the pinned commit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install "git+https://github.com/wking53214/DGK.git@da256f314d0b80cb79a3b4652a89dea1cf60ca3d"
+      - name: DGK integration tests
+        run: python -m pytest tests/test_integration_dgk.py -q --tb=short

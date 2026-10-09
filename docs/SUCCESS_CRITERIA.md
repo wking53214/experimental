@@ -14,6 +14,7 @@ What "works" means here, in plain terms: the system must (a) never let automatio
 | 6 | **Baseline poisoning is survivable in the recommended configuration** | `baseline_poisoning` experiment, calibrated detector with the trimmed fit, 10% contaminated baseline | Detection of the 3 sd probe at least 80% |
 | 7 | **A restart never loosens a limit** (added 2026-10-08, after the first scoring found the gap) | `tests/test_durable_state.py` (restart keeps limits and breaker state, refuses a tampered or forged log, fails closed if the log write fails) | All tests pass |
 | 8 | **Outside signals can never loosen a limit** (added 2026-10-09) | `tests/test_signal_interface.py` (including a randomized hostile-input test) and the signal-endpoint tests in `tests/test_adjudication_server_hardening.py` | All tests pass |
+| 9 | **The stack integrations work as described** (added 2026-10-09) | `tests/test_integration_dgk.py` (against the real DGK) and `tests/test_integration_stack_traps.py` | All tests pass; the DGK file is skipped, and so does not count, when DGK is not installed |
 
 Not in scope of any criterion, and so not claimed: protection against code running inside the process, network attackers, malicious operators, or attackers who stay below every limit and every detector.
 
@@ -41,3 +42,5 @@ Criterion 3 was also tried with an alarm-persistence filter (`experiments/persis
 **Criterion 7** was added after the first scoring, when Phase 13 and the positioning work showed that limits were not persisted. It is a test-based criterion, scored by running that file.
 
 **Criterion 8** was added when the signal interface was built, in the same way as criterion 7: a test-based criterion scored by running those files.
+
+**Criterion 9** was added with the integrations. It measures that the adapters behave as documented; it does not measure that the stack is better with them (see `docs/STACK_FIT.md`, last section).

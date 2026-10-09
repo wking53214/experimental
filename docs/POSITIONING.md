@@ -38,3 +38,7 @@ Distinctive is not the same as valuable. Measured value so far: against a sustai
 ## Where it would fit
 
 As a **sidecar or library that owns the limit state for something else**, with detection supplied from outside: an AI agent's spend or tool-call budget, an API key's rate cap, a permission tier. You send it "this principal looks wrong, propose a tighter limit"; it applies the tightening instantly and refuses any increase without a human grant. The part worth building a stack around is that refusal, plus the audit trail. The adaptive detection is replaceable and, today, the weak half.
+
+## Update 2026-10-09: what the library showed
+
+After reading the repository library, the picture changed: this core is the adaptation half of the STACK kernel's P3.2 proposal, not a free-standing product. Integrations exist for DGK and for STACK trap events; see `docs/STACK_FIT.md`. The "not ready for a stack" list above still applies to the kernel side: nothing in Rust or C++ reads the governed limits yet.

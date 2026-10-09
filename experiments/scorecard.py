@@ -85,11 +85,24 @@ def c8():
     return ("PASS" if r.returncode == 0 else "FAIL"), last
 
 
+def c9():
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-q", "-rs", "tests/test_integration_dgk.py",
+                        "tests/test_integration_stack_traps.py"], capture_output=True, text=True)
+    out = r.stdout.strip().splitlines()
+    skipped = any("SKIPPED" in l for l in out)
+    last = out[-1] if out else ""
+    return ("PASS" if r.returncode == 0 and not skipped else ("NOT MEASURED" if skipped else "FAIL")), last + (
+        " (DGK not installed: its tests were skipped)" if skipped else "")
+
+
 if __name__ == "__main__":
     rows = [("1 safety", c1), ("2 detection vs baseline", c2), ("3 no crying wolf", c3),
             ("4 responds to real trouble", c4), ("5 value over alternatives", c5), ("6 poisoning survivable", c6),
             ("7 restart never loosens", c7),
-            ("8 signals never loosen", c8)]
+            ("8 signals never loosen", c8),
+            ("9 stack integrations work", c9)]
     for name, fn in rows:
         status, detail = fn()
         print(f"{status:13s} {name:28s} {detail}")
