@@ -419,3 +419,131 @@ class TestExcessRelease:
         done = sorted(x for x in samples if x <= 100.0)
         q = [done[int(p * (len(done) - 1))] * 1e6 for p in (0.50, 0.75, 0.90, 0.95, 0.99)]
         assert b._slowdown("agent-7", q, 100 * self.MS) == pytest.approx(true_f, rel=0.08)
+
+
+class TestValidationLayer:
+    """validate_after: a tightened deadline is judged against a canary kept on the original deadline, with confidence
+    bounds over every slice since the tightening. DEGRADED files a restore request for a person and holds further
+    tightening; nothing is ever loosened by the bridge. Numbers below are large because the bounds demand it."""
+
+    MS = 1_000_000
+    DEF = {"deadline_ns": 100 * MS, "tokens_capacity": 4000, "memory_capacity_bytes": 2**29}
+    TASKS, CANARY = 5000, 500       # per slice; the canary is 10% of the tasks
+
+    def make(self, tmp_path, factor=0.5):
+        ops = OperatorRegistry(iterations=1000); ops.register("alice", OPS)
+        # one automatic tightening, so the slices that follow it cannot tighten again and move the review;
+        # factor 0.5 so that one hang saved (50 ms) is worth one task newly killed (50 ms)
+        g = Governor(store_path=str(tmp_path / "ev"), operators=ops, max_auto_tightenings=1)
+        b = TrapBridge(g, defaults=self.DEF, policy=TrapPolicy(min_rate=0.01, factor=factor, reasons=("deadline_exceeded",),
+                                                               validate_after=2))
+        return g, b
+
+    def slice(self, b, main_traps, canary_traps=0, canary_tasks=None, tasks=None, agent="agent-7"):
+        """main_traps among the main tasks and canary_traps among the canary tasks; all are deadline traps."""
+        tasks = tasks or self.TASKS; canary_tasks = self.CANARY if canary_tasks is None else canary_tasks
+        b.observe_transactions(agent, tasks, canary_tasks=canary_tasks, canary_deadline_traps=canary_traps)
+        return b.ingest([trap(agent=agent, reason="deadline_exceeded") for _ in range(main_traps + canary_traps)])
+
+    def tighten(self, b):
+        replies = self.slice(b, 250, canary_tasks=0)              # 5% traps: tightens 100 -> 50 ms
+        assert replies and replies[0]["status"] == "applied"
+        assert b.canary_plan("agent-7") == {"share": 0.10, "deadline_ns": 100 * self.MS}
+
+    def test_no_canary_plan_until_a_deadline_is_tightened_or_without_the_option(self, tmp_path):
+        g, b = self.make(tmp_path)
+        assert b.canary_plan("agent-7") is None                  # unknown agent
+        self.slice(b, 1, canary_tasks=0)
+        assert b.canary_plan("agent-7") is None                  # known, not tightened
+        b2 = TrapBridge(g, defaults=self.DEF, policy=TrapPolicy(min_rate=0.01))
+        assert b2.canary_plan("agent-7") is None                 # validation off
+
+    def test_a_runaway_is_improved(self, tmp_path):
+        """Main and canary trap at the same 5%: nothing extra is killed, every trap was a hang. With 9,000 main and
+        1,000 canary tasks the collateral's upper bound (1.5%, 0.7 ms) is under the benefit's lower bound (3.6%, 1.8 ms)."""
+        g, b = self.make(tmp_path)
+        self.tighten(b)
+        for _ in range(3):                                       # the third report reviews the first two
+            self.slice(b, 225, canary_traps=25)
+        assert b.verdicts and b.verdicts[-1]["verdict"] == "IMPROVED", b.verdicts
+        assert b.counts["review_improved"] == 1 and not g.list_pending_review()
+        assert any(e["payload"].get("kind") == "tightening_reviewed" for e in g.audit.find("signal"))
+        assert g.validations.get_validations_for_boundary(b.boundary_id("agent-7", "deadline_ns"))
+
+    def test_a_tightening_that_only_kills_completing_tasks_is_degraded_and_a_person_is_asked(self, tmp_path):
+        """Canary (original deadline) never traps; the main group does at 4.4%: those tasks would have completed."""
+        g, b = self.make(tmp_path)
+        self.tighten(b)
+        for _ in range(3):
+            self.slice(b, 200, canary_traps=0)
+        assert b.verdicts[-1]["verdict"] == "DEGRADED" and b.counts["restore_requested"] == 1
+        pending = g.list_pending_review()
+        assert len(pending) == 1 and pending[0].proposed_value == 100 * self.MS
+        assert b.limit_for("agent-7", "deadline_exceeded") == 50 * self.MS   # nothing loosened by itself
+        replies = self.slice(b, 300, canary_traps=0)                        # more traps: held, not tightened
+        assert replies == [] and b.counts["review_hold"] > 0
+        assert b.limit_for("agent-7", "deadline_exceeded") == 50 * self.MS
+
+    def test_the_verdict_weighs_time_with_confidence_bounds(self, tmp_path):
+        """6% hangs at the original deadline. 12 extra kills per 100 main tasks is confidently worse (DEGRADED);
+        none extra is confidently better (IMPROVED); 4 extra per 100 cannot be told apart from noise at this
+        volume (UNCHANGED), which is the honest answer, not a guess."""
+        g, b = self.make(tmp_path)
+        self.tighten(b)
+        for _ in range(3):
+            self.slice(b, 810, canary_traps=30)                  # main 18%, canary 6%
+        assert b.verdicts[-1]["verdict"] == "DEGRADED"
+        g, b = self.make(tmp_path / "b")
+        self.tighten(b)
+        for _ in range(3):
+            self.slice(b, 270, canary_traps=30)                  # main 6%, canary 6%
+        assert b.verdicts[-1]["verdict"] == "IMPROVED"
+        g, b = self.make(tmp_path / "c")
+        self.tighten(b)
+        for _ in range(3):
+            self.slice(b, 450, canary_traps=30)                  # main 10%, canary 6%
+        assert b.verdicts[-1]["verdict"] == "UNCHANGED"
+        assert not g.list_pending_review()
+
+    def test_too_few_canary_tasks_is_unknown_and_both_zero_is_unchanged(self, tmp_path):
+        g, b = self.make(tmp_path)
+        self.tighten(b)
+        for _ in range(3):
+            self.slice(b, 0, canary_tasks=10)
+        assert b.verdicts[-1]["verdict"] == "UNKNOWN"
+        for _ in range(3):
+            self.slice(b, 0, canary_tasks=50)
+        assert b.verdicts[-1]["verdict"] == "UNCHANGED"
+
+    def test_a_cumulative_review_does_not_notice_an_episode_that_ended(self, tmp_path):
+        """Documented limit (docs/TRACE_TEST_PLAN.md, round 5): the bounds need volume, so the window runs from the
+        tightening onward, and an episode's hangs keep the verdict from turning DEGRADED after the episode ends."""
+        g, b = self.make(tmp_path)
+        self.tighten(b)
+        for _ in range(3):
+            self.slice(b, 225, canary_traps=25)                  # 5% hangs
+        assert b.verdicts[-1]["verdict"] == "IMPROVED"
+        for _ in range(6):
+            self.slice(b, 30, canary_traps=0)                    # hangs over; a 0.7% natural tail remains
+        assert "DEGRADED" not in [v["verdict"] for v in b.verdicts] and b.counts["restore_requested"] == 0
+
+    @pytest.mark.parametrize("bad", [(-1, 0), (6000, 0), (50, 60), (True, 0), ("50", 0), (5.0, 0)])
+    def test_bad_canary_counts_are_ignored(self, tmp_path, bad):
+        g, b = self.make(tmp_path)
+        b.observe_transactions("agent-7", 5000, canary_tasks=bad[0], canary_deadline_traps=bad[1])
+        assert list(b._slices["agent-7"])[-1][2:] == [0, 0]
+
+    def test_the_bridge_still_cannot_raise_a_limit(self, tmp_path):
+        g, b = self.make(tmp_path)
+        self.tighten(b)
+        for _ in range(4):
+            self.slice(b, 200, canary_traps=0)
+        ok, checks = g.verify_governance_integrity()
+        assert ok, checks
+        assert b.verdicts and b.verdicts[-1]["verdict"] == "DEGRADED"
+        at_verdict = b.limit_for("agent-7", "deadline_exceeded")
+        assert at_verdict == 50 * self.MS
+        for _ in range(4):
+            self.slice(b, 200, canary_traps=0)
+        assert b.limit_for("agent-7", "deadline_exceeded") == at_verdict   # held since: never lower, never higher
+        assert g.verify_governance_integrity()[0]

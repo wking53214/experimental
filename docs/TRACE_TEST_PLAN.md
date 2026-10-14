@@ -234,3 +234,85 @@ What the sweep says: the drift factor is flat between 1.3 and 1.5 and breaks at 
 **Same-seed diff (the cleaner test).** Rerunning seeds 1001-1020 with the fix changed the decision on exactly 11 agent-seeds under each policy: the 11 `regressed-2` recovery tightenings (slices 24 to 30), all now untightened, cost change 0.00-0.01 points. No other agent-seed changed under either policy. So the fix removes the recovery defect and touches nothing else; the fresh-seed moves on `regressed-0` and `regressed-1` are the excess rule's seed-to-seed noise at 1 to 2 seeds per agent per 10, which the 10-point bar was too tight for.
 
 **Where this leaves the recommended policy.** On this workload, over 20 seeds and after the fix: runaway agents and every inflate-first attacker are tightened on every seed; the price is the hold's 3 to 7 slice delay on attackers who inflate first (hung time saved 6% to 24% instead of 19% to 27%), one legitimately wide-tailed agent above the 1% rule tightened every time, the natural-tail agent 40% of the time, the slow-from-start agents always, and the excess rule falsely releasing a legitimate regression or drift in about 1 of 8 agent-seeds, late and cheaply. The thresholds: 1.5x is flat down to 1.3 and breaks at 2.0; 1% is a workload parameter with agents on both sides of it, and no trap-count rule moves them apart.
+
+## Fifth round: a validation layer for deadline tightenings (design and predictions written before the code ran)
+
+**What question C asks.** The research proposal's critique says the architecture skips validation: nothing establishes that a tightening improved anything rather than just moving violations around. Rounds 1 to 4 judged tightenings against the trace's ground-truth labels, which a running system does not have. This round gives the loop an independent signal it could really have, and judges every tightening with it.
+
+**The signal: a canary.** While an agent's deadline is tightened, the kernel keeps a fixed share of that agent's tasks (every tenth task, 10%) on the original deadline. That is an A/B test the proposal itself suggests. It costs 10% of the saving on hung tasks. Two things are then observable per slice without any label or baseline: the trap share of the main tasks at the tightened deadline D1, and the trap share of the canary tasks at the original deadline D0.
+
+**The verdict.** Four slices after a tightening (and again every four slices while the limit stays tightened), with at least 50 canary tasks seen:
+- `delta = max(0, main_share - canary_share)`: tasks the tightening newly kills, that would have completed under D0. These are the collateral, whoever the agent is.
+- `benefit_max = canary_share x (D0 - D1)`: time saved per task if every trap at the original deadline were a hang (an upper bound; the hung share is never known).
+- `cost = delta x D1`: time burned by the newly killed tasks before they were killed.
+- **DEGRADED** if `cost > benefit_max`: even if every original-deadline trap were a hang, the tightening burns more time than it saves. **IMPROVED** if `cost < 0.5 x benefit_max`. **UNCHANGED** between. **UNKNOWN** with too few canary tasks. A tightening whose canary and main shares are both zero is UNCHANGED (it is not doing anything).
+- DEGRADED files a restore request to the configured limit for a person (never a loosening) and stops further automatic tightening of that boundary until the person decides. The verdict, the numbers and the request go to the audit log and the governor's validation store.
+
+No distribution is assumed and no baseline is used, so the baseline-poisoning and truncation problems of the drift rule do not apply. What the verdict cannot do is tell whose time it is: an attacker's inflated-but-completing tasks count as collateral like anyone's. That is deliberate, and a limitation to record, not hide.
+
+**Predictions** (20 fresh seeds 3001-3020, three rosters, recommended policy with validation on; counts are agent-seeds):
+
+| # | Prediction |
+|---|---|
+| P1 | Sustained runaways (steady, mild, ho-runaway-3pct, control-runaway): first verdict IMPROVED in at least 90%; DEGRADED while still hanging tasks in at most 10% |
+| P2 | runaway-episode (hangs only between tasks 2,000 and 3,000): IMPROVED during the episode, then DEGRADED with a restore request after it ends, in at least 70% of seeds: the layer notices a tightening that has stopped buying anything |
+| P3 | Agents that should not be tightened but are (healthy-tail, ho-healthy-1, the three slow-from-start agents, falsely released regressions and drifts): DEGRADED with a restore request within 6 slices in at least 80% of those agent-seeds; the slow-from-start agents and ho-healthy-1 in 100% |
+| P4 | Attackers that inflate their completed durations (attacker-inflate and the six inflate-first agents): DEGRADED in at least 50%. In time terms the tightening burns more on their inflated tasks than it saves on their hangs; the verdict is right about the time and blind to the intent |
+| P5 | The low-and-slow attacker: not DEGRADED (UNCHANGED or IMPROVED) in at least 70% |
+| P6 | Hung-task time saved on sustained runaways drops by about a tenth (the canary's share) and stays at least 15% |
+| P7 | Zero restore requests and zero tightenings on the nine healthy agents with tails at or below 0.2% |
+| P8 | Criterion 10: (a), (b), (c), (e) pass; (d) passes on both halves. If (d) fails on the runaway half it will be through noise on the 2% runaway, whose canary sees about 1 hang per slice |
+
+### Round 5, first result (2026-10-14; seeds 3001-3020; `experiments/stack_trace_multiseed_results_validated.json`, policies `recommended` and `validated`)
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| P1 | Sustained runaways: first verdict IMPROVED in at least 90%; DEGRADED while hanging at most 10% | first IMPROVED **43 of 80**; DEGRADED while still hanging **70 of 80** | **No** |
+| P2 | Episode runaway: IMPROVED then DEGRADED after the episode, at least 70% | 13 of 20 | No (65%) |
+| P3 | Wrong tightenings: DEGRADED with a restore request within 6 slices in at least 80%; slow-from-start and ho-healthy-1 in 100% | within 6 slices **77 of 121** (64%); ever 100 of 121. Slow-from-start 60 of 60 within 6. ho-healthy-1: 20 of 20 ever, **3 of 20 within 6** | No |
+| P4 | Inflating attackers DEGRADED in at least 50% | 147 of 160 ever, 115 of 160 at the first verdict | Yes |
+| P5 | Low-and-slow attacker not DEGRADED in at least 70% | not DEGRADED **2 of 20** | **No** |
+| P6 | Saving on sustained runaways drops about a tenth and stays at least 15% | 26 to 23%, 24 to 21%, 26 to 23%, 20 to 18% (relative drop 9 to 13%) | Yes |
+| P7 | Zero tightenings or restore requests on the nine quiet healthy agents | 0 of 178 | Yes |
+| P8 | Criterion 10 passes | **FAIL** on (d): wrong tightenings caught within 6 slices 77 of 121 (need 80%); runaways DEGRADED while hanging 74 of 100 (need at most 10%). (a) 279 of 280, (b) 19%, (c) ok, (e) 0 of 178 all pass | No |
+
+**Diagnosis.** The verdict compared two shares with no regard for how many tasks they came from. A 10% canary over 4 slices is 100 tasks; at a 5% hang rate that is 5 traps give or take 2, and the main group's natural tail at the tightened deadline adds a few tenths of a point. Sampling noise alone moves the cost-against-benefit comparison across the DEGRADED line about one review in three, and the review repeats every 4 slices, so almost every correctly tightened runaway was eventually declared DEGRADED (70 of 80) and a restore request filed. In all, 355 restore requests on 400 tightened agent-seeds: the layer asked a person to undo nearly everything, which is the opposite of relocating human attention. The gross cases were right (slow-from-start 60 of 60 within 6 slices; inflating attackers mostly DEGRADED at the first look, which the time currency makes correct); the marginal ones were noise.
+
+**Change made after seeing the result.** Verdicts now carry confidence bounds (normal approximation, z = 2, rule-of-three upper bound for a zero count) and are computed over every slice since the tightening (capped at 32), not the last 4: DEGRADED only if the lower bound of the collateral's cost exceeds the upper bound of the maximum benefit; IMPROVED only if the upper bound of the cost is under the lower bound of the maximum benefit (`improved_ratio` now 1.0, "confidently net positive"); UNCHANGED when the bounds do not separate. The window change trades away the episode-end detection of P2: a cumulative window dilutes the signal that a tightening has stopped buying anything.
+
+**What the arithmetic says to expect, written before the rerun.** With a 10% canary, confirming harm needs a collateral of several points (slow-from-start: 7 to 18 points, caught within a few slices; a 3x regression: 6 points, caught after a few more; ho-healthy-1 at 2 points: marginal, after 20 or more slices; healthy-tail at half a point: never). Confirming benefit is harder still, because one newly killed task costs the whole tightened deadline while one hang saved earns only the cut: at the first 10% step the collateral must be shown to be under a ninth of the hang share, which needs tens of thousands of canary tasks. So IMPROVED should be rare and most correct tightenings should read UNCHANGED, which is the honest answer at this canary volume.
+
+**Pre-registered predictions for the bounded validator, fresh seeds 4001-4020.**
+
+| # | Prediction |
+|---|---|
+| P1' | Sustained runaways: DEGRADED while hanging in at most 10% of agent-seeds (from 70 of 80); IMPROVED ever in at most 20%; the rest UNCHANGED |
+| P2' | Episode runaway: DEGRADED after the episode in at most 30% (the predicted loss) |
+| P3' | Slow-from-start: DEGRADED with a restore request within 6 slices in 100%. Falsely released 3x and 4x regressions and 3.5x drift: DEGRADED eventually in at least 60%. ho-healthy-1: DEGRADED ever between 20% and 80%, within 6 slices at most 20%. healthy-tail: DEGRADED ever at most 30% |
+| P4' | Inflating attackers: DEGRADED ever at least 50% |
+| P5' | Low-and-slow: not DEGRADED in at least 80% |
+| P6' | Restore requests on at most 40% of tightened agent-seeds (from 89%), and on at most 10% of sustained-runaway agent-seeds |
+| P7' | Criterion 10 still FAILS, on the wrong-tightening half of (d) (healthy-tail and ho-healthy-1 cannot be resolved within 6 slices at this volume); the runaway half of (d) passes |
+
+### Round 5, second result: the bounded validator (2026-10-14; fresh seeds 4001-4020; `experiments/stack_trace_multiseed_results_validated_bounded.json`)
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| P1' | Sustained runaways DEGRADED while hanging at most 10%; IMPROVED ever at most 20%; the rest UNCHANGED | DEGRADED while hanging **7 of 80** (from 70 of 80); IMPROVED ever 13 of 80; first verdict UNCHANGED 77 of 80 | Yes |
+| P2' | Episode runaway DEGRADED after the episode at most 30% | 1 of 20 | Yes (the predicted loss) |
+| P3' | Slow-from-start DEGRADED within 6 slices in 100% | within 6: **48 of 60**; ever 60 of 60. The review runs 4 slices after the *last* tightening, and these agents tighten three times in their first three slices, so the first verdict lands at slice 6 or 7 | No |
+| P3' | Falsely released 3x and 4x regressions and 3.5x drift DEGRADED eventually in at least 60% | **3 of 28**. They are released at slices 20 to 28; the cumulative window has 4 to 12 slices left before the trace ends and the bounds do not close in time | No |
+| P3' | ho-healthy-1 DEGRADED ever 20% to 80%, within 6 slices at most 20% | ever **20 of 20** (above the range: the cumulative window gets there by slice 20 to 30); within 6: 1 of 20 | Half |
+| P3' | healthy-tail DEGRADED ever at most 30% | **9 of 11** (82%): the same cumulative power, late | No, in the right direction |
+| P4' | Inflating attackers DEGRADED ever at least 50% | 73 of 160 (46%) | No, narrowly |
+| P5' | Low-and-slow not DEGRADED in at least 80% | 13 of 20 (65%) | No |
+| P6' | Restore requests at most 40% of tightened agent-seeds; at most 10% on sustained runaways | 182 of 408 (45%); sustained runaways 7 of 80 (9%) | Half |
+| P7' | Criterion 10 still fails on the wrong-tightening half of (d), passes the runaway half | **FAIL**: (d) wrong tightenings caught within 6 slices 54 of 128; runaways DEGRADED while hanging 8 of 100. (a) 280 of 280, (b) 19%, (c) ok, (e) 0 of 179 | Yes |
+
+Verdicts overall: UNCHANGED 1,176, IMPROVED 412, DEGRADED 219. Hung time saved on sustained runaways 18% to 23% with the canary (20% to 26% without).
+
+**What the validation layer is, after two runs.** With confidence bounds it no longer asks a person to undo correct tightenings (7 of 80 sustained runaways instead of 70). It confirms the gross wrong tightenings (every slow-from-start agent, every seed) and, given 20 or more slices, the wide-tail ones (ho-healthy-1 20 of 20, healthy-tail 9 of 11). It cannot confirm harm quickly: the 6-slice bar in criterion 10 was missed by one or two slices on the slow-from-start agents and by a long way on everything marginal, and a regression released late in the trace is never resolved. It almost never confirms benefit: IMPROVED needs the collateral shown to be under about a ninth of the hang share at the first 10% step, which a 10% canary does not have the volume for; "UNCHANGED" on a correct tightening means "cannot tell", not "no effect". And it is blind to intent by design: an attacker's inflated-but-completing tasks count as collateral, so 46% of inflating attackers get a restore request a person then has to refuse.
+
+**Criterion 10 stands as FAIL** on the speed half of (d). The bar was written before the layer existed and is kept; the arithmetic says what would pass it: a canary of 30% or more, or windows of 2,000 canary tasks before the first verdict, each of which costs saving or time. That trade is a policy choice for whoever runs this, not something to tune here on these seeds.
+
+**Change log for this round, for the record.** One change after seeing results (the bounds and the cumulative window), checked on fresh seeds; its predictions held on the runaway side and missed on the speed side, as written above. No threshold in the recommended policy was changed.

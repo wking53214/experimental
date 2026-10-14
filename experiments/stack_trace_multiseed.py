@@ -80,8 +80,9 @@ def one_job(job):
                 "legit_fail_rate_static": 100.0 * s["legit_failed"] / max(1, s["legit"]),
                 "bad_ns_static": s["bad_ns"], "bad_ns_governed": g["bad_ns"],
                 "final_deadline_ns": v["limits"]["deadline_ns"]["limit"] if v["limits"]["deadline_ns"] else DEFAULTS["deadline_ns"],
+                "verdicts": v.get("verdicts", []), "restore_requested": v.get("restore_requested", False),
             }
-        out[pname]["_audit_intact"] = pr["audit_chain_intact"]
+        out[pname]["_audit_intact"] = pr["audit_chain_intact"] and pr.get("integrity_ok", True)
     return roster, seed, out
 
 
@@ -105,7 +106,12 @@ def summarize(runs):
                 tight = [o["tightened"] for o in outs]
                 firsts = [o["first"] for o in outs if o["first"] is not None]
                 bad_s = sum(o["bad_ns_static"] for o in outs); bad_g = sum(o["bad_ns_governed"] for o in outs)
+                firsts_v = [o["verdicts"][0]["verdict"] for o in outs if o.get("verdicts")]
                 rows[agent] = {
+                    "first_verdict": {k: firsts_v.count(k) for k in ("IMPROVED", "UNCHANGED", "DEGRADED", "UNKNOWN") if firsts_v.count(k)},
+                    "any_degraded_seeds": int(sum(any(x["verdict"] == "DEGRADED" for x in o.get("verdicts", [])) for o in outs)),
+                    "degraded_while_bad_seeds": int(sum(any(x["verdict"] == "DEGRADED" and x["bad_in_window"] > 0 for x in o.get("verdicts", [])) for o in outs)),
+                    "restore_requested_seeds": int(sum(bool(o.get("restore_requested")) for o in outs)),
                     "profile": outs[0]["profile"], "should_tighten": outs[0]["should_tighten"], "seeds": n,
                     "tightened_seeds": int(sum(tight)), "tightened_share": sum(tight) / n,
                     "first_slice_median": (float(np.median(firsts)) if firsts else None),
@@ -131,13 +137,14 @@ def print_summary(summary, title):
             tp = sum(r["tightened_seeds"] for r in rows.values() if r["should_tighten"])
             tp_n = sum(r["seeds"] for r in rows.values() if r["should_tighten"])
             print(f"\n== {roster} / {pname}: should-tighten agent-seeds tightened {tp}/{tp_n}; should-NOT agent-seeds tightened {fp}/{fp_n}")
-            print("%-20s %-24s %2s %5s %7s %8s %8s %9s %9s" % ("agent", "profile", "sh", "tight", "1st med", "static%", "cost pts", "cost max", "saved"))
+            print("%-20s %-24s %2s %5s %7s %8s %8s %9s %9s  %s" % ("agent", "profile", "sh", "tight", "1st med", "static%", "cost pts", "cost max", "saved", "verdicts: first / any DEGRADED / DEGRADED while bad / restore"))
             for agent, r in rows.items():
-                print("%-20s %-24s %2d %5s %7s %8.2f %8.2f %9.2f %9s" % (
+                print("%-20s %-24s %2d %5s %7s %8.2f %8.2f %9.2f %9s  %s" % (
                     agent, r["profile"], r["should_tighten"], f"{r['tightened_seeds']}/{r['seeds']}",
                     "-" if r["first_slice_median"] is None else f"{r['first_slice_median']:.0f}",
                     r["legit_fail_rate_static_mean"], r["legit_cost_points_mean"], r["legit_cost_points_max"],
-                    "-" if r["bad_time_saved_share"] is None else f"{100 * r['bad_time_saved_share']:.0f}%"))
+                    "-" if r["bad_time_saved_share"] is None else f"{100 * r['bad_time_saved_share']:.0f}%",
+                    "" if not r["first_verdict"] else f"{r['first_verdict']} / {r['any_degraded_seeds']} / {r['degraded_while_bad_seeds']} / {r['restore_requested_seeds']}"))
 
 
 def main():

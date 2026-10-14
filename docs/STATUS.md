@@ -6,11 +6,13 @@ One page. Evidence is in the linked documents; nothing here is new measurement.
 
 Can a governance layer that lets automation only **tighten** limits (and only a named human **loosen** them) be useful for the STACK, and does it work?
 
+**The claim, as of 2026-10-14.** Two claims were in play and they have come apart. The strong one, that the system judges on its own *when* a limit should come down, was tested in four rounds of trace replays and did not hold: statistical detection cries wolf on real telemetry, and no trap-count rule separates a legitimately slow or wide-tailed agent from a mild runaway. The bounded one is what the project now claims and measures (criterion 10): automation tightens within a fixed budget on strong, cheap signals; a named human loosens; and a validation layer judges every tightening afterwards from an independent signal, so a wrong tightening costs a person one decision rather than an outage. Human effort is relocated to adjudication, not removed. This is the reframing the research proposal's own critique asked for.
+
 ## What is established
 
 | Claim | Status | Basis |
 |---|---|---|
-| Automation cannot loosen a limit, and every change is attributable | **Holds within the stated threat model** | Criterion 1: 36 of 36 soak runs plus fuzzing; criteria 7 and 8 (restart, outside signals). 701 tests pass locally (plus 46 that need DGK). Not covered: code inside the process, network attackers, malicious operators (`docs/THREAT_MODEL.md`). |
+| Automation cannot loosen a limit, and every change is attributable | **Holds within the stated threat model** | Criterion 1: 36 of 36 soak runs plus fuzzing; criteria 7 and 8 (restart, outside signals). 728 tests pass locally (plus 46 that need DGK). Not covered: code inside the process, network attackers, malicious operators (`docs/THREAT_MODEL.md`). |
 | It can govern a real system's limits | **Shown for DGK and for the Rust kernel's deadline** | DGK's three hardcoded limits run governed against the real DGK (46 tests); the Rust `stack-p3-2` kernel reads governed budgets over HTTP and obeys them (`docs/STACK_CLOSED_LOOP.md`). |
 | It finds real defects | **Yes** | NaN/infinity handling in DGK, found by running its code and fixed on DGK `main` (`4a0ecd2`). |
 | It saves something against a runaway | **Yes, bounded** | 27% less time spent on runaway tasks, exactly the breaker cap's arithmetic (3 steps of 10%). A perfect human does better on sustained attacks. |
@@ -36,26 +38,28 @@ Two committed synthetic traces (`testdata/traces/`: 200,000 tasks over 25 agents
 ## Scorecard (pre-registered, `experiments/scorecard.py`)
 
 PASS: 1 safety, 2 detection vs baseline (bare minimum), 5 value vs alternatives (43% vs 40% needed), 6 poisoning (opt-in trimmed fit only), 7 restart, 8 signals, 9 integrations.
-FAIL: 3 no crying wolf, 4 responds to real trouble.
+FAIL: 3 no crying wolf, 4 responds to real trouble, 10 bounded autonomy with validated tightening (added 2026-10-14; fails only on how fast a wrong tightening is confirmed: 54 of 128 within 6 slices against 80% needed; every other part passes).
 
-The trap-loop work (rate rule, drift rule) is not part of the pre-registered criteria; it has no pass bar and was developed after seeing results. The trace-replay predictions were written before each run and are scored in `docs/TRACE_TEST_PLAN.md`.
+The trap-loop work now has a criterion (10), written before the validation layer was built. Rounds 1 to 4 of it were developed after seeing results and are scored only against the predictions in `docs/TRACE_TEST_PLAN.md`. The trace-replay predictions were written before each run and are scored in `docs/TRACE_TEST_PLAN.md`.
 
 ## Decision recorded: cold-start agents are an accepted limit
 
 An agent that is slow from its first task has no earlier baseline, so it is treated like any other high-trap agent and tightened (up to the 27% breaker cap) until a named person loosens it. In the traces this affected 3 agents (2 in the first trace, 1 in the held-out trace; timeouts roughly doubled, e.g. 15.2% to 33.3%). A learning period that holds tightening for a new agent's first ~1,250 tasks was considered and not built: it would remove those false tightenings but also delay real protection for every new agent by the same period. Revisit if slow-from-the-start agents turn out to be common.
 
+**Fifth round, the validation layer** (question C of the research proposal; `TrapPolicy(validate_after=4)`): while a deadline is tightened, 10% of the agent's tasks stay on the original deadline, and every 4 slices the bridge compares the two groups' trap shares with confidence bounds; DEGRADED files a restore request for a person and holds further tightening. First version had no bounds and asked a person to undo 355 of 400 tightenings, including nearly every correct one. With bounds (checked on fresh seeds): correct tightenings are left alone (7 of 80 sustained runaways wrongly flagged), every slow-from-start agent is flagged on every seed (48 of 60 within 6 slices, the rest a slice or two later), wide-tail agents are flagged after 20 or more slices, late-released regressions are not resolved before the trace ends, and benefit is almost never confirmed (most correct tightenings read UNCHANGED, meaning "cannot tell" at this canary volume). Criterion 10 fails on that speed. The verdict is blind to intent: attackers that inflate their completed durations get restore requests a person must refuse (46%).
+
 ## Known open issues, in the order I would worry about them
 
 1. **Nothing has run on real traffic.** Every closed-loop number comes from simulated durations. The 1.5x drift factor is not on an edge in the sweep; the 1% rate threshold is a workload parameter (agents the labels put on both sides of it), and nothing in the trap stream can set it.
-2. **The benefit is small and capped.** The design buys at most 27% on a runaway and needs a human for everything else.
+2. **The benefit is small and capped.** The design buys at most 27% on a runaway (23% with the validation canary) and needs a human for everything else. The validation layer can confirm gross harm but not benefit at a 10% canary; confirming benefit needs roughly ten times the canary volume.
 3. **Baselines can be poisoned** (T2), and the drift rule can be defeated by an attacker who inflates completions first (T15, demonstrated). Opt-in mitigation only.
 4. **Kernel coverage is thin.** Deadline only; C++ untouched; STACK-Kernel CI covers one crate.
-5. **Audit anchoring is undecided** (head hash must live somewhere the governor cannot write; DGK has the same open gap). Seven separate hash-chained ledgers exist in the library.
+5. **Audit anchoring is now a hook, not a decision** (`anchor_store`: the head is published after every append and checked at startup; a rewrite, truncation or deletion of the log is refused). Where the anchor file lives is still the operator's call, and on the same host under the same user it buys nothing. DGK has the same gap. Seven separate hash-chained ledgers exist in the library.
 6. **No TLS** on the adjudication server or the kernel's HTTP read (T10).
 
 ## What it is for
 
-The distinctive, working piece is the **one-way ratchet enforced by the store**: limits that adapt, with monotonicity guaranteed in code and audit, and a single human gate to reverse it. That fits the adaptation half of the STACK P3.2 proposal. The part that decides *when* to tighten is the weak part, and the honest current answer is: enforcement events plus a rate rule plus a drift check, a human for the rest.
+The distinctive, working piece is the **one-way ratchet enforced by the store**: limits that adapt, with monotonicity guaranteed in code and audit, and a single human gate to reverse it. That fits the adaptation half of the STACK P3.2 proposal. The part that decides *when* to tighten is the weak part, and the honest current answer is: enforcement events plus a rate rule plus a drift check, a canary-based review of every tightening, and a human for the rest. The system is self-hardening in the safety direction and not self-judging; it should be described as bounded autonomy with human-gated loosening, never as a system that learns the right limits on its own.
 
 ## Where the code is
 

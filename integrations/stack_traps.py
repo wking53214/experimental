@@ -30,6 +30,11 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Deque, Dict, Iterable, List, Optional
 
+from src.governance.validation import ValidationOutcome
+
+_OUTCOME = {"IMPROVED": ValidationOutcome.IMPROVED, "UNCHANGED": ValidationOutcome.UNCHANGED,
+            "DEGRADED": ValidationOutcome.DEGRADED, "UNKNOWN": ValidationOutcome.UNKNOWN}
+
 REASON_TO_LIMIT = {
     "deadline_exceeded": ("deadline_ns", "deadline_ns"),
     "token_exhausted": ("tokens_capacity", "tokens_capacity"),
@@ -74,6 +79,23 @@ class TrapPolicy:
     # Which trap reasons may trigger tightening (None = all mapped reasons). The trace replays found that tightening
     # token and memory caps added collateral and no benefit; ("deadline_exceeded",) enforces only the deadline.
     reasons: Optional[tuple] = None
+    # Validation layer (off by default; docs/TRACE_TEST_PLAN.md, fifth round). While an agent's deadline is tightened,
+    # the kernel keeps canary_share of its tasks on the ORIGINAL deadline and reports both groups' counts through
+    # observe_transactions(..., canary_tasks=, canary_deadline_traps=). Every validate_after slices the bridge
+    # compares the main and canary trap shares: delta = main - canary is the collateral (tasks newly killed that
+    # would have completed), cost = delta x D1, benefit_max = canary_share x (D0 - D1). DEGRADED if cost confidently exceeds
+    # benefit_max (files a restore request for a person and holds further tightening), IMPROVED if cost is under
+    # improved_ratio x benefit_max, UNCHANGED when the bounds do not separate, UNKNOWN under min_canary_tasks.
+    validate_after: Optional[int] = None
+    canary_share: float = 0.10
+    improved_ratio: float = 1.0
+    min_canary_tasks: int = 50
+    # Confidence bounds on the verdict (added after the first run issued noise-driven verdicts; docs/TRACE_TEST_PLAN.md,
+    # round 5): shares get normal-approximation bounds at review_z standard errors (rule of three for a zero count),
+    # over every slice since the tightening up to review_window slices. DEGRADED needs the cost's lower bound above
+    # the benefit's upper bound; IMPROVED needs the cost's upper bound under improved_ratio x the benefit's lower bound.
+    review_z: float = 2.0
+    review_window: int = 32
 
 
 def _agent_key(agent_id: Any) -> Optional[str]:
@@ -103,6 +125,9 @@ class TrapBridge:
         self._slices: Dict[str, Deque[list]] = defaultdict(lambda: deque(maxlen=64))   # [tasks, deadline traps]
         self._drifting: set = set()
         self._slow_cache: Dict[tuple, float] = {}
+        self._reviews: Dict[str, dict] = {}        # agent -> pending review of its deadline tightening
+        self._restore_pending: set = set()         # boundary ids with a DEGRADED verdict awaiting a person
+        self.verdicts: List[dict] = []             # every verdict issued, in order (also in the audit log)
         self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
         self.counts = defaultdict(int)  # skipped_malformed, unmapped, expected, duplicate, agent_cap, ...
@@ -120,14 +145,21 @@ class TrapBridge:
     QUANTILE_POINTS = (0.50, 0.75, 0.90, 0.95, 0.99)
 
     def observe_transactions(self, agent_id: str, n: int, completed_median_ns: Optional[float] = None,
-                             completed_quantiles: Optional[list] = None) -> None:
+                             completed_quantiles: Optional[list] = None, canary_tasks: int = 0,
+                             canary_deadline_traps: int = 0) -> None:
         """Report that the agent ran n more transactions (traps or not), and optionally the median duration of the
-        ones that completed. Call before ingesting their traps."""
+        ones that completed. canary_tasks of the n ran on the ORIGINAL deadline (see TrapPolicy.validate_after) and
+        canary_deadline_traps of those overran it. Call before ingesting their traps."""
         key = _agent_key(agent_id)
         if key is None or not isinstance(n, int) or isinstance(n, bool) or n <= 0:
             return
+        ok_int = lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 0
+        if not (ok_int(canary_tasks) and ok_int(canary_deadline_traps) and canary_tasks <= n
+                and canary_deadline_traps <= canary_tasks):
+            canary_tasks, canary_deadline_traps = 0, 0
+        self._review_if_due(key)            # over completed slices only: this slice's traps are not in yet
         self._tasks[key] += n
-        self._slices[key].append([n, 0])
+        self._slices[key].append([n, 0, canary_tasks, canary_deadline_traps])
         q = completed_quantiles
         if (isinstance(q, (list, tuple)) and len(q) == len(self.QUANTILE_POINTS)
                 and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and v > 0 for v in q)
@@ -205,11 +237,11 @@ class TrapBridge:
         f = self._slowdown(agent_key, self._quantiles[agent_key][-1] if self._quantiles.get(agent_key) else [], deadline_ns)
         if f is None:
             return False
-        tasks = sum(t for t, _ in sl)
+        tasks = sum(w[0] for w in sl)
         if tasks <= 0 or f <= 1:
             return False
         explained = self._survival(agent_key, deadline_ns / f)
-        observed = sum(k for _, k in sl) / tasks
+        observed = sum(w[1] for w in sl) / tasks
         return observed > explained + max(self.policy.excess_abs, self.policy.excess_rel * explained)
 
     def drifting(self, agent_key: str) -> bool:
@@ -235,6 +267,93 @@ class TrapBridge:
                     bid, requested_by=self.source, credential=self.credential, new_limit=float(self.defaults[suffix]),
                     reason="completed tasks are slower than this agent's baseline: looks like a regression, "
                            "not a runaway", evidence=info, idempotency_key=f"drift-{agent}-{suffix}-{int(recent)}")
+            except (ValueError, KeyError):
+                self.counts["rejected_input"] += 1
+
+    def canary_plan(self, agent_id: str) -> Optional[dict]:
+        """What the kernel should do for validation: if the agent's deadline is tightened and validation is on,
+        run `share` of its tasks on `deadline_ns` (the configured original). None when nothing to do."""
+        key = _agent_key(agent_id)
+        if self.policy.validate_after is None or key is None or key not in self._agents:
+            return None
+        current = float(self.gov.boundaries.get_boundary(self.boundary_id(key, "deadline_ns")).current_limit)
+        original = float(self.defaults["deadline_ns"])
+        if current >= original:
+            return None
+        return {"share": self.policy.canary_share, "deadline_ns": original}
+
+    def _schedule_review(self, agent: str, suffix: str, reply: dict) -> None:
+        if self.policy.validate_after is None or suffix != "deadline_ns":
+            return
+        self._reviews[agent] = {"at_slice": len(self._slices[agent]), "since": len(self._slices[agent]),
+                                "version": reply.get("version"), "limit": reply.get("limit_after")}
+
+    def _review_if_due(self, agent: str) -> None:
+        """Validation layer: judge the agent's tightened deadline against the canary, every validate_after slices."""
+        rv = self._reviews.get(agent)
+        if rv is None or len(self._slices[agent]) - rv["at_slice"] < self.policy.validate_after:
+            return
+        bid = self.boundary_id(agent, "deadline_ns")
+        d1 = float(self.gov.boundaries.get_boundary(bid).current_limit)
+        d0 = float(self.defaults["deadline_ns"])
+        if d1 >= d0:
+            self._reviews.pop(agent, None)
+            return
+        all_slices = list(self._slices[agent])
+        window = all_slices[max(rv["since"], len(all_slices) - self.policy.review_window):]
+        n_all = sum(w[0] for w in window); traps_all = sum(w[1] for w in window)
+        c_n = sum(w[2] for w in window); c_traps = sum(w[3] for w in window)
+        m_n, m_traps = n_all - c_n, traps_all - c_traps
+        rv["at_slice"] = len(all_slices)                        # next review in validate_after slices
+        if c_n < self.policy.min_canary_tasks or m_n <= 0:
+            verdict, numbers = "UNKNOWN", {"canary_tasks": c_n, "main_tasks": m_n}
+        else:
+            z = self.policy.review_z
+            main_share, canary_share = m_traps / m_n, c_traps / c_n
+            se_m = math.sqrt(main_share * (1 - main_share) / m_n)
+            se_c = math.sqrt(canary_share * (1 - canary_share) / c_n)
+            se_d = math.sqrt(se_m ** 2 + se_c ** 2)
+            delta = max(0.0, main_share - canary_share)
+            d_lo = max(0.0, main_share - canary_share - z * se_d)
+            d_hi = max(0.0, main_share - canary_share + z * se_d)
+            c_hi = max(min(1.0, canary_share + z * se_c), 3.0 / c_n)   # rule of three when nothing was seen
+            c_lo = max(0.0, canary_share - z * se_c)
+            cost, benefit_max = delta * d1, canary_share * (d0 - d1)
+            if d_lo * d1 > c_hi * (d0 - d1):
+                verdict = "DEGRADED"
+            elif c_lo > 0 and d_hi * d1 < self.policy.improved_ratio * c_lo * (d0 - d1):
+                verdict = "IMPROVED"
+            else:
+                verdict = "UNCHANGED"
+            numbers = {"main_share": main_share, "canary_share": canary_share, "delta": delta,
+                       "cost_ns_per_task": cost, "benefit_max_ns_per_task": benefit_max,
+                       "cost_lower_ns": d_lo * d1, "cost_upper_ns": d_hi * d1,
+                       "benefit_lower_ns": c_lo * (d0 - d1), "benefit_upper_ns": c_hi * (d0 - d1),
+                       "main_tasks": m_n, "canary_tasks": c_n, "slices": len(window)}
+        record = {"kind": "tightening_reviewed", "source": self.source, "boundary_id": bid, "agent": agent,
+                  "verdict": verdict, "deadline_ns": d1, "original_deadline_ns": d0, "version": rv.get("version"),
+                  "slice": len(self._slices[agent]), **numbers}
+        self.verdicts.append(record)
+        self.counts[f"review_{verdict.lower()}"] += 1
+        self.gov.audit.append("signal", record)
+        try:
+            self.gov.validations.record_validation(
+                proposal_id=f"trap-review-{agent}-{rv.get('version')}", boundary_id=bid,
+                expected_condition="the tightened deadline cuts hung tasks short without killing tasks that complete under the original",
+                observed_condition=f"main trap share {numbers.get('main_share')}, canary trap share {numbers.get('canary_share')}",
+                outcome=_OUTCOME[verdict], notes=numbers)
+        except Exception:
+            self.counts["review_record_failed"] += 1
+        if verdict == "DEGRADED" and bid not in self._restore_pending:
+            try:
+                r = self.gov.request_loosening(
+                    bid, requested_by=self.source, credential=self.credential, new_limit=d0,
+                    reason="validation: the tightened deadline kills tasks that complete under the original and "
+                           "burns more time than it saves; a person should restore it",
+                    evidence=record, idempotency_key=f"review-{agent}-{rv.get('version')}-{record['slice']}")
+                if r.get("status") == "pending_review":
+                    self._restore_pending.add(bid)
+                    self.counts["restore_requested"] += 1
             except (ValueError, KeyError):
                 self.counts["rejected_input"] += 1
 
@@ -268,6 +387,9 @@ class TrapBridge:
             self.counts["expected"] += 1
             return None
         suffix, ctx_field = REASON_TO_LIMIT[reason]
+        if agent in self._agents and self.boundary_id(agent, suffix) in self._restore_pending:
+            self.counts["review_hold"] += 1       # a DEGRADED verdict is waiting for a person: no more tightening
+            return None
         if agent not in self._agents:
             if len(self._agents) >= self.max_agents:
                 self.counts["agent_cap"] += 1
@@ -336,4 +458,6 @@ class TrapBridge:
             return None
         window.clear()  # the next tightening needs a fresh pattern
         stamps.clear()
+        if reply.get("status") in ("applied", "applied_clamped"):
+            self._schedule_review(agent, suffix, reply)
         return reply

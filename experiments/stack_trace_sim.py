@@ -32,6 +32,8 @@ POLICIES = {
     "rate_drift_excess": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True),
     "recommended": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
                                       reasons=("deadline_exceeded",)),
+    "validated": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
+                                    reasons=("deadline_exceeded",), validate_after=4),
 }
 SUFFIX = ("deadline_ns", "tokens_capacity", "memory_capacity_bytes")
 LIMIT_TO_REASON = {s: r for r, (s, _f) in REASON_TO_LIMIT.items()}
@@ -56,29 +58,38 @@ def load_trace(csv_path):
     return out
 
 
-def run_slice(agent, rows, start, stop, limits):
+def run_slice(agent, rows, start, stop, limits, canary=None):
     """The kernel's job for one slice: check each task against the limits it read at the start of the slice.
 
     Deadline first (a task that overruns is killed and burns exactly the deadline), then tokens, then memory
     (a task refused for tokens or memory still burns its own duration in the committed kernel numbers).
     Expected-load tasks still trap, but are not counted as legitimate failures. Completed-duration statistics
     cover the tasks that no check trapped.
+
+    canary: {"share": s, "deadline_ns": d0} keeps every (1/s)th task (by seq) on deadline d0 instead of the
+    tightened one, for the validation layer (TrapBridge.canary_plan). Not in the Rust kernel example.
     """
     dl, tc, mc = limits["deadline_ns"], limits["tokens_capacity"], limits["memory_capacity_bytes"]
     dur = rows["duration_ns"][start:stop]; tok = rows["tokens"][start:stop]; mem = rows["memory"][start:stop]
     exp = rows["expected"][start:stop]; bad = rows["is_bad"][start:stop]; ids = rows["task_id"][start:stop]
-    over = dur > dl
+    seq = rows["seq"][start:stop]
+    is_canary = np.zeros(len(dur), dtype=bool)
+    if canary and canary.get("share", 0) > 0:
+        every = max(1, int(round(1.0 / canary["share"])))
+        is_canary = (seq % every) == 0
+    dl_task = np.where(is_canary, int(canary["deadline_ns"]) if canary else int(dl), int(dl))
+    over = dur > dl_task
     tok_trap = (~over) & (tok > tc)
     mem_trap = (~over) & (~tok_trap) & (mem > mc)
     trapped = over | tok_trap | mem_trap
-    burned = np.where(over, int(dl), dur)
+    burned = np.where(over, dl_task, dur)
     traps = []
     for i in np.flatnonzero(trapped):
         reason = "deadline_exceeded" if over[i] else ("token_exhausted" if tok_trap[i] else "memory_exceeded")
         ev = {"trap_id": str(ids[i]), "agent_id": agent, "boundary_layer": 3, "trap_reason": reason,
-              "trap_outcome": "HALT", "expected_load": bool(exp[i]), "kernel_made": False}
+              "trap_outcome": "HALT", "expected_load": bool(exp[i]), "kernel_made": False, "canary": bool(is_canary[i])}
         if over[i]:
-            ev["nanoseconds_since_deadline"] = int(dur[i] - dl)
+            ev["nanoseconds_since_deadline"] = int(dur[i] - dl_task[i])
         elif tok_trap[i]:
             ev["tokens_deficit"] = int(tok[i] - tc)
         else:
@@ -93,6 +104,8 @@ def run_slice(agent, rows, start, stop, limits):
         "bad": int((bad == 1).sum()), "bad_caught": int(((bad == 1) & trapped).sum()),
         "deadline_traps": int(over.sum()), "token_traps": int(tok_trap.sum()), "memory_traps": int(mem_trap.sum()),
         "bad_ns": int(burned[bad == 1].sum()), "total_ns": int(burned.sum()),
+        "canary_tasks": int(is_canary.sum()), "canary_deadline_traps": int((is_canary & over).sum()),
+        "bad_in_slice": int((bad == 1).sum()),
         "completed_median_ns": float(np.median(completed)) if len(completed) else None,
         "completed_q": [float(v) for v in np.percentile(completed, QUANTILE_POINTS, method=os.environ.get("QUANTILE_METHOD", "nearest"))] if len(completed) else None,
     }
@@ -115,8 +128,9 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
     results = {"slices": n_slices, "slice_tasks": slice_n, "defaults": defaults, "policies": {}}
     for pname, factory in policies.items():
         gov = Governor(store_path=tempfile.mkdtemp(prefix="sim-"), use_semantic=True)
-        bridge = TrapBridge(gov, policy=factory(), defaults=defaults, is_expected=lambda ev: bool(ev.get("expected_load")))
-        governed = {n: [] for n in names}; first = {}; trajectory = {n: [] for n in names}
+        policy_obj = factory()
+        bridge = TrapBridge(gov, policy=policy_obj, defaults=defaults, is_expected=lambda ev: bool(ev.get("expected_load")))
+        governed = {n: [] for n in names}; first = {}; trajectory = {n: [] for n in names}; verdicts = {n: [] for n in names}
         for r in range(n_slices):
             for n in names:   # fixed order, as the kernel replay ingests
                 limits = {}
@@ -124,10 +138,16 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                     cur = bridge.limit_for(n, LIMIT_TO_REASON[x])
                     limits[x] = float(defaults[x]) if cur is None else cur
                 trajectory[n].append(limits["deadline_ns"])
-                traps, s = run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, limits)
+                plan = bridge.canary_plan(n)
+                traps, s = run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, limits, canary=plan)
                 governed[n].append(s)
+                before = len(bridge.verdicts)
                 bridge.observe_transactions(n, s["tasks"], completed_median_ns=s["completed_median_ns"],
-                                            completed_quantiles=s["completed_q"])
+                                            completed_quantiles=s["completed_q"], canary_tasks=s["canary_tasks"],
+                                            canary_deadline_traps=s["canary_deadline_traps"])
+                for v in bridge.verdicts[before:]:
+                    verdicts[n].append({"slice": r, "verdict": v["verdict"], "deadline_ns": v["deadline_ns"],
+                                        "bad_in_window": int(sum(x["bad_in_slice"] for x in governed[n][-(policy_obj.validate_after or 1) - 1:-1]))})
                 bridge.ingest(traps)
                 if n not in first and any((bridge.limit_for(n, LIMIT_TO_REASON[x]) or float(defaults[x])) < float(defaults[x])
                                           for x in SUFFIX):
@@ -145,12 +165,17 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                                                      "pending": st["pending_operator_requests"],
                                                      "tightenings": st["automatic_tightenings_since_acknowledgement"]}
             tightened = any(v and v["limit"] < float(defaults[k]) for k, v in limits.items())
+            restore = [e["payload"] for e in gov.audit.find("signal")
+                       if e["payload"].get("kind") == "loosen_requested" and e["payload"].get("boundary_id") == bridge.boundary_id(n, "deadline_ns")
+                       and str(e["payload"].get("idempotency_key", "")).startswith("review-")]
             per[n] = {"profile": ag["profile"], "should_tighten": int(ag["should_tighten"]), "tightened": tightened,
                       "first_tightened_slice": first.get(n), "limits": limits,
                       "static": totals(static[n]), "governed": totals(governed[n]),
-                      "deadline_trajectory_ns": trajectory[n]}
+                      "deadline_trajectory_ns": trajectory[n], "verdicts": verdicts[n],
+                      "restore_requested": bool(restore)}
+        integrity_ok, _checks = gov.verify_governance_integrity()
         results["policies"][pname] = {"agents": per, "bridge_counts": dict(bridge.counts),
-                                      "audit_chain_intact": gov.audit.verify()[0]}
+                                      "audit_chain_intact": gov.audit.verify()[0], "integrity_ok": bool(integrity_ok)}
     return results
 
 

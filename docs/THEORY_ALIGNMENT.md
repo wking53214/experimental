@@ -16,7 +16,7 @@ and `ARCHITECTURE.md`) against this prototype. Tests named here live in
 | Held tightenings are visible to a human | Partial. Held tightenings are recorded in `Governor.tightening_holds` with a reason. They are not in `list_pending_review`, which covers loosening and disabling proposals only. | `governor.py` |
 | Access isolation (code cannot read learning summaries) | **Not implemented.** This is a library running in one process, so nothing stops in-process code from reading state. | — |
 | Real-time stream, PostgreSQL/TimescaleDB, Kafka, Flink | **Not implemented, deliberately.** The prototype is in-process with a file-backed audit store. The theory's own sec. 8 lists these as technology choices, not the core claim. | — |
-| Effectiveness score is defined | Not defined. Validation stays categorical (IMPROVED/UNCHANGED/DEGRADED/UNKNOWN) rather than inventing a metric. | `validation.py` docstring |
+| Effectiveness score is defined | Defined for deadline tightenings only, in one currency (time per task): benefit is the share of tasks trapped at the original deadline times the cut, cost is the share newly killed under the tightened deadline times that deadline; the verdict is categorical on the confidence bounds of the two. Not defined for token or memory caps, where the first trace replay found no benefit to measure. | `integrations/stack_traps.py` (`_review_if_due`) |
 
 ## Known remaining gaps
 

@@ -8,6 +8,8 @@ Experimental research prototype for **asymmetric adaptive authority** in adaptiv
 
 Systems can autonomously *increase* constraints when evidence of boundary pressure emerges, but **no observation generated inside the adaptive loop may grant authority to reduce or disable constraints**.
 
+What the evidence supports, after fourteen phases and five rounds of trace replays: the one-way ratchet holds (automation never loosens, every change is attributable, limits survive restarts and outside signals), and tightening within a fixed budget on enforcement events catches runaways and bounded attackers. What it does not support: that the system can judge on its own *when* a limit should come down. Statistical detection cries wolf on real telemetry and trap counts cannot tell a legitimately slow agent from a mild runaway, so the project claims **bounded autonomy with human-gated loosening and validated tightening** (criterion 10 in [docs/SUCCESS_CRITERIA.md](docs/SUCCESS_CRITERIA.md)), not self-governing limits. See [docs/STATUS.md](docs/STATUS.md).
+
 ## Design Analogy
 
 Modeled after **asymmetric building codes**: the system may *tighten* limits when stress is evidenced; only a human may *loosen* them.
@@ -25,7 +27,7 @@ See [ELEGANT_AUDIT.md](ELEGANT_AUDIT.md) for architectural defects and beautific
 
 ## Status
 
-- **747 tests passing** (46 of them need DGK installed and are skipped otherwise) (Phases 1-12 plus the Phase 9 detection research); CI runs on Python 3.11 and 3.12.
+- **774 tests passing** (46 of them need DGK installed and are skipped otherwise) (Phases 1-12 plus the Phase 9 detection research); CI runs on Python 3.11 and 3.12.
 - Multi-seed protocol (`scripts/run_multiseed.py`; reference results at N=200 in `results/multiseed_summary.md`): diurnal false positives 0.9% (95% interval 0.7% to 1.1%); detection of an obvious spike (about 50 standard deviations) 95.3% (93.5% to 96.5%), which is at the 95% target but not shown to clear it; detection of weaker spikes (6 to 12 standard deviations) 84% (81% to 86%); slow ramp 100%. These test the single-metric detector, not the multi-metric one, and not adaptive attackers: see [PHASE9_EXPERIMENT_RESULTS.md](PHASE9_EXPERIMENT_RESULTS.md) for evolved-attacker results (partial detection). The endurance and late-success experiments give identical results on every seed.
 - Core invariant: raising a limit requires a single-use grant issued by the authority when a named operator approves, checked against the boundary's actual limit; the integrity check audits stored version history; rollbacks that loosen are gated like any other loosening. An observation-only attacker never raised a limit in fuzzing (`tests/test_invariant_attacks.py`). This guards against bugs and API misuse, not against malicious code in the same process (see `docs/LIMITATIONS.md`).
 - Accountability: every authority decision, boundary change and breaker event is written to a hash-chained audit log (`src/governance/audit_log.py`; `Governor(audit_path=...)`, `GET /audit`), and `Governor(operators=OperatorRegistry)` makes a loosening, rollback or breaker acknowledgement require the operator's own credential. The log makes tampering *evident*, not impossible: a full rewrite verifies unless you compare against an anchor stored out of the governor's reach. Operator credentials are shared secrets, not signatures. See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (T8, T9).
