@@ -480,3 +480,32 @@ Full v1 roster, pooled: hung time saved on deadline attackers 23.7% (ratchet), 2
 **What this establishes, which is not what the thesis said.** The one-way rule by itself is not what protects anyone. A two-way limiter with no breaker goes to the floor on anything that keeps tripping it, honest or not, and so it saves two to four times more hung time than the ratchet *and* ruins every honest agent with a tail or a regression. The ratchet's measured advantage is availability for honest agents, bought with the breaker (a cap on automatic steps), the drift hold, and the human gate; its measured price is a saving capped at the breaker's arithmetic. The specific "attackers cannot earn budget back" benefit exists but is narrow: it shows only when an attacker's quiet stretch is long enough for the increase to outrun the decrease (period 8 here), and even there the ratchet saves 16%, not 20%.
 
 **The question this leaves, pre-registered now as round 9b.** Is it the one-way rule or the cap that protects honest agents? A two-way limiter with the breaker's cap (`aimd_capped`: the same `aimd`, floor at 72.9% of the original instead of 20%) isolates them. Same seeds (8001-8020), same rosters. Predictions: (B1) its legitimate cost on the v1 should-not agents is within 2 points of the ratchet's 1.99, and on regressed-0 and healthy-tail under 3 points each, so the cap, not the direction, is what protects honest agents; (B2) its saving on sustained runaways equals the ratchet's cap (about 26%); (B3) on the period-8 pulser it saves at most 8%, under the ratchet's 16%, because it gives the budget back, which is the one-way rule's only unique contribution; (B4) on the low-and-slow attacker it saves within 5 points of the ratchet's 13%.
+
+### Round 9b, result (2026-10-14; same seeds 8001-8020; `experiments/stack_trace_multiseed_results_round9b.json`)
+
+| Agent | ratchet | aimd_capped (two-way, floor at the breaker's cap) |
+|---|---|---|
+| attacker-pulse-2 | 25% / 0.4 | 22% / 0.4 |
+| attacker-pulse-4 | 23% / 0.5 | 15% / 0.3 |
+| attacker-pulse-8 | 16% / 0.4 | **0%** / 0.0 |
+| runaway-steady | 26% / 0.5 | 25% / 0.4 |
+| attacker-lowslow | 13% / 0.2 | 22% / 0.4 |
+| regressed-0 (honest) | 2 of 20 tightened, 0.2 | 20 of 20, **8.3** |
+| healthy-tail | 8 of 20, 0.3 | 20 of 20, 1.3 |
+| v1 pooled: saved on deadline attackers / should-not cost | 23.7% / 1.99 | 23.6% / 3.96 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| B1 | Legitimate cost within 2 points of the ratchet's pooled; regressed-0 and healthy-tail under 3 each | pooled 3.96 against 1.99 (1.97 apart); healthy-tail 1.3; regressed-0 **8.3** | Half |
+| B2 | Sustained saving equals the cap | 25.4% against 25.6% | Yes |
+| B3 | Period-8 pulser at most 8%, under the ratchet's 16% | 0% | Yes |
+| B4 | Low-and-slow within 5 points of the ratchet | 22% against 13%: the capped two-way limiter saves **more**, because its per-slice trigger fires on an 0.8% hang rate more often than the ratchet's 2,000-task rate rule | No |
+
+**The decomposition, which is the result of the round.** Take the ratchet apart into its four features and the same seeds say what each buys:
+
+- **The cap** (three automatic steps, then stop) is what protects honest agents from being ground to the floor: it takes the pooled legitimate cost from 17.75 points to 3.96, and healthy-tail from 26.5 to 1.3. It is also what caps the saving at about 26% on anything sustained. A two-way limiter with the same cap matches the ratchet on sustained runaways to within a point.
+- **The drift hold** (and the human gate behind it) is what protects the honest *regression*: 8.3 points under the capped two-way limiter against 0.2 under the ratchet. A cap alone does not know the agent is slow for an honest reason.
+- **The one-way rule itself** has one measurable, narrow contribution: an attacker who can wait out the limiter's recovery keeps its budget under a two-way limiter and loses it under the ratchet (period 8: 0% against 16%; period 4: 15% against 23%). Against sustained or frequent attackers the direction makes no difference, and the slower-firing rate rule the ratchet uses even costs it 9 points on the low-and-slow attacker.
+- **The human gate** has no measured benefit in these traces because no human acts in them; what it does is turn the cap's "stop" into "stop until someone looks", which is a property of the operation, not of the replay.
+
+**Where this leaves the thesis.** "Automation may only tighten" is not, by itself, the source of safety. Safety against grinding honest agents comes from bounding automation (the cap) and from an interpretation rule (the drift hold) that a two-way limiter could also have. What the direction uniquely gives is that an adversary cannot restore its own budget by behaving for a while, which is real but narrow, and the price is that nobody but a person can restore anyone's. The claim should now be stated that way, and the comparison table above belongs in the paper's evaluation, not in a footnote.
