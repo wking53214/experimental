@@ -688,3 +688,69 @@ All outcomes now carry `legit_kills`, `net_burn_ns` (hung time saved minus what 
 | Q10 (B2, the headline) | Taking 12a, 12b and 12c together there is no cell in which the ratchet beats `twoway_h16` by 8 or more points of saving, and no honest agent on which `twoway_h16` costs 1.0 point or more above the ratchet except `healthy-tail`. If this holds, the "direction matters" claim is withdrawn, not softened. | both |
 
 **What would falsify the red team.** Q1 or Q2 failing means the cold-start explanation is wrong or hysteresis does not travel to fresh seeds; Q5 failing means the headroom dependence was seed noise; Q8 failing means the committed rounds must be regenerated before they are cited again.
+
+### Round 12, results (2026-10-14; `..._round12a/b/c.json`; predictions committed at 19:09:23 UTC in 1e247c7, runs launched after, scored by `experiments/score_rounds.py`)
+
+**12a, phase-shifted pulsers** (saved% / seeds tightened; net time with burn, ms per seed, and seeds negative):
+
+| agent | ratchet | capped + drift | two-way, 16-slice hysteresis |
+|---|---|---|---|
+| pulse-8, first pulse slice 0 | 17.0% / 20 (-1069, 19 neg) | 0.1% / 20 | 18.5% / 20 (-1455, 20 neg) |
+| pulse-8, slice 3 | 7.5% / 16 | 0.8% / 20 | 18.2% / 20 |
+| pulse-8, slice 7 | **2.5% / 6** | 0.0% / 20 | **18.7% / 20** |
+| pulse-8, "slice 11" (see below) | 8.8% / 19 | 0.7% / 20 | 19.2% / 20 |
+| pulse-16, slice 15 | **0.0% / 0** | 0.0% / 20 | **10.8% / 20** |
+| pulse-4, slice 3 (steady 1.25%, above the rule) | 18.0% / 20 (+112, 10 neg) | 14.4% / 20 | 22.6% / 20 (+39, 12 neg) |
+| pulse-8 width 2, slice 7 | 22.2% / 20 (+99, 9 neg) | 12.9% / 20 | 23.1% / 20 (+51, 11 neg) |
+| runaway-steady | 26.0% (+8204, 0 neg) | 25.5% | 26.0% (+8210, 0 neg) |
+| pooled should-not cost | 0.26 | 0.49 | 0.60 (healthy-tail 1.38 against 0.40) |
+| operator decisions | 92 | 0 | 0 |
+
+The "slice 11" agent is mis-specified: with period 8, a phase of 11 wraps to 3 (Python's modulo), so it pulses in slice 3 as well, where the window is still filling. It is a second phase-3 agent under different seeds and reads like one.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Q1 | ratchet under 5% and under half the seeds on ph7 and "ph11"; under 3% on ph15; 16 ± 3% on ph0 | ph7 2.5% / 6 of 20; ph15 0.0% / 0 of 20; ph0 17.0%; **"ph11" 8.8% / 19 of 20** (the wrapped agent) | 3 of 4 as written; the miss is the mis-specified agent |
+| Q2 | two-way with hysteresis at least 14% on period 8 at every phase, at least 8% on ph15, at least 8 points over the ratchet on ph7, "ph11", ph15 | 18.2 to 19.2% at every phase; 10.8% on ph15; margins 16.2, 10.4, 10.8 | **Yes, every cell** |
+| Q3 | pooled should-not cost within 0.5 of the ratchet on phase_v1; on v1 within 0.5 with the slow-from-start pair and 0.2 without | 0.60 against 0.26; v1 2.07 against 2.00, and 0.17 against 0.08 | Yes |
+
+**12b, deadline headroom** (v1 agents; pooled should-not cost, with and without the slow-from-start pair; should-not agent-seeds tightened of 320; net time with burn as a share of all static time):
+
+| deadline | ratchet | capped + drift | two-way, hysteresis |
+|---|---|---|---|
+| 100 ms (12c) | 2.00 / 0.08; 47 of 320; -2.8% | 1.99 / 0.15; 49; -2.8% | 2.07 / 0.17; 46; -2.9% |
+| 75 ms | 3.36 / 0.76; 109 of 320; -3.6% | 5.55 / 3.36; 231; -5.6% | 5.95 / 3.72; 232; -5.9% |
+| 60 ms | 8.24 / 6.15; 220 of 320; -6.2% | 8.32 / 6.35; 221; -6.4% | 8.40 / 6.34; 221; -6.4% |
+
+At 75 ms the ratchet holds the honest regressions and drifts (regressed-0 1.49 points, drift-0 1.36) where the two-way policies do not (10.45 and 10.59): the ratchet's drift machinery fits the slowdown under deadline truncation (`_slowdown`), the transplanted hold compares a raw, truncated median. It pays 131 operator decisions on should-not agents for that. At 60 ms every policy tightens every regression, drift, slow-from-start and tail agent in every seed, and `runaway-steady` itself is net negative in time (20 of 20 seeds under the ratchet: 4.6 points of its own completing tasks killed for a 26% cut in hung time).
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Q5 | at 60 ms more than half the should-not agent-seeds tightened and pooled cost over 6; 75 ms in between | 220 of 320, 8.24; 75 ms 3.36 | Yes |
+| Q6 | at 60 ms total net time negative under every policy; runaway-steady net negative under the ratchet in 15 of 20 | -6.2%, -6.4%, -6.4%; 20 of 20 | Yes |
+| Q7 | ratchet and two-way within 1.0 point at both headrooms | 60 ms: 0.16 apart; **75 ms: 2.59 apart, in the ratchet's favour** | Half: the ratchet's truncation-aware drift fit is a real advantage at 75 ms, and it is a feature of the bridge, not of the direction |
+
+**12c, the decisive rosters under the kernel-exact statistics** (seeds 8001 to 8020, the same as rounds 9 to 11):
+
+| number | rounds 9 to 11 | round 12c | moved? |
+|---|---|---|---|
+| v1 pooled should-not cost, ratchet | 1.99 | 2.00 | no |
+| v1 sustained saved, ratchet | 25.6% | 25.6% | no |
+| v1 operator decisions, ratchet | 216 (156 attackers, 60 should-not) | 216 (154, 62) | two decisions moved between groups |
+| v1 pooled cost, plain AIMD | 17.75 | 17.75 | no |
+| pulse_v1 attacker-pulse-8, ratchet / capped + drift | 16% / 0% | 16.5% / 0.0% | no |
+| holdout inflate-first, ratchet (mild / strong / ramp) | 19 / 21 / 16% | 19.1 / 20.6 / 16.2% | no |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Q8 | every headline number within its stated tolerance | all within | Yes: the K1 divergence does not move the multi-seed headlines, only single-trace verdicts |
+| Q9 | at least 50 should-not decisions, at least 35 on slow-from-start, inflate more than half the attacker decisions | 62, 40, 86 of 154 | Yes |
+| Q4 | period-8 and period-16 pulsers and low-and-slow net negative (burn) in at least 15 of 20 under every policy that tightens them; sustained runaways net positive in at least 18 of 20 | narrow pulsers: 19, 20 (ratchet), 20, 20 (two-way), 17, 12 (capped + drift, which barely tightens them); **width-2 pulser about even (9 to 11 of 20)**; **low-and-slow under the ratchet 10 and 11 of 20, under the two-way 18 and 19**; runaways 20 of 20 everywhere. Under the rerun accounting every pulser and the low-and-slow attacker are negative in nearly every seed under every policy | Half: a one-slice pulser is a net loss to tighten; a two-slice pulser and the low-and-slow attacker sit at the break-even |
+| Q10 | no cell where the ratchet beats the two-way by 8 or more points; no honest agent 1.0 point worse under the two-way except healthy-tail | **holdout inflate-first attackers: 19.1 / 20.6 / 16.2% against 0 / 0 / 7.3%**; **75 ms regressions and drifts 5 to 9 points worse under the two-way** | **No, on both parts.** Both are features the two-way policy was not given: the excess release (round 10c) and the truncation-aware slowdown fit. Neither is the direction. |
+
+**What round 12 settles.**
+1. The one-way direction's measured benefit in rounds 9 to 11 was the cold start (Q1, Q2). A patient pulser that waits for the rate window to fill is not caught by the ratchet at all (2.5% and 0%), and a two-way limiter with 16 slices of hysteresis catches it at every phase (18 to 19%, 11%) with no human decisions. **The "direction matters" claim is withdrawn.** What remains to the direction is the auditability of every change and the fact that no workload can move a limit up; neither is measured by these replays.
+2. The ratchet's bridge still beats the transplanted two-way on two things, and both are interpretation, not direction: the excess release against inflate-first attackers (Q10) and the truncation-aware drift fit at 75 ms headroom (Q7). A two-way limiter could carry both; that is the obvious next experiment and it is not run here.
+3. The honest-agent numbers are a headroom result (Q5, Q6). At three times the slowest honest median, every policy tightens every honest agent with a tail and the whole loop is a net loss of 6% of all task time; at 100 ms the loop is a net loss of 2.8% under every policy, carried by the inflate attacker's and the slow-from-start agents' killed tasks. Only sustained runaways are a net win in time.
+4. The kernel-exact statistics do not move the multi-seed headlines (Q8); they moved single-trace verdicts and one restore request in the kernel comparison, which is where K1 was found.
+5. Strict count: Q2, Q3, Q5, Q6, Q8, Q9 held; Q1, Q4, Q7 half; Q10 failed. The two misses that matter (Q7 at 75 ms, Q10) both favour the bridge's interpretation rules over the direction, and both say the decomposition was incomplete rather than wrong.

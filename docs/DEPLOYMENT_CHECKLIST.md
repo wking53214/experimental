@@ -17,7 +17,7 @@ The adjudication server and the kernel's limit reads are plain HTTP, and the sha
 
 ## 3. Give every operator and every signal source its own credential (T9, T14)
 
-- `Governor(operators=OperatorRegistry)` or `ADJUDICATION_OPERATOR_TOKENS` on the server: without it `operator_id` is a claim and every response says `identity_verified: false`.
+- `Governor(operators=OperatorRegistry)` or `ADJUDICATION_OPERATOR_TOKENS` on the server. Without a registry the governor now refuses every operator action (acknowledging the breaker, approving a loosening, registering a pattern); the demo server opts in with `unverified_operators=True` only when no per-operator tokens are set, and each such action is logged `identity_verified: false`. Before the red team the default accepted any name, and the breaker could be reset by any API caller (T18).
 - `Governor(signal_sources=OperatorRegistry)`: without it a monitor's source name is a claim. One credential per source lets a buggy source be attributed and revoked.
 - These are shared secrets, not signatures. A person who can read the process memory can forge any operator. Asymmetric signatures are not built.
 
@@ -54,3 +54,11 @@ The Python model runs the canary; the Rust kernel example does not. A kernel tha
 ## 11. Keep the claims to what was measured
 
 The system is self-hardening in the safety direction and not self-judging. It has not run on real traffic. Statistical detection on real telemetry cries wolf and is not fit to act on unattended. Say "bounded autonomy with human-gated loosening and validated tightening", and point at `docs/STATUS.md` for the numbers.
+
+## 12. Match the kernel's quantile definition to the bridge's (red team K1, K4)
+
+- The drift and excess rules sit on the completed-duration median and nearest-rank quantiles. The Python model used numpy's definitions and disagreed with the Rust example on most slices by under 1%, which flipped releases and verdicts. The model now uses the kernel's (`sorted[len/2]`, round half away from zero). A production kernel that reports any other definition must be modelled with that definition before its results are trusted.
+
+## 13. Set the deadline with the headroom the results assume, or expect the honest-agent numbers to be different (red team T1)
+
+- Every honest-agent result in rounds 4 to 11 was measured with the deadline 4 to 17 times above the honest medians. At three times the slowest honest median the tail agents are tightened in most seeds and the pooled honest cost is several times higher; the cap bounds the damage per agent, the thresholds do not prevent it. Round 12b measures this. If the production deadline is tight, use per-class thresholds (item 5) and a smaller cap (item 7), and price the kills in time (`net_burn_ns` in the harness), not in points.
