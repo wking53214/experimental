@@ -69,6 +69,8 @@ python scripts/adjudication_server.py   # http://127.0.0.1:8765
 | [docs/FIGURES.md](docs/FIGURES.md) | Mermaid architecture diagrams |
 | [docs/openapi-adjudication.yaml](docs/openapi-adjudication.yaml) | OpenAPI for demo HTTP API |
 | [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | Environment and commands |
+| [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) | What an operator must decide before this runs anywhere real |
+| [docs/TRACE_TEST_PLAN.md](docs/TRACE_TEST_PLAN.md) | Pre-registered trace replays: predictions, results, changes made after seeing results |
 
 ## Phase index
 
