@@ -97,12 +97,50 @@ def c9():
         " (DGK not installed: its tests were skipped)" if skipped else "")
 
 
+def c10():
+    """Bounded autonomy with validated tightening (docs/SUCCESS_CRITERIA.md, criterion 10)."""
+    # The bounded validator (round 5, second run, seeds 4001-4020) is the current code; the first run's file is the
+    # fallback so the criterion can still be scored from either.
+    name = "stack_trace_multiseed_results_validated_bounded.json"
+    d = load(name)
+    if d is None:
+        name = "stack_trace_multiseed_results_validated.json"; d = load(name)
+    if d is None:
+        return "NOT MEASURED", "run experiments/stack_trace_multiseed.py --seeds 20 --seed-base 4000 --policies validated --no-sweep --tag _validated_bounded"
+    pol = "validated"
+    runs = [(r["roster"], r["seed"], r["outcomes"][pol]) for r in d["per_seed"] if pol in r["outcomes"]]
+    if not runs:
+        return "NOT MEASURED", "no 'validated' policy in the results"
+    should = [o for _r, _s, out in runs for a, o in out.items() if not a.startswith("_")
+              and o["profile"] in ("runaway", "runaway_episode") or (not a.startswith("_") and o["profile"].startswith("attacker"))]
+    a_ok = sum(o["tightened"] for o in should); a_n = len(should)
+    bad_s = sum(o["bad_ns_static"] for o in should); bad_g = sum(o["bad_ns_governed"] for o in should)
+    b_val = 1 - bad_g / bad_s if bad_s else 0.0
+    c_ok = all(out["_audit_intact"] for _r, _s, out in runs)
+    wrong = [o for _r, _s, out in runs for a, o in out.items() if not a.startswith("_") and not o["should_tighten"] and o["tightened"]]
+    def degraded_within(o, k=6):
+        t = o["first"]
+        return any(v["verdict"] == "DEGRADED" and t is not None and v["slice"] - t <= k for v in o.get("verdicts", [])) and o.get("restore_requested")
+    d_wrong = sum(degraded_within(o) for o in wrong)
+    runaways = [o for _r, _s, out in runs for a, o in out.items() if not a.startswith("_") and o["profile"] in ("runaway", "runaway_episode")]
+    d_run = sum(any(v["verdict"] == "DEGRADED" and v["bad_in_window"] > 0 for v in o.get("verdicts", [])) for o in runaways)
+    healthy = [o for _r, _s, out in runs for a, o in out.items() if not a.startswith("_") and o["profile"] == "healthy"
+               and o["legit_fail_rate_static"] <= 0.2]
+    e_bad = sum(o["tightened"] or o.get("restore_requested", False) for o in healthy)
+    parts = [a_ok >= 0.95 * a_n, b_val >= 0.10, c_ok, (d_wrong >= 0.8 * len(wrong) if wrong else True) and d_run <= 0.10 * len(runaways), e_bad == 0]
+    detail = (f"(a) should-tighten agent-seeds tightened {a_ok}/{a_n}; (b) hung time saved {b_val:.0%} (need 10%); (c) integrity {'ok' if c_ok else 'BROKEN'}; "
+              f"(d) wrong tightenings DEGRADED+restore within 6 slices {d_wrong}/{len(wrong)}, runaways DEGRADED while hanging {d_run}/{len(runaways)}; "
+              f"(e) healthy (tail <= 0.2%) tightened or restore-requested {e_bad}/{len(healthy)}")
+    return ("PASS" if all(parts) else "FAIL"), detail + " | " + "".join("P" if x else "F" for x in parts) + f" [{name}]"
+
+
 if __name__ == "__main__":
     rows = [("1 safety", c1), ("2 detection vs baseline", c2), ("3 no crying wolf", c3),
             ("4 responds to real trouble", c4), ("5 value over alternatives", c5), ("6 poisoning survivable", c6),
             ("7 restart never loosens", c7),
             ("8 signals never loosen", c8),
-            ("9 stack integrations work", c9)]
+            ("9 stack integrations work", c9),
+            ("10 bounded autonomy validated", c10)]
     for name, fn in rows:
         status, detail = fn()
         print(f"{status:13s} {name:28s} {detail}")

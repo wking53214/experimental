@@ -41,6 +41,7 @@ class AuditLog:
         self.path = path
         self.truncated_tail = False
         self.entries: list = []
+        self.on_append = None   # called with the new anchor after each durable append (the anchor store hook)
         if path and os.path.exists(path):
             self._load(path)
 
@@ -58,7 +59,25 @@ class AuditLog:
                 f.write(_canonical(entry) + "\n")
                 f.flush()
                 os.fsync(f.fileno())
+        if self.on_append is not None:
+            # Fail closed: an entry that could not be anchored is not durable in the sense the anchor promises.
+            # The write-ahead callers (boundary versions) treat the exception as "the change did not happen".
+            try:
+                self.on_append(self.anchor())
+            except Exception as e:
+                self.entries.pop()
+                if self.path:
+                    self._rewrite_without_last()
+                raise AuditIntegrityError(f"audit entry could not be anchored: {e}") from e
         return entry
+
+    def _rewrite_without_last(self) -> None:
+        tmp = self.path + ".repair"
+        with open(tmp, "w", encoding="utf-8") as g:
+            g.write("".join(_canonical(e) + "\n" for e in self.entries))
+            g.flush()
+            os.fsync(g.fileno())
+        os.replace(tmp, self.path)
 
     # ---- reading ----
     @property

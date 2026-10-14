@@ -32,7 +32,7 @@ save_anchor_somewhere_safe(g.audit_anchor())   # periodically, off the governor'
 
 ## Limits (what this does not do)
 
-- **A full rewrite of the log is invisible** without an anchor stored where the governor's process cannot write. The anchor is your job.
+- **A full rewrite of the log is invisible** without an anchor stored where the governor's process cannot write. `Governor(anchor_store=FileAnchorStore("/path/the/process/can/only/append/to"))` publishes the head after every append and verifies against the latest one at startup (`src/governance/anchor.py`); choosing a path the process cannot rewrite is still your job, and under the same user on the same host it buys nothing.
 - A forger who recomputes the chain **and** invents a grant id gets a loosening past replay, because the log cannot prove a grant id is real. The integrity check then flags it (no matching authority decision and `boundary_update` record), but the limit is already loaded. Treat a failed integrity check as an incident.
 - **Not restored:** pending proposals (an operator must resubmit), unused grants (void, which is safe), registered expected-load patterns (register them again through `register_expected_pattern`), detector baselines (the detector relearns from the first observations, with the poisoning exposure that implies; see `BASELINE_POISONING.md`).
 - Limits must be JSON values (numbers).

@@ -38,7 +38,8 @@ class Governor:
                  detection: str = "generative", operators: Optional[OperatorRegistry] = None,
                  audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None,
                  strict_patterns: bool = False, evidence_window: Optional[int] = None,
-                 audit_anchor: Optional[dict] = None, signal_sources: Optional[OperatorRegistry] = None):
+                 audit_anchor: Optional[dict] = None, signal_sources: Optional[OperatorRegistry] = None,
+                 anchor_store=None):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
@@ -57,6 +58,11 @@ class Governor:
             request_loosening; without one, the source name is a claim (docs/INTEGRATION.md).
         audit_anchor: a value from audit_anchor() stored earlier; startup fails if the log's history
             no longer matches it (catches truncation and full rewrites).
+        anchor_store: an object with publish(anchor) and latest() (src/governance/anchor.py). Every audit
+            append publishes the new head to it (fail closed: an append that cannot be anchored fails and
+            the change it records does not happen), and at startup the log is verified against its latest
+            anchor unless audit_anchor is given explicitly. The store only helps if it lives where this
+            process cannot rewrite it; see the module docstring.
         evidence_window: only violations among the boundary's most recent N executions count toward
             a tightening. Without it evidence never expires, so a few false alarms spread over a long
             time add up to a tightening (on clean 30-metric data: 3 tightenings in 1500 steps).
@@ -126,10 +132,17 @@ class Governor:
         self.restored: Optional[dict] = None
         self._signal_context: Optional[dict] = None
         self.signals = SignalInterface(self, signal_sources)
+        self.anchor_store = anchor_store
+        if anchor_store is not None and audit_anchor is None:
+            audit_anchor = anchor_store.latest()
         if self.audit.entries:
             self._restore(audit_anchor)
         elif audit_anchor is not None and audit_anchor.get("length"):
             raise AuditIntegrityError("an anchor was given but the audit log is empty")
+        if anchor_store is not None:
+            self.audit.on_append = anchor_store.publish
+            if self.audit.entries:
+                anchor_store.publish(self.audit.anchor())
         self.boundaries.on_event = self._log_boundary_version
 
     def _log_boundary_version(self, kind: str, payload: dict) -> None:

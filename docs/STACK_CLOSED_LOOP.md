@@ -52,3 +52,7 @@ New agent `regressed`: healthy for 20 rounds, then every task is 3x slower. With
 ## Not tested
 
 The rate rule's threshold and the drift factor on other workloads or other seeds (one seed throughout). Token and memory limits are not enforced by the kernel yet, so only the deadline was exercised. Durations are simulated; real workloads have different tails.
+
+## Validation layer (`TrapPolicy(validate_after=4)`, off by default)
+
+Added in the fifth trace round (`docs/TRACE_TEST_PLAN.md`). While an agent's deadline is tightened the kernel keeps 10% of its tasks on the original deadline (the bridge's `canary_plan()` says which share and which deadline; the kernel reports both groups' counts through `observe_transactions`). Every 4 slices the bridge compares the two groups' trap shares with confidence bounds over everything since the tightening: DEGRADED (the tightening confidently kills more completing-task time than it can save on hangs) files a restore request for a person and holds further tightening; IMPROVED (confidently net positive) is rare at this canary volume; UNCHANGED means the bounds do not separate. Nothing is loosened by the bridge. The Rust kernel example does not implement the canary yet; the Python model does.

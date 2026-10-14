@@ -20,6 +20,10 @@ from integrations.stack_traps import TrapBridge, TrapPolicy   # noqa: E402
 from src.governance.governor import Governor           # noqa: E402
 
 BIN = os.environ.get("GOVERNED_WORKLOAD_BIN", "/home/user/stack-kernel/target/debug/examples/governed_workload")
+# NOTE on the committed v1 results: the kernel ignored every tightened MEMORY cap because its limit client refused values
+# with a fractional part (0.9 x 512 MiB is not whole); tokens and deadlines stayed whole and were applied. Fixed in
+# STACK-Kernel by flooring (strictly tighter, never looser). Replays with the fixed kernel will show more memory traps
+# on the leak agents under memory-tightening policies, as the Python model already did (tests/test_trace_sim.py).
 POLICIES = {
     "default": lambda: TrapPolicy(),
     "rate": lambda: TrapPolicy(min_rate=0.01),
@@ -27,19 +31,24 @@ POLICIES = {
     "rate_drift_excess": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True),
     "recommended": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
                                       reasons=("deadline_exceeded",)),
+    "validated": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
+                                    reasons=("deadline_exceeded",), validate_after=4),
 }
 SUFFIX = ("deadline_ns", "tokens_capacity", "memory_capacity_bytes")
 
 
-def run_slice(csv_path, agent, rnd, slice_n, defaults, port=None):
+def run_slice(csv_path, agent, rnd, slice_n, defaults, port=None, canary=None):
     cmd = [BIN, "--agent", agent, "--round", str(rnd), "--tasks", str(slice_n), "--csv", csv_path,
            "--default-ns", str(defaults["deadline_ns"]), "--tokens-cap", str(defaults["tokens_capacity"]),
            "--memory-cap", str(defaults["memory_capacity_bytes"]), "--ttl-s", "3600"]
     cmd += ["--static"] if port is None else ["--port", str(port)]
+    if canary:   # the validation layer's canary (TrapBridge.canary_plan); needs the kernel example with --canary-share
+        cmd += ["--canary-share", str(canary["share"]), "--canary-ns", str(int(canary["deadline_ns"]))]
     traps, summary = [], None
     for line in subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.splitlines():
         d = json.loads(line)
-        if "trap" in d: traps.append({**d["trap"], "expected_load": d["expected_load"], "kernel_made": d["kernel_made"]})
+        if "trap" in d: traps.append({**d["trap"], "expected_load": d["expected_load"], "kernel_made": d["kernel_made"],
+                                      "canary": d.get("canary", False)})
         else: summary = d["summary"]
     return traps, summary
 
@@ -78,13 +87,19 @@ def main():
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         bridge = TrapBridge(srv.GOV, policy=POLICIES[pname](), defaults=defaults,
                             is_expected=lambda ev: bool(ev.get("expected_load")))
-        gov = {ag["agent_id"]: [] for ag in agents}; first = {}
+        gov = {ag["agent_id"]: [] for ag in agents}; first = {}; verdicts = {ag["agent_id"]: [] for ag in agents}
         for r in range(n_slices):
-            outs = list(pool.map(lambda ag: (ag["agent_id"], *run_slice(a.csv, ag["agent_id"], r, a.slice, defaults, port)), agents))
+            plans = {ag["agent_id"]: bridge.canary_plan(ag["agent_id"]) for ag in agents}
+            outs = list(pool.map(lambda ag: (ag["agent_id"], *run_slice(a.csv, ag["agent_id"], r, a.slice, defaults, port,
+                                                                        canary=plans[ag["agent_id"]])), agents))
             for agent, traps, s in outs:      # ingest in a fixed order so runs are reproducible
                 gov[agent].append(s)
+                before = len(bridge.verdicts)
                 bridge.observe_transactions(agent, s["tasks"], completed_median_ns=s["completed_median_ns"],
-                                            completed_quantiles=s["completed_q"])
+                                            completed_quantiles=s["completed_q"], canary_tasks=s.get("canary_tasks", 0),
+                                            canary_deadline_traps=s.get("canary_deadline_traps", 0))
+                for v in bridge.verdicts[before:]:
+                    verdicts[agent].append({"slice": r, "verdict": v["verdict"], "deadline_ns": v["deadline_ns"]})
                 bridge.ingest(traps)
                 if agent not in first and any(float(srv.GOV.boundary_status(f"stack.agent.{agent}.{x}")["limit"]) <
                                               float(defaults[x]) for x in SUFFIX if _has(f"stack.agent.{agent}.{x}")):
@@ -100,8 +115,12 @@ def main():
                                                      "tightenings": st["automatic_tightenings_since_acknowledgement"]}
             tightened = any(v and v["limit"] < float(defaults[k]) for k, v in limits.items())
             s_, g_ = totals(static[name]), totals(gov[name])
+            restore = [e["payload"] for e in srv.GOV.audit.find("signal")
+                       if e["payload"].get("kind") == "loosen_requested" and str(e["payload"].get("idempotency_key", "")).startswith("review-")
+                       and e["payload"].get("boundary_id") == f"stack.agent.{name}.deadline_ns"]
             per[name] = {"profile": ag["profile"], "should_tighten": int(ag["should_tighten"]), "tightened": tightened,
-                         "first_tightened_slice": first.get(name), "limits": limits, "static": s_, "governed": g_}
+                         "first_tightened_slice": first.get(name), "limits": limits, "static": s_, "governed": g_,
+                         "verdicts": verdicts[name], "restore_requested": bool(restore)}
         results["policies"][pname] = {"agents": per, "bridge_counts": dict(bridge.counts),
                                       "audit_chain_intact": srv.GOV.audit.verify()[0]}
         httpd.shutdown()
