@@ -773,3 +773,29 @@ At 75 ms the ratchet holds the honest regressions and drifts (regressed-0 1.49 p
 | X6 | Headline: across every cell of the five rosters, the only places the ratchet beats a bridge two-way by 5 or more points of saving are the period-16 pulsers under `h8`. If so, the decomposition is complete: everything else the ratchet does is cap and interpretation, the direction's measured value is exactly the formula's cell, and hysteresis of `K >= period - 1 - 0.10 / increase` removes it at no honest cost on these traces. | the headline |
 
 **What would falsify this.** X1 or X4 failing means the limit book and the governor differ in something other than direction (a bug in `BridgeTwoWay`, to be found before anything is concluded). X2 failing in the h8 cell means the formula is wrong even with the interpretation layer held fixed. X3 failing means automatic recovery costs honest agents something the restore request does not.
+
+### Round 13, results (2026-10-14; `..._round13a.json`, `..._round13b.json`; predictions committed at 23:44:51 UTC in ffb7cb1, runs launched after)
+
+With the interpretation layer held fixed, the three directions are **identical on every cell of all five rosters except two**: the saving, the legitimate cost, the seeds tightened, the net time, all equal to the printed precision, with the ratchet asking 216 decisions on v1 and 269 on headroom75_v1 and the two-way bridges asking none.
+
+| cell | ratchet | bridge two-way, K = 8 | bridge two-way, K = 16 |
+|---|---|---|---|
+| `attacker-pulse-16` (pulse_v1, first pulse in slice 0), saved | 10.4% | **7.4%** | 10.4% |
+| `regressed-0` (phase_v1), cost | 0.38 | **0.23** | 0.38 |
+| everything else (v1, pulse_v1, holdout_v1, phase_v1, headroom75_v1) | = | = | = |
+| `ho-inflate-mild / -strong / -ramp`, saved (plain two-way in round 12: 0 / 0 / 7.3%) | 19.1 / 20.6 / 16.2% | same | same |
+| headroom75_v1 pooled should-not cost (plain two-way in round 12: 5.95) | 3.36 | 3.36 | 3.36 |
+| operator decisions, v1 / headroom75_v1 | 216 / 269 | 0 / 0 | 0 / 0 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| X1 | interpretation travels: within 2 points everywhere but the named cells | identical everywhere but the named cells | Yes |
+| X2 | pulse-16 under K = 8 at least 5 points under the ratchet; under K = 16 within 2 | **3.0 points under** (7.4 against 10.4), sign right, size short; K = 16 identical. The phase-15 agent is caught by nobody (0 / 0 / 0), so that cell is empty | Half |
+| X3 | recovery at or below the ratchet's honest cost on v1 and headroom75_v1, within 1.0 there | equal (2.00, 3.36); on phase_v1 lower (0.21 against 0.26) | Yes, with equality |
+| X4 | the inflate cell closes | identical | Yes |
+| X5 | zero decisions; ratchet 216 and over 100 | 0; 216 and 269 | Yes |
+| X6 | the only cells the ratchet wins by 5 or more are period-16 pulsers under K = 8 | the ratchet wins no cell by 5 or more; its largest edge is 3.0 points on one agent under K = 8 and nothing under K = 16 | Yes, more strongly than written |
+
+**Why they are identical.** The two-way bridge raises a limit only after K consecutive calm slices, and on these traces the agents that get tightened are the ones that keep trapping: the slow-from-start agents, the tail agents at 75 ms, the inflate attackers, the sustained runaways. The drift hold already keeps the transient ones (regressions, drifts) from being tightened. So the recovery rule almost never fires, and when it does (the period-16 pulser, with 15 calm slices between pulses; a regression that was tightened before its hold engaged) it changes one number by 3 points or 0.15 points. Within a 32-slice run, the direction is nearly moot. The breaker's three steps and the floor at 72.9% are the same depth, so the cap does not separate them either.
+
+**What rounds 12 and 13 settle together.** Everything the ratchet's bridge does that protects an honest agent or catches an attacker is cap and interpretation, and a two-way limiter carrying the same rules reproduces it exactly with no human in the loop. The one-way direction's measured value on these traces is 3 points of saving on one patient pulser against a limiter with 8 slices of hysteresis, and nothing against one with 16. What the direction still buys is not in these replays: every change attributable to a signal or a named person, no path by which a workload moves a limit up, and a held tightening that waits for a person rather than decaying on its own. Those are properties of the audit and the authority model, and the paper should claim them as such, not as measured protection.
