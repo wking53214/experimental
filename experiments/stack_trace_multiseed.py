@@ -51,7 +51,7 @@ def make_trace(roster_name, seed):
             "expected": np.array([r[COL["expected_load"]] for r in rows], dtype=np.int64),
             "is_bad": np.array([r[COL["is_bad"]] for r in rows], dtype=np.int64),
         }
-        agents.append({"agent_id": name, "profile": profile, "should_tighten": st})
+        agents.append({"agent_id": name, "profile": profile, "should_tighten": st, "team": team})
     return trace, agents
 
 

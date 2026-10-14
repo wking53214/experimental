@@ -547,3 +547,70 @@ class TestValidationLayer:
             self.slice(b, 200, canary_traps=0)
         assert b.limit_for("agent-7", "deadline_exceeded") == at_verdict   # held since: never lower, never higher
         assert g.verify_governance_integrity()[0]
+
+
+class TestPerClassThresholds:
+    """min_rate_by_class: an operator's per-class allowance for the natural tail (docs/TRACE_TEST_PLAN.md, round 6)."""
+
+    def make(self, tmp_path, classes):
+        g = Governor(store_path=str(tmp_path / "ev"))
+        pol = TrapPolicy(min_rate=0.01, min_rate_by_class={"core": 0.02, "ext": 0.005})
+        return g, TrapBridge(g, defaults=DEFAULTS, policy=pol, agent_class=lambda a: classes.get(a))
+
+    def run(self, b, agent, traps, tasks=1000):
+        b.observe_transactions(agent, tasks)
+        return b.ingest([trap(agent=agent) for _ in range(traps)])
+
+    def test_each_class_gets_its_own_threshold_and_unknown_classes_get_the_default(self, tmp_path):
+        g, b = self.make(tmp_path, {"c": "core", "x": "ext", "w": "web"})
+        assert self.run(b, "c", 15) == [] and b.limit_for("c", "token_exhausted") == 100.0     # 1.5% < core 2%
+        assert self.run(b, "x", 7) != [] and b.limit_for("x", "token_exhausted") == 90.0       # 0.7% >= ext 0.5%
+        assert self.run(b, "w", 15) != []                                                       # 1.5% >= default 1%
+        assert self.run(b, "u", 15) != []                                                       # no class: default
+
+    def test_without_a_class_callable_the_mapping_is_ignored(self, tmp_path):
+        g = Governor(store_path=str(tmp_path / "ev"))
+        b = TrapBridge(g, defaults=DEFAULTS, policy=TrapPolicy(min_rate=0.01, min_rate_by_class={"core": 0.02}))
+        assert self.run(b, "c", 15) != []
+
+    def test_a_failing_class_callable_falls_back_to_the_default(self, tmp_path):
+        g = Governor(store_path=str(tmp_path / "ev"))
+        b = TrapBridge(g, defaults=DEFAULTS, policy=TrapPolicy(min_rate=0.01, min_rate_by_class={"core": 0.02}),
+                       agent_class=lambda a: 1 / 0)
+        assert self.run(b, "c", 15) != []
+
+    def test_a_class_threshold_cannot_make_the_bridge_loosen(self, tmp_path):
+        g, b = self.make(tmp_path, {"c": "core"})
+        self.run(b, "c", 30)
+        assert b.limit_for("c", "token_exhausted") == 90.0
+        assert g.verify_governance_integrity()[0]
+
+
+class TestSliceTally:
+    """The per-slice deadline-trap tally feeds the validation review and must count every trap of the slice, including
+    ones the policy does not act on (round 6 found held traps missing from it, which made the main share negative)."""
+
+    DEF = {"deadline_ns": 100_000_000, "tokens_capacity": 4000, "memory_capacity_bytes": 2**29}
+
+    def test_expected_held_and_duplicate_traps_are_tallied_once_each(self, tmp_path):
+        g = Governor(store_path=str(tmp_path / "ev"), max_auto_tightenings=1)
+        b = TrapBridge(g, defaults=self.DEF, policy=TrapPolicy(min_rate=0.01, reasons=("deadline_exceeded",), validate_after=2),
+                       is_expected=lambda ev: bool(ev.get("expected_load")))
+        b.observe_transactions("a", 500)
+        b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(25)])             # tightens, 25 tallied
+        assert list(b._slices["a"])[-1][1] == 25
+        b.observe_transactions("a", 500)
+        same = trap(agent="a", reason="deadline_exceeded")
+        b.ingest([same, same, trap(agent="a", reason="deadline_exceeded", expected_load=True)])  # dup once, expected once
+        assert list(b._slices["a"])[-1][1] == 2 and b.counts["duplicate"] == 1 and b.counts["expected"] == 1
+        for _ in range(3):
+            b.observe_transactions("a", 500, canary_tasks=50, canary_deadline_traps=0)
+            b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(20)])
+        assert b.counts["restore_requested"] == 1                                               # DEGRADED: review hold
+        b.observe_transactions("a", 500, canary_tasks=50, canary_deadline_traps=5)
+        b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(20)])
+        assert b.counts["review_hold"] > 0 and list(b._slices["a"])[-1][1] == 20              # held, still tallied
+        for _ in range(3):
+            b.observe_transactions("a", 500, canary_tasks=50, canary_deadline_traps=5)         # reviews keep running
+            b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(20)])
+        assert all(0.0 <= v.get("main_share", 0.0) <= 1.0 for v in b.verdicts)

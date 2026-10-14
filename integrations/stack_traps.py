@@ -59,6 +59,10 @@ class TrapPolicy:
     # TrapBridge.observe_transactions; without it no rate can be computed and nothing tightens (fails safe).
     min_rate: Optional[float] = None
     rate_window_tasks: int = 2000
+    # Per-class rate thresholds (docs/TRACE_TEST_PLAN.md, sixth round): an operator who knows an agent class's natural
+    # tail sets its threshold above it. Keys are whatever TrapBridge(agent_class=...) returns for an agent; a class not
+    # listed, or no agent_class callable, uses min_rate. Operator knowledge, not learned.
+    min_rate_by_class: Optional[Dict[str, float]] = None
     # Drift rule (off by default). A high trap rate while the agent's COMPLETED tasks have also slowed against its own
     # baseline looks like a regression, not a runaway: hold instead of tightening, and let a person decide. The
     # baseline is the median of the first baseline_reports completed-duration medians, then frozen. Needs
@@ -107,7 +111,8 @@ def _agent_key(agent_id: Any) -> Optional[str]:
 class TrapBridge:
     def __init__(self, governor, *, defaults: Dict[str, float], policy: Optional[TrapPolicy] = None,
                  source: str = "stack-sentinel", credential: Optional[str] = None, max_agents: int = 1000,
-                 is_expected: Optional[Callable[[dict], bool]] = None):
+                 is_expected: Optional[Callable[[dict], bool]] = None,
+                 agent_class: Optional[Callable[[str], Optional[str]]] = None):
         """defaults: the configured starting limit for each of deadline_ns, tokens_capacity, memory_capacity_bytes
         (a trap event's own execution context may supply a per-agent capacity, which is used instead)."""
         missing = {s for _r, (s, _f) in REASON_TO_LIMIT.items()} - set(defaults)
@@ -115,7 +120,7 @@ class TrapBridge:
             raise ValueError(f"defaults missing: {sorted(missing)}")
         self.gov, self.defaults = governor, dict(defaults)
         self.policy, self.source, self.credential = policy or TrapPolicy(), source, credential
-        self.max_agents, self.is_expected = max_agents, is_expected
+        self.max_agents, self.is_expected, self.agent_class = max_agents, is_expected, agent_class
         self._recent: Dict[str, Deque[str]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
         self._stamps: Dict[str, Deque[int]] = defaultdict(lambda: deque(maxlen=self.policy.window_events))
         self._medians: Dict[str, list] = defaultdict(list)   # completed-duration medians reported per agent
@@ -125,6 +130,7 @@ class TrapBridge:
         self._slices: Dict[str, Deque[list]] = defaultdict(lambda: deque(maxlen=64))   # [tasks, deadline traps]
         self._drifting: set = set()
         self._slow_cache: Dict[tuple, float] = {}
+        self._tallied: Dict[str, Deque[str]] = defaultdict(lambda: deque(maxlen=4096))   # trap ids already in the slice tally
         self._reviews: Dict[str, dict] = {}        # agent -> pending review of its deadline tightening
         self._restore_pending: set = set()         # boundary ids with a DEGRADED verdict awaiting a person
         self.verdicts: List[dict] = []             # every verdict issued, in order (also in the audit log)
@@ -270,6 +276,17 @@ class TrapBridge:
             except (ValueError, KeyError):
                 self.counts["rejected_input"] += 1
 
+    def _min_rate_for(self, agent_id: Any) -> float:
+        by_class = self.policy.min_rate_by_class
+        if by_class and self.agent_class is not None:
+            try:
+                cls = self.agent_class(agent_id)
+            except Exception:
+                cls = None
+            if isinstance(cls, str) and cls in by_class:
+                return float(by_class[cls])
+        return float(self.policy.min_rate)
+
     def canary_plan(self, agent_id: str) -> Optional[dict]:
         """What the kernel should do for validation: if the agent's deadline is tightened and validation is on,
         run `share` of its tasks on `deadline_ns` (the configured original). None when nothing to do."""
@@ -309,7 +326,7 @@ class TrapBridge:
             verdict, numbers = "UNKNOWN", {"canary_tasks": c_n, "main_tasks": m_n}
         else:
             z = self.policy.review_z
-            main_share, canary_share = m_traps / m_n, c_traps / c_n
+            main_share = min(1.0, max(0.0, m_traps / m_n)); canary_share = min(1.0, max(0.0, c_traps / c_n))
             se_m = math.sqrt(main_share * (1 - main_share) / m_n)
             se_c = math.sqrt(canary_share * (1 - canary_share) / c_n)
             se_d = math.sqrt(se_m ** 2 + se_c ** 2)
@@ -383,6 +400,12 @@ class TrapBridge:
         if self.policy.reasons is not None and reason not in self.policy.reasons:
             self.counts["reason_not_enforced"] += 1
             return None
+        if reason == "deadline_exceeded" and self._slices[agent] and trap_id not in self._tallied[agent]:
+            # The slice tally feeds the validation review and must count EVERY deadline trap of this slice, whether
+            # or not the policy below acts on it (expected load, a review hold, a drift hold). Round 6 found the
+            # tally skipping held traps while the canary count did not, which made the main share negative.
+            self._tallied[agent].append(trap_id)
+            self._slices[agent][-1][1] += 1
         if self.is_expected is not None and self.is_expected(ev):
             self.counts["expected"] += 1
             return None
@@ -406,8 +429,6 @@ class TrapBridge:
             self.counts["duplicate"] += 1
             return None
         window.append(trap_id)
-        if reason == "deadline_exceeded" and self._slices[agent]:
-            self._slices[agent][-1][1] += 1
         stamps = self._stamps[f"{agent}|{reason}"]
         stamps.append(self._tasks[agent])
         if len(window) < self.policy.min_traps:     # the window already holds only the last window_events
@@ -419,7 +440,7 @@ class TrapBridge:
                 return None
             span = min(total, self.policy.rate_window_tasks)
             recent = sum(1 for st in stamps if st > total - span)
-            if recent < self.policy.min_traps or recent / span < self.policy.min_rate:
+            if recent < self.policy.min_traps or recent / span < self._min_rate_for(ev.get("agent_id")):
                 self.counts["below_rate"] += 1
                 return None
         if self.policy.drift_factor is not None:

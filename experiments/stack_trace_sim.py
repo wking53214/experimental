@@ -35,6 +35,15 @@ POLICIES = {
     "validated": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
                                     reasons=("deadline_exceeded",), validate_after=4),
 }
+# Sixth round: canary share and per-class thresholds (docs/TRACE_TEST_PLAN.md). Class = the trace's team column.
+CLASS_RATES = {"core": 0.02, "ext": 0.005}
+for _share in (0.10, 0.20, 0.30):
+    POLICIES[f"validated_c{int(_share * 100)}"] = (lambda sh: lambda: TrapPolicy(
+        min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",),
+        validate_after=4, canary_share=sh))(_share)
+    POLICIES[f"class_c{int(_share * 100)}"] = (lambda sh: lambda: TrapPolicy(
+        min_rate=0.01, min_rate_by_class=dict(CLASS_RATES), drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
+        reasons=("deadline_exceeded",), validate_after=4, canary_share=sh))(_share)
 SUFFIX = ("deadline_ns", "tokens_capacity", "memory_capacity_bytes")
 LIMIT_TO_REASON = {s: r for r, (s, _f) in REASON_TO_LIMIT.items()}
 QUANTILE_POINTS = (50, 75, 90, 95, 99)
@@ -122,6 +131,7 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
     """trace: load_trace() output; agents: list of dicts with agent_id, profile, should_tighten;
     policies: {name: TrapPolicy factory}. Returns the same structure as stack_trace_replay.py writes."""
     names = [ag["agent_id"] for ag in agents]
+    team_of = {ag["agent_id"]: ag.get("team") for ag in agents}
     n_tasks = tasks_per_agent or len(trace[names[0]]["seq"])
     n_slices = n_tasks // slice_n
     static = {n: [run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, defaults)[1] for r in range(n_slices)] for n in names}
@@ -129,7 +139,8 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
     for pname, factory in policies.items():
         gov = Governor(store_path=tempfile.mkdtemp(prefix="sim-"), use_semantic=True)
         policy_obj = factory()
-        bridge = TrapBridge(gov, policy=policy_obj, defaults=defaults, is_expected=lambda ev: bool(ev.get("expected_load")))
+        bridge = TrapBridge(gov, policy=policy_obj, defaults=defaults, is_expected=lambda ev: bool(ev.get("expected_load")),
+                            agent_class=lambda a: team_of.get(a))
         governed = {n: [] for n in names}; first = {}; trajectory = {n: [] for n in names}; verdicts = {n: [] for n in names}
         for r in range(n_slices):
             for n in names:   # fixed order, as the kernel replay ingests

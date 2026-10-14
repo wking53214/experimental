@@ -316,3 +316,24 @@ Verdicts overall: UNCHANGED 1,176, IMPROVED 412, DEGRADED 219. Hung time saved o
 **Criterion 10 stands as FAIL** on the speed half of (d). The bar was written before the layer existed and is kept; the arithmetic says what would pass it: a canary of 30% or more, or windows of 2,000 canary tasks before the first verdict, each of which costs saving or time. That trade is a policy choice for whoever runs this, not something to tune here on these seeds.
 
 **Change log for this round, for the record.** One change after seeing results (the bounds and the cumulative window), checked on fresh seeds; its predictions held on the runaway side and missed on the speed side, as written above. No threshold in the recommended policy was changed.
+
+## Sixth round: pricing the canary, and per-class rate thresholds (design and predictions written before any code ran)
+
+**Two open items, one experiment.** Round 5 left the validation layer failing criterion 10 on confirmation speed, with the arithmetic saying a larger canary would resolve verdicts faster at the price of saving. Round 4 left the 1% rate threshold as a workload parameter with labelled agents on both sides of it. Both are priced here on the same fresh seeds (5001-5020), three rosters, so the trade-offs can be read off one table.
+
+**Canary share.** The validated policy at canary shares of 10% (as before), 20% and 30%. Everything else unchanged.
+
+**Per-class thresholds.** The traces carry a `team` column (core, batch, web, ml, data, ext). An operator who knows a class's natural tail sets its threshold above it; an operator who distrusts a class sets it lower. The setting used, fixed now: core 2% (its wide-tailed agents sit at 0.6% and 1.5%), ext 0.5% (external agents get less benefit of the doubt), every other team 1%. This is operator knowledge, not learned, and it is the cheap version of the fix; it is fair only to the extent an operator really would know a class's tail, which is the assumption being priced. Run at each canary share.
+
+**Predictions.**
+
+| # | Prediction |
+|---|---|
+| Q1 | Criterion 10(d), wrong tightenings confirmed within 6 slices: rises from about 42% at 10% to at least 60% at 20% and at least 75% at 30%. Slow-from-start agents reach 60 of 60 within 6 at 30% |
+| Q2 | Hung-task time saved on sustained runaways falls by about the canary share: roughly 23%, 20%, 18% at 10, 20, 30% |
+| Q3 | Correct runaway tightenings wrongly declared DEGRADED stays at or under 10% at every share; IMPROVED confirmations on sustained runaways rise with share, to at least 30% of agent-seeds at 30% |
+| Q4 | Per-class thresholds: ho-healthy-1 and healthy-tail tightened in 0 of 20 seeds each (from 20 and 8); the low-and-slow attacker caught in 20 of 20 with a first slice no later than median 3 (from 19 of 20, median 4.5); every other agent within 15 points of its flat-threshold share |
+| Q5 | Criterion 10 as a whole: passes at 30% canary with per-class thresholds **only if** the wrong tightenings that remain are mostly slow-from-start agents; the late-released regressions (3 to 7 per roster-set, released at slices 20 to 28) cannot be confirmed in 6 slices at any share, so the (d) wrong-half lands between 65% and 85% and the criterion is a coin flip. Recorded as the honest expectation, not a bar |
+| Q6 | The price of per-class thresholds, which the roster cannot show: a core-team runaway at 1.5% hangs would be missed under a 2% core threshold. No such agent exists in the traces; the point is recorded so the "0 false tightenings" number is not read as free |
+
+**What would change my mind.** If the 30% canary does not reach 60% on Q1, the layer's speed problem is not volume and the verdict design is wrong. If per-class thresholds move any runaway agent's detection, the class assignment is doing more than setting a tail allowance.
