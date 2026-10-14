@@ -40,6 +40,12 @@ POLICIES["aimd"] = lambda defaults=None: AIMDController(defaults or {"deadline_n
 POLICIES["aimd_fast"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.10)
 # Round 9b: the two-way limiter with the ratchet's breaker cap as its floor, to separate the cap from the direction.
 POLICIES["aimd_capped"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02, floor=0.729)
+# Round 10: the cap plus the drift hold; and the increase-rate sweep for the pulse formula.
+POLICIES["aimd_capped_drift"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02,
+                                                                    floor=0.729, drift_factor=1.5)
+for _inc in (0.01, 0.02, 0.05, 0.10):
+    POLICIES[f"aimd_capped_i{int(_inc * 100)}"] = (lambda inc: lambda defaults=None: AIMDController(
+        defaults or {"deadline_ns": 100_000_000}, increase=inc, floor=0.729))(_inc)
 # Sixth round: canary share and per-class thresholds (docs/TRACE_TEST_PLAN.md). Class = the trace's team column.
 CLASS_RATES = {"core": 0.02, "ext": 0.005}
 for _share in (0.10, 0.20, 0.30):
@@ -60,7 +66,8 @@ class AIMDController:
     and floor as the ratchet's rate rule; no breaker, no human, no drift rule. It is NOT a TrapBridge and does not go
     through the governor, because the governor cannot raise a limit, which is the whole difference under test."""
 
-    def __init__(self, defaults, increase=0.02, calm_share=0.005, min_rate=0.01, min_traps=3, factor=0.9, floor=0.20):
+    def __init__(self, defaults, increase=0.02, calm_share=0.005, min_rate=0.01, min_traps=3, factor=0.9, floor=0.20,
+                 drift_factor=None, baseline_slices=5):
         """Reacts to the CURRENT slice, as AIMD limiters do: decrease when this slice's traps are at least min_traps
         and at least min_rate of its tasks; increase when its share is under calm_share. (A first version reused the
         ratchet's 2,000-task trigger window and could never increase while a pulse was still inside the window; it
@@ -69,6 +76,10 @@ class AIMDController:
         self.min_rate, self.min_traps, self.factor, self.floor = min_rate, min_traps, factor, floor
         self.limit = {}; self.counts = {"decrease": 0, "increase": 0}; self.verdicts = []
         self.min_limit = {}
+        # Round 10a: the ratchet's drift hold, transplanted. Baseline = median of the first baseline_slices completed
+        # medians; no decrease while the latest median exceeds drift_factor x baseline. No excess release.
+        self.drift_factor, self.baseline_slices = drift_factor, baseline_slices
+        self.medians = {}; self.baseline = {}
 
     def canary_plan(self, agent):
         return None
@@ -86,7 +97,18 @@ class AIMDController:
         cur = self.limit.get(agent, orig)
         traps = summary["deadline_traps"]
         share = traps / max(1, summary["tasks"])
-        if traps >= self.min_traps and share >= self.min_rate:
+        drifting = False
+        if self.drift_factor is not None:
+            m = summary.get("completed_median_ns")
+            if m:
+                ms = self.medians.setdefault(agent, []); ms.append(float(m))
+                if agent not in self.baseline and len(ms) >= self.baseline_slices:
+                    srt = sorted(ms[: self.baseline_slices]); self.baseline[agent] = srt[len(srt) // 2]
+                if agent in self.baseline and ms[-1] > self.drift_factor * self.baseline[agent]:
+                    drifting = True; self.counts["drift_held"] = self.counts.get("drift_held", 0) + 1
+        if drifting:
+            pass
+        elif traps >= self.min_traps and share >= self.min_rate:
             cur = max(orig * self.floor, cur * self.factor); self.counts["decrease"] += 1
         elif share < self.calm_share and cur < orig:
             cur = min(orig, cur + self.increase * orig); self.counts["increase"] += 1

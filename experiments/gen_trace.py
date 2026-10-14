@@ -95,6 +95,9 @@ ROSTER_PULSE = [
     ("regressed-0", "regressed", 0, "web", "3x slower from 4000 (honest)", dict(median_ms=20, sigma=.5, at=4000, until=None)),
     ("healthy-0", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
     ("healthy-tail", "healthy_tail", 0, "core", "natural 0.6% timeout tail", dict(median_ms=22, sigma=.6)),
+    # appended for round 10b, so every earlier agent keeps its spawned seed
+    ("attacker-pulse-16", "attacker_pulse", 1, "ext", "hangs 5% of tasks during one slice in every 16",
+     dict(median_ms=20, sigma=.5, p=0.05, period=16, slice_tasks=250)),
 ]
 ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY,
            "pulse_v1": ROSTER_PULSE}

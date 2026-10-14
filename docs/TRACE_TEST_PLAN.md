@@ -509,3 +509,22 @@ Full v1 roster, pooled: hung time saved on deadline attackers 23.7% (ratchet), 2
 - **The human gate** has no measured benefit in these traces because no human acts in them; what it does is turn the cap's "stop" into "stop until someone looks", which is a property of the operation, not of the replay.
 
 **Where this leaves the thesis.** "Automation may only tighten" is not, by itself, the source of safety. Safety against grinding honest agents comes from bounding automation (the cap) and from an interpretation rule (the drift hold) that a two-way limiter could also have. What the direction uniquely gives is that an adversary cannot restore its own budget by behaving for a while, which is real but narrow, and the price is that nobody but a person can restore anyone's. The claim should now be stated that way, and the comparison table above belongs in the paper's evaluation, not in a footnote.
+
+## Tenth round: making the decomposition defensible (design and predictions written before any code ran)
+
+Three checks a reviewer would ask for, run before any writing.
+
+**10a. A two-way limiter with the cap and the drift hold** (`aimd_capped_drift`): `aimd_capped` plus the ratchet's drift rule (baseline = median of the first five slices' completed-duration medians; no decrease while the latest median exceeds 1.5x baseline). No excess release, deliberately: that rule is the ratchet's answer to T15, and the question is what transfers.
+
+| # | Prediction |
+|---|---|
+| D1 | Honest regression (`regressed-0`): cost at most 1 point (from 8.3 under `aimd_capped`; 0.2 under the ratchet) |
+| D2 | v1 pooled should-not cost within 1 point of the ratchet's 1.99 |
+| D3 | Period-8 pulser still 0% saved (the direction's contribution is untouched by the drift rule); sustained runaway about 25% |
+| D4 | The inflate-first attacker in v1 (`attacker-inflate`, T15): saving falls to at most 5% (from 26% under the ratchet, which has the excess release), because the drift hold without the release holds it for the whole attack. So the interpretation rules transfer, and so does their weakness, and the ratchet's advantage there is the excess rule, not the direction |
+
+**10b. When does the direction matter? A formula, then a sweep.** Under a two-way limiter, an attacker that hangs during one slice in every `period` and behaves otherwise loses about 10% per pulse and regains `increase` per calm slice. Its budget recovers between pulses when `(period - 1) x increase >= 0.10`. Prediction D5: `aimd_capped` saves at least 8 points less than the ratchet exactly in the cells where that inequality holds, and within 8 points of the ratchet elsewhere, allowing one cell either side of the boundary. Sweep: periods 2, 4, 8, 16 (a `attacker-pulse-16` is added at the end of the pulse roster, which leaves every other agent's seed unchanged) x increase 1%, 2%, 5%, 10%. From the formula the direction should matter at: 1% only for period 16; 2% for 8 and 16; 5% for 4, 8 and 16; 10% for 2 (boundary), 4, 8 and 16. Round 9 already gave three cells consistent with this (2%: period 8 at 0% against 16%; 10%: periods 4 and 8 at 0%).
+
+**10c. Replication.** The whole comparison (ratchet, `aimd`, `aimd_capped`, `aimd_capped_drift`) on fresh seeds 9001-9020 and on the held-out roster as well as the pulse roster. Prediction D6: the three decomposition statements hold on both (cap protects honest agents, drift hold protects the honest regression, direction matters only for patient pulsers), with every number within 5 points of the round-9 values on the pulse roster.
+
+**Also before writing:** `docs/references.bib` gains the prior art the novelty check named (pledge/unveil, seccomp, AIMD, Netflix concurrency-limits, Kayenta, Rehak 2009). Not a prediction, a debt.
