@@ -1,0 +1,6335 @@
+{
+ "seeds": [
+  7001,
+  7002,
+  7003,
+  7004,
+  7005,
+  7006,
+  7007,
+  7008,
+  7009,
+  7010,
+  7011,
+  7012,
+  7013,
+  7014,
+  7015,
+  7016,
+  7017,
+  7018,
+  7019,
+  7020
+ ],
+ "tasks_per_agent": 8000,
+ "slice_tasks": 250,
+ "kernel": "python model (stack_trace_sim.py)",
+ "policies": [
+  "recommended",
+  "validated_c10",
+  "keyed_c10"
+ ],
+ "summary": {
+  "canary_v1": {
+   "recommended": {
+    "attacker-canary": {
+     "first_verdict": {},
+     "any_degraded_seeds": 0,
+     "degraded_while_bad_seeds": 0,
+     "restore_requested_seeds": 0,
+     "profile": "attacker_canary",
+     "should_tighten": 1,
+     "seeds": 20,
+     "tightened_seeds": 20,
+     "tightened_share": 1.0,
+     "first_slice_median": 0.0,
+     "first_slice_min_max": [
+      0,
+      1
+     ],
+     "legit_fail_rate_static_mean": 0.09158593757019046,
+     "legit_cost_points_mean": 0.4592081954794242,
+     "legit_cost_points_max": 0.6007574768185974,
+     "bad_time_saved_share": 0.2593330533389332,
+     "bad_time_saved_min_max": [
+      0.2557628571428572,
+      0.2616822157434402
+     ]
+    },
+    "control-runaway": {
+     "first_verdict": {},
+     "any_degraded_seeds": 0,
+     "degraded_while_bad_seeds": 0,
+     "restore_requested_seeds": 0,
+     "profile": "runaway",
+     "should_tighten": 1,
+     "seeds": 20,
+     "tightened_seeds": 20,
+     "tightened_share": 1.0,
+     "first_slice_median": 0.0,
+     "first_slice_min_max": [
+      0,
+      0
+     ],
+     "legit_fail_rate_static_mean": 0.07831151592417501,
+     "legit_cost_points_mean": 0.44951493349448174,
+     "legit_cost_points_max": 0.5909389363099147,
+     "bad_time_saved_share": 0.25985678920658495,
+     "bad_time_saved_min_max": [
+      0.2552898550724638,
+      0.2615216216216216
+     ]
+    },
+    "healthy": {
+     "first_verdict": {},
+     "any_degraded_seeds": 0,
+     "degraded_while_bad_seeds": 0,
+     "restore_requested_seeds": 0,
+     "profile": "healthy",
+     "should_tighten": 0,
+     "seeds": 20,
+     "tightened_seeds": 0,
+     "tightened_share": 0.0,
+     "first_slice_median": null,
+     "first_slice_min_max": null,
+     "legit_fail_rate_static_mean": 0.013750000000000004,
+     "legit_cost_points_mean": 0.0,
+     "legit_cost_points_max": 0.0,
+     "bad_time_saved_share": null,
+     "bad_time_saved_min_max": null
+    }
+   },
+   "validated_c10": {
+    "attacker-canary": {
+     "first_verdict": {
+      "DEGRADED": 20
+     },
+     "any_degraded_seeds": 20,
+     "degraded_while_bad_seeds": 20,
+     "restore_requested_seeds": 20,
+     "profile": "attacker_canary",
+     "should_tighten": 1,
+     "seeds": 20,
+     "tightened_seeds": 20,
+     "tightened_share": 1.0,
+     "first_slice_median": 0.0,
+     "first_slice_min_max": [
+      0,
+      1
+     ],
+     "legit_fail_rate_static_mean": 0.09158593757019046,
+     "legit_cost_points_mean": 0.41472674059569525,
+     "legit_cost_points_max": 0.5236287472182223,
+     "bad_time_saved_share": 0.2593330533389332,
+     "bad_time_saved_min_max": [
+      0.2557628571428572,
+      0.2616822157434402
+     ]
+    },
+    "control-runaway": {
+     "first_verdict": {
+      "IMPROVED": 1,
+      "UNCHANGED": 19
+     },
+     "any_degraded_seeds": 0,
+     "degraded_while_bad_seeds": 0,
+     "restore_requested_seeds": 0,
+     "profile": "runaway",
+     "should_tighten": 1,
+     "seeds": 20,
+     "tightened_seeds": 20,
+     "tightened_share": 1.0,
+     "first_slice_median": 0.0,
+     "first_slice_min_max": [
+      0,
+      0
+     ],
+     "legit_fail_rate_static_mean": 0.07831151592417501,
+     "legit_cost_points_mean": 0.4021193413392255,
+     "legit_cost_points_max": 0.5519779208831647,
+     "bad_time_saved_share": 0.23437628419358836,
+     "bad_time_saved_min_max": [
+      0.2262783251231527,
+      0.24046491228070177
+     ]
+    },
+    "healthy": {
+     "first_verdict": {},
+     "any_degraded_seeds": 0,
+     "degraded_while_bad_seeds": 0,
+     "restore_requested_seeds": 0,
+     "profile": "healthy",
+     "should_tighten": 0,
+     "seeds": 20,
+     "tightened_seeds": 0,
+     "tightened_share": 0.0,
+     "first_slice_median": null,
+     "first_slice_min_max": null,
+     "legit_fail_rate_static_mean": 0.013750000000000004,
+     "legit_cost_points_mean": 0.0,
+     "legit_cost_points_max": 0.0,
+     "bad_time_saved_share": null,
+     "bad_time_saved_min_max": null
+    }
+   },
+   "keyed_c10": {
+    "attacker-canary": {
+     "first_verdict": {
+      "IMPROVED": 1,
+      "UNCHANGED": 18,
+      "DEGRADED": 1
+     },
+     "any_degraded_seeds": 1,
+     "degraded_while_bad_seeds": 1,
+     "restore_requested_seeds": 1,
+     "profile": "attacker_canary",
+     "should_tighten": 1,
+     "seeds": 20,
+     "tightened_seeds": 20,
+     "tightened_share": 1.0,
+     "first_slice_median": 0.0,
+     "first_slice_min_max": [
+      0,
+      1
+     ],
+     "legit_fail_rate_static_mean": 0.09158593757019046,
+     "legit_cost_points_mean": 0.418642177152026,
+     "legit_cost_points_max": 0.5615776413739062,
+     "bad_time_saved_share": 0.23200321993560125,
+     "bad_time_saved_min_max": [
+      0.2213828571428571,
+      0.24211873350923485
+     ]
+    },
+    "control-runaway": {
+     "first_verdict": {
+      "IMPROVED": 2,
+      "UNCHANGED": 17,
+      "DEGRADED": 1
+     },
+     "any_degraded_seeds": 1,
+     "degraded_while_bad_seeds": 1,
+     "restore_requested_seeds": 1,
+     "profile": "runaway",
+     "should_tighten": 1,
+     "seeds": 20,
+     "tightened_seeds": 20,
+     "tightened_share": 1.0,
+     "first_slice_median": 0.0,
+     "first_slice_min_max": [
+      0,
+      0
+     ],
+     "legit_fail_rate_static_mean": 0.07831151592417501,
+     "legit_cost_points_mean": 0.40674881893048614,
+     "legit_cost_points_max": 0.5284713964856652,
+     "bad_time_saved_share": 0.23302017576432732,
+     "bad_time_saved_min_max": [
+      0.22694581280788173,
+      0.24265561224489796
+     ]
+    },
+    "healthy": {
+     "first_verdict": {},
+     "any_degraded_seeds": 0,
+     "degraded_while_bad_seeds": 0,
+     "restore_requested_seeds": 0,
+     "profile": "healthy",
+     "should_tighten": 0,
+     "seeds": 20,
+     "tightened_seeds": 0,
+     "tightened_share": 0.0,
+     "first_slice_median": null,
+     "first_slice_min_max": null,
+     "legit_fail_rate_static_mean": 0.013750000000000004,
+     "legit_cost_points_mean": 0.0,
+     "legit_cost_points_max": 0.0,
+     "bad_time_saved_share": null,
+     "bad_time_saved_min_max": null
+    }
+   }
+  }
+ },
+ "per_seed": [
+  {
+   "roster": "canary_v1",
+   "seed": 7001,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.433014040152211,
+      "legit_fail_rate_static": 0.06560818790185015,
+      "bad_ns_static": 37900000000,
+      "bad_ns_governed": 28000100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.31603897814063736,
+      "legit_fail_rate_static": 0.06584145377929945,
+      "bad_ns_static": 40600000000,
+      "bad_ns_governed": 30114500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3936491274111009,
+      "legit_fail_rate_static": 0.06560818790185015,
+      "bad_ns_static": 37900000000,
+      "bad_ns_governed": 28000100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.28970239662891756,
+      "legit_fail_rate_static": 0.06584145377929945,
+      "bad_ns_static": 40600000000,
+      "bad_ns_governed": 31049600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3674058522503608,
+      "legit_fail_rate_static": 0.06560818790185015,
+      "bad_ns_static": 37900000000,
+      "bad_ns_governed": 28723700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.28970239662891756,
+      "legit_fail_rate_static": 0.06584145377929945,
+      "bad_ns_static": 40600000000,
+      "bad_ns_governed": 31198500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7002,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.49868766404199477,
+      "legit_fail_rate_static": 0.026246719160104987,
+      "bad_ns_static": 38000000000,
+      "bad_ns_governed": 28168200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5909389363099147,
+      "legit_fail_rate_static": 0.06565988181221274,
+      "bad_ns_static": 38500000000,
+      "bad_ns_governed": 28432200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.47244094488188976,
+      "legit_fail_rate_static": 0.026246719160104987,
+      "bad_ns_static": 38000000000,
+      "bad_ns_governed": 28168200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 35
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.48588312541037426,
+      "legit_fail_rate_static": 0.06565988181221274,
+      "bad_ns_static": 38500000000,
+      "bad_ns_governed": 29426800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 57
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.45931758530183725,
+      "legit_fail_rate_static": 0.026246719160104987,
+      "bad_ns_static": 38000000000,
+      "bad_ns_governed": 28991200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 35
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5121470781352594,
+      "legit_fail_rate_static": 0.06565988181221274,
+      "bad_ns_static": 38500000000,
+      "bad_ns_governed": 29453900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 57
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7003,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.42940793754066364,
+      "legit_fail_rate_static": 0.10409889394925179,
+      "bad_ns_static": 31500000000,
+      "bad_ns_governed": 23364100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.407465825446898,
+      "legit_fail_rate_static": 0.09200841219768664,
+      "bad_ns_static": 39200000000,
+      "bad_ns_governed": 28983300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3903708523096942,
+      "legit_fail_rate_static": 0.10409889394925179,
+      "bad_ns_static": 31500000000,
+      "bad_ns_governed": 23364100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 32
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3286014721345952,
+      "legit_fail_rate_static": 0.09200841219768664,
+      "bad_ns_static": 39200000000,
+      "bad_ns_governed": 29823400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 60
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 33
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3903708523096942,
+      "legit_fail_rate_static": 0.10409889394925179,
+      "bad_ns_static": 31500000000,
+      "bad_ns_governed": 24079600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 32
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3548895899053628,
+      "legit_fail_rate_static": 0.09200841219768664,
+      "bad_ns_static": 39200000000,
+      "bad_ns_governed": 29687900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 60
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 33
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7004,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.6007574768185974,
+      "legit_fail_rate_static": 0.13059945148230379,
+      "bad_ns_static": 34300000000,
+      "bad_ns_governed": 25438000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.578262583782363,
+      "legit_fail_rate_static": 0.03942699434879748,
+      "bad_ns_static": 39100000000,
+      "bad_ns_governed": 28910100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5093378607809848,
+      "legit_fail_rate_static": 0.13059945148230379,
+      "bad_ns_static": 34300000000,
+      "bad_ns_governed": 25438000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5519779208831647,
+      "legit_fail_rate_static": 0.03942699434879748,
+      "bad_ns_static": 39100000000,
+      "bad_ns_governed": 29986000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 60
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 35
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5615776413739062,
+      "legit_fail_rate_static": 0.13059945148230379,
+      "bad_ns_static": 34300000000,
+      "bad_ns_governed": 26513900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 10,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 14,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 18,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5256932579839664,
+      "legit_fail_rate_static": 0.03942699434879748,
+      "bad_ns_static": 39100000000,
+      "bad_ns_governed": 29885700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 60
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 35
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7005,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5735888410898188,
+      "legit_fail_rate_static": 0.026072220049537218,
+      "bad_ns_static": 32900000000,
+      "bad_ns_governed": 24444500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.45068928950159065,
+      "legit_fail_rate_static": 0.07953340402969247,
+      "bad_ns_static": 45600000000,
+      "bad_ns_governed": 33694400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5214444009907444,
+      "legit_fail_rate_static": 0.026072220049537218,
+      "bad_ns_static": 32900000000,
+      "bad_ns_governed": 24444500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 27
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.41092258748674443,
+      "legit_fail_rate_static": 0.07953340402969247,
+      "bad_ns_static": 45600000000,
+      "bad_ns_governed": 34634800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 68
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 64
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5475166210402815,
+      "legit_fail_rate_static": 0.026072220049537218,
+      "bad_ns_static": 32900000000,
+      "bad_ns_governed": 25086800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 27
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.39766702014846234,
+      "legit_fail_rate_static": 0.07953340402969247,
+      "bad_ns_static": 45600000000,
+      "bad_ns_governed": 35033200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 18,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 68
+       },
+       {
+        "slice": 26,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 64
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7006,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4434589800443459,
+      "legit_fail_rate_static": 0.11738620059997391,
+      "bad_ns_static": 33300000000,
+      "bad_ns_governed": 24690600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4998027094567934,
+      "legit_fail_rate_static": 0.03945810864132579,
+      "bad_ns_static": 39700000000,
+      "bad_ns_governed": 29466500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4043302465110213,
+      "legit_fail_rate_static": 0.11738620059997391,
+      "bad_ns_static": 33300000000,
+      "bad_ns_governed": 24690600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4471918979350257,
+      "legit_fail_rate_static": 0.03945810864132579,
+      "bad_ns_static": 39700000000,
+      "bad_ns_governed": 30488200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 57
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3912873353332464,
+      "legit_fail_rate_static": 0.11738620059997391,
+      "bad_ns_static": 33300000000,
+      "bad_ns_governed": 25530700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4471918979350257,
+      "legit_fail_rate_static": 0.03945810864132579,
+      "bad_ns_static": 39700000000,
+      "bad_ns_governed": 30569500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 57
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7007,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5113412875311394,
+      "legit_fail_rate_static": 0.1311131506490101,
+      "bad_ns_static": 37300000000,
+      "bad_ns_governed": 27630800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3427366200896388,
+      "legit_fail_rate_static": 0.052728710783021354,
+      "bad_ns_static": 41400000000,
+      "bad_ns_governed": 30831000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.45889602727153533,
+      "legit_fail_rate_static": 0.1311131506490101,
+      "bad_ns_static": 37300000000,
+      "bad_ns_governed": 27630800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.29000790930661746,
+      "legit_fail_rate_static": 0.052728710783021354,
+      "bad_ns_static": 41400000000,
+      "bad_ns_governed": 31915000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 9,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4195620820768323,
+      "legit_fail_rate_static": 0.1311131506490101,
+      "bad_ns_static": 37300000000,
+      "bad_ns_governed": 28714800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3163722646981281,
+      "legit_fail_rate_static": 0.052728710783021354,
+      "bad_ns_static": 41400000000,
+      "bad_ns_governed": 31942100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7008,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.30057501306847884,
+      "legit_fail_rate_static": 0.13068478829064298,
+      "bad_ns_static": 34800000000,
+      "bad_ns_governed": 25784100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.39609189331925004,
+      "legit_fail_rate_static": 0.06601531555320835,
+      "bad_ns_static": 42600000000,
+      "bad_ns_governed": 31485900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.2744380554103502,
+      "legit_fail_rate_static": 0.13068478829064298,
+      "bad_ns_static": 34800000000,
+      "bad_ns_governed": 25784100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 34
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.30367045154475836,
+      "legit_fail_rate_static": 0.06601531555320835,
+      "bad_ns_static": 42600000000,
+      "bad_ns_governed": 32681100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.30057501306847884,
+      "legit_fail_rate_static": 0.13068478829064298,
+      "bad_ns_static": 34800000000,
+      "bad_ns_governed": 27040700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 18,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 26,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 34
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.35648270398732507,
+      "legit_fail_rate_static": 0.06601531555320835,
+      "bad_ns_static": 42600000000,
+      "bad_ns_governed": 32597000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7009,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5236287472182223,
+      "legit_fail_rate_static": 0.15708862416546668,
+      "bad_ns_static": 36100000000,
+      "bad_ns_governed": 26709400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5242463958060288,
+      "legit_fail_rate_static": 0.11795543905635648,
+      "bad_ns_static": 37000000000,
+      "bad_ns_governed": 27323700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.05,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4843565911768556,
+      "legit_fail_rate_static": 0.15708862416546668,
+      "bad_ns_static": 36100000000,
+      "bad_ns_governed": 26709400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 34
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4849279161205767,
+      "legit_fail_rate_static": 0.11795543905635648,
+      "bad_ns_static": 37000000000,
+      "bad_ns_governed": 28163800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.05,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.47126587249640006,
+      "legit_fail_rate_static": 0.15708862416546668,
+      "bad_ns_static": 36100000000,
+      "bad_ns_governed": 27950700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 34
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 26,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.47182175622542594,
+      "legit_fail_rate_static": 0.11795543905635648,
+      "bad_ns_static": 37000000000,
+      "bad_ns_governed": 28353500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.05,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7010,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.418848167539267,
+      "legit_fail_rate_static": 0.03926701570680628,
+      "bad_ns_static": 36000000000,
+      "bad_ns_governed": 26682600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5381283633022707,
+      "legit_fail_rate_static": 0.09187557422233888,
+      "bad_ns_static": 38100000000,
+      "bad_ns_governed": 28145900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.36649214659685864,
+      "legit_fail_rate_static": 0.03926701570680628,
+      "bad_ns_static": 36000000000,
+      "bad_ns_governed": 26682600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 31
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.48562803517521985,
+      "legit_fail_rate_static": 0.09187557422233888,
+      "bad_ns_static": 38100000000,
+      "bad_ns_governed": 29121500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.35340314136125656,
+      "legit_fail_rate_static": 0.03926701570680628,
+      "bad_ns_static": 36000000000,
+      "bad_ns_governed": 27994300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 31
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 18,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 26,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4593778711116944,
+      "legit_fail_rate_static": 0.09187557422233888,
+      "bad_ns_static": 38100000000,
+      "bad_ns_governed": 29194700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7011,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 1,
+      "legit_cost_points": 0.39215686274509803,
+      "legit_fail_rate_static": 0.13071895424836602,
+      "bad_ns_static": 35000000000,
+      "bad_ns_governed": 26048300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.39421813403416556,
+      "legit_fail_rate_static": 0.0657030223390276,
+      "bad_ns_static": 39000000000,
+      "bad_ns_governed": 28856200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 1,
+      "legit_cost_points": 0.35294117647058826,
+      "legit_fail_rate_static": 0.13071895424836602,
+      "bad_ns_static": 35000000000,
+      "bad_ns_governed": 26048300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 7,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 11,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 15,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 19,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 33
+       },
+       {
+        "slice": 23,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 27,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 31,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.354796320630749,
+      "legit_fail_rate_static": 0.0657030223390276,
+      "bad_ns_static": 39000000000,
+      "bad_ns_governed": 29924000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 1,
+      "legit_cost_points": 0.35294117647058826,
+      "legit_fail_rate_static": 0.13071895424836602,
+      "bad_ns_static": 35000000000,
+      "bad_ns_governed": 27251600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 7,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 11,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 15,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 19,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 33
+       },
+       {
+        "slice": 23,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 27,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 31,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3679369250985545,
+      "legit_fail_rate_static": 0.0657030223390276,
+      "bad_ns_static": 39000000000,
+      "bad_ns_governed": 29905000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7012,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.49627791563275436,
+      "legit_fail_rate_static": 0.06529972574115189,
+      "bad_ns_static": 34300000000,
+      "bad_ns_governed": 25324300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5254170497832654,
+      "legit_fail_rate_static": 0.09194798371207145,
+      "bad_ns_static": 38700000000,
+      "bad_ns_governed": 28590100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.05,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4701580253362936,
+      "legit_fail_rate_static": 0.06529972574115189,
+      "bad_ns_static": 34300000000,
+      "bad_ns_governed": 25324300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4728753448049389,
+      "legit_fail_rate_static": 0.09194798371207145,
+      "bad_ns_static": 38700000000,
+      "bad_ns_governed": 29619900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.05,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.483217970484524,
+      "legit_fail_rate_static": 0.06529972574115189,
+      "bad_ns_static": 34300000000,
+      "bad_ns_governed": 26137300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.48601077104952056,
+      "legit_fail_rate_static": 0.09194798371207145,
+      "bad_ns_static": 38700000000,
+      "bad_ns_governed": 29819600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.05,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7013,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5099372384937239,
+      "legit_fail_rate_static": 0.0653765690376569,
+      "bad_ns_static": 35200000000,
+      "bad_ns_governed": 26067300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.36817882971729127,
+      "legit_fail_rate_static": 0.09204470742932282,
+      "bad_ns_static": 39500000000,
+      "bad_ns_governed": 29256200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.45763598326359833,
+      "legit_fail_rate_static": 0.0653765690376569,
+      "bad_ns_static": 35200000000,
+      "bad_ns_governed": 26067300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 9,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 13,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 17,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 21,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 25,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 29,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.32873109796186717,
+      "legit_fail_rate_static": 0.09204470742932282,
+      "bad_ns_static": 39500000000,
+      "bad_ns_governed": 30069200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4445606694560669,
+      "legit_fail_rate_static": 0.0653765690376569,
+      "bad_ns_static": 35200000000,
+      "bad_ns_governed": 26771900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 9,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 13,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 17,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.36817882971729127,
+      "legit_fail_rate_static": 0.09204470742932282,
+      "bad_ns_static": 39500000000,
+      "bad_ns_governed": 30015000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       }
+      ],
+      "restore_requested": true
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7014,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.44502617801047123,
+      "legit_fail_rate_static": 0.07853403141361257,
+      "bad_ns_static": 36000000000,
+      "bad_ns_governed": 26609400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3687121411640769,
+      "legit_fail_rate_static": 0.1316829075585989,
+      "bad_ns_static": 40600000000,
+      "bad_ns_governed": 30031000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.39267015706806285,
+      "legit_fail_rate_static": 0.07853403141361257,
+      "bad_ns_static": 36000000000,
+      "bad_ns_governed": 26609400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3423755596523571,
+      "legit_fail_rate_static": 0.1316829075585989,
+      "bad_ns_static": 40600000000,
+      "bad_ns_governed": 31413100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 25,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 29,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.418848167539267,
+      "legit_fail_rate_static": 0.07853403141361257,
+      "bad_ns_static": 36000000000,
+      "bad_ns_governed": 27650100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 14,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3292072688964972,
+      "legit_fail_rate_static": 0.1316829075585989,
+      "bad_ns_static": 40600000000,
+      "bad_ns_governed": 31386000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 58
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 25,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 29,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7015,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4713275726630008,
+      "legit_fail_rate_static": 0.07855459544383346,
+      "bad_ns_static": 36200000000,
+      "bad_ns_governed": 26736500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5541628183137617,
+      "legit_fail_rate_static": 0.0527774112679773,
+      "bad_ns_static": 42100000000,
+      "bad_ns_governed": 31124500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4451427075150563,
+      "legit_fail_rate_static": 0.07855459544383346,
+      "bad_ns_static": 36200000000,
+      "bad_ns_governed": 26736500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5013854070457844,
+      "legit_fail_rate_static": 0.0527774112679773,
+      "bad_ns_static": 42100000000,
+      "bad_ns_governed": 32371100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 66
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 29,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.45823514008902855,
+      "legit_fail_rate_static": 0.07855459544383346,
+      "bad_ns_static": 36200000000,
+      "bad_ns_governed": 27657900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.527774112679773,
+      "legit_fail_rate_static": 0.0527774112679773,
+      "bad_ns_static": 42100000000,
+      "bad_ns_governed": 32506600000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 9,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 66
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 21,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 25,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 29,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7016,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.42027843446283164,
+      "legit_fail_rate_static": 0.1182033096926714,
+      "bad_ns_static": 38600000000,
+      "bad_ns_governed": 28521700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5681067512220901,
+      "legit_fail_rate_static": 0.06605892456070815,
+      "bad_ns_static": 43100000000,
+      "bad_ns_governed": 31934800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3546099290780142,
+      "legit_fail_rate_static": 0.1182033096926714,
+      "bad_ns_static": 38600000000,
+      "bad_ns_governed": 28521700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 7,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 11,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 15,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 19,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 23,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 27,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 31,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5152596115735236,
+      "legit_fail_rate_static": 0.06605892456070815,
+      "bad_ns_static": 43100000000,
+      "bad_ns_governed": 33100100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.39401103230890466,
+      "legit_fail_rate_static": 0.1182033096926714,
+      "bad_ns_static": 38600000000,
+      "bad_ns_governed": 29678900000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 7,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 11,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 15,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 19,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 23,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 27,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 31,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5284713964856652,
+      "legit_fail_rate_static": 0.06605892456070815,
+      "bad_ns_static": 43100000000,
+      "bad_ns_governed": 32829100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 59
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7017,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.2884489314278222,
+      "legit_fail_rate_static": 0.18355841090861413,
+      "bad_ns_static": 37300000000,
+      "bad_ns_governed": 27633100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4241781548250265,
+      "legit_fail_rate_static": 0.07953340402969247,
+      "bad_ns_static": 45600000000,
+      "bad_ns_governed": 33824300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.2622263012980202,
+      "legit_fail_rate_static": 0.18355841090861413,
+      "bad_ns_static": 37300000000,
+      "bad_ns_governed": 27633100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3711558854718982,
+      "legit_fail_rate_static": 0.07953340402969247,
+      "bad_ns_static": 45600000000,
+      "bad_ns_governed": 34946300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 63
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 63
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.2753376163629212,
+      "legit_fail_rate_static": 0.18355841090861413,
+      "bad_ns_static": 37300000000,
+      "bad_ns_governed": 28519300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.39766702014846234,
+      "legit_fail_rate_static": 0.07953340402969247,
+      "bad_ns_static": 45600000000,
+      "bad_ns_governed": 35073700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 61
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 63
+       },
+       {
+        "slice": 22,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 56
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 63
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0125,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7018,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.35423773287850957,
+      "legit_fail_rate_static": 0.026239832065074783,
+      "bad_ns_static": 37800000000,
+      "bad_ns_governed": 27989800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3418353931107021,
+      "legit_fail_rate_static": 0.1051801209571391,
+      "bad_ns_static": 39400000000,
+      "bad_ns_governed": 29163700000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3279979008134348,
+      "legit_fail_rate_static": 0.026239832065074783,
+      "bad_ns_static": 37800000000,
+      "bad_ns_governed": 27989800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 9,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 13,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 17,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 21,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 25,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 60
+       },
+       {
+        "slice": 29,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3286878779910597,
+      "legit_fail_rate_static": 0.1051801209571391,
+      "bad_ns_static": 39400000000,
+      "bad_ns_governed": 30096000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3411178168459722,
+      "legit_fail_rate_static": 0.026239832065074783,
+      "bad_ns_static": 37800000000,
+      "bad_ns_governed": 28965400000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 41
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 39
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 60
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.28924533263213253,
+      "legit_fail_rate_static": 0.1051801209571391,
+      "bad_ns_static": 39400000000,
+      "bad_ns_governed": 30329000000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 10,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 36
+       },
+       {
+        "slice": 14,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 18,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 48
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 53
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7019,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.523354703650399,
+      "legit_fail_rate_static": 0.03925160277377993,
+      "bad_ns_static": 35700000000,
+      "bad_ns_governed": 26493800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4846738276133089,
+      "legit_fail_rate_static": 0.09169504846738276,
+      "bad_ns_static": 36600000000,
+      "bad_ns_governed": 27052100000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.43176763051157924,
+      "legit_fail_rate_static": 0.03925160277377993,
+      "bad_ns_static": 35700000000,
+      "bad_ns_governed": 26493800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 63
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.44537594969871624,
+      "legit_fail_rate_static": 0.09169504846738276,
+      "bad_ns_static": 36600000000,
+      "bad_ns_governed": 27892200000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.45793536569409915,
+      "legit_fail_rate_static": 0.03925160277377993,
+      "bad_ns_static": 35700000000,
+      "bad_ns_governed": 27515500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 46
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 42
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 47
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 63
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 40
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4322766570605187,
+      "legit_fail_rate_static": 0.09169504846738276,
+      "bad_ns_static": 36600000000,
+      "bad_ns_governed": 27983500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 14,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 18,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 49
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 45
+       },
+       {
+        "slice": 30,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.025,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  },
+  {
+   "roster": "canary_v1",
+   "seed": 7020,
+   "outcomes": {
+    "recommended": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5498101845791334,
+      "legit_fail_rate_static": 0.11781646812410002,
+      "bad_ns_static": 36100000000,
+      "bad_ns_governed": 26721800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.31641397495056034,
+      "legit_fail_rate_static": 0.07910349373764008,
+      "bad_ns_static": 41500000000,
+      "bad_ns_governed": 30741300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "validated_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.5236287472182223,
+      "legit_fail_rate_static": 0.11781646812410002,
+      "bad_ns_static": 36100000000,
+      "bad_ns_governed": 26721800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 10,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 14,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 18,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 26,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 30,
+        "verdict": "DEGRADED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       }
+      ],
+      "restore_requested": true
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.3032300593276203,
+      "legit_fail_rate_static": 0.07910349373764008,
+      "bad_ns_static": 41500000000,
+      "bad_ns_governed": 31825300000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 57
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    },
+    "keyed_c10": {
+     "attacker-canary": {
+      "profile": "attacker_canary",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.4843565911768556,
+      "legit_fail_rate_static": 0.11781646812410002,
+      "bad_ns_static": 36100000000,
+      "bad_ns_governed": 27805800000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 6,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 54
+       },
+       {
+        "slice": 10,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       },
+       {
+        "slice": 14,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 18,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 52
+       },
+       {
+        "slice": 22,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 44
+       },
+       {
+        "slice": 26,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 38
+       },
+       {
+        "slice": 30,
+        "verdict": "IMPROVED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 37
+       }
+      ],
+      "restore_requested": false
+     },
+     "control-runaway": {
+      "profile": "runaway",
+      "should_tighten": 1,
+      "tightened": true,
+      "first": 0,
+      "legit_cost_points": 0.27686222808174027,
+      "legit_fail_rate_static": 0.07910349373764008,
+      "bad_ns_static": 41500000000,
+      "bad_ns_governed": 31879500000,
+      "final_deadline_ns": 72900000.0,
+      "verdicts": [
+       {
+        "slice": 5,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 9,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 51
+       },
+       {
+        "slice": 13,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 17,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 55
+       },
+       {
+        "slice": 21,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 57
+       },
+       {
+        "slice": 25,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 50
+       },
+       {
+        "slice": 29,
+        "verdict": "UNCHANGED",
+        "deadline_ns": 72900000.0,
+        "bad_in_window": 43
+       }
+      ],
+      "restore_requested": false
+     },
+     "healthy": {
+      "profile": "healthy",
+      "should_tighten": 0,
+      "tightened": false,
+      "first": null,
+      "legit_cost_points": 0.0,
+      "legit_fail_rate_static": 0.0,
+      "bad_ns_static": 0,
+      "bad_ns_governed": 0,
+      "final_deadline_ns": 100000000,
+      "verdicts": [],
+      "restore_requested": false
+     },
+     "_audit_intact": true
+    }
+   }
+  }
+ ]
+}

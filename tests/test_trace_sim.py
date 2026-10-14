@@ -78,3 +78,35 @@ def test_the_slowdown_cache_does_not_change_results(tmp_path):
     f2 = b._slowdown("a", [60e6, 84e6, 95e6, 98e6, 99.5e6], 100e6)
     assert f1 == f2 and f1 > 1.5
     assert b._slowdown("a", [60e6, 84e6, 95e6, 98e6, 99.5e6], 80e6) != f1   # the deadline is part of the key
+
+
+def test_keyed_canary_selection_matches_the_reference_hash_and_is_unpredictable_by_seq():
+    """The kernel example uses the same 64-bit FNV-1a; these vectors pin the contract (T16)."""
+    import numpy as np
+    assert sim.fnv1a64(b"") == 0xcbf29ce484222325
+    assert sim.fnv1a64(b"a") == 0xaf63dc4c8601ec8c
+    assert sim.fnv1a64(b"k-7f3a|agent-1|42") == 0xca8a5faaefe020a3
+    seq = np.arange(10_000)
+    plain = sim.canary_mask(seq, 10, "agent-1")
+    keyed = sim.canary_mask(seq, 10, "agent-1", key="k-7f3a")
+    assert plain.sum() == 1000 and bool(plain[0]) and bool(plain[10]) and not plain[1]
+    assert 850 <= keyed.sum() <= 1150                                   # about a tenth, by hash
+    overlap = (plain & keyed).sum()
+    assert 60 <= overlap <= 140                                         # independent of seq % 10
+    other = sim.canary_mask(seq, 10, "agent-2", key="k-7f3a")
+    assert (keyed != other).sum() > 1000                                # and of the agent
+
+
+def test_canary_plan_carries_the_key_only_when_set(tmp_path):
+    from integrations.stack_traps import TrapBridge, TrapPolicy
+    from src.governance.governor import Governor
+    defaults = {"deadline_ns": 100e6, "tokens_capacity": 4000, "memory_capacity_bytes": 2**29}
+    for key in (None, "k-7f3a"):
+        g = Governor(store_path=str(tmp_path / f"s{key}"))
+        b = TrapBridge(g, defaults=defaults, policy=TrapPolicy(min_rate=0.01, reasons=("deadline_exceeded",),
+                                                                validate_after=4, canary_key=key))
+        b.observe_transactions("a", 500)
+        b.ingest([{"trap_id": f"t{i}", "agent_id": "a", "trap_reason": "deadline_exceeded", "trap_outcome": "HALT"} for i in range(25)])
+        plan = b.canary_plan("a")
+        assert plan["share"] == 0.10 and plan["deadline_ns"] == 100e6
+        assert plan.get("key") == key

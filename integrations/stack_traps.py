@@ -100,6 +100,11 @@ class TrapPolicy:
     # the benefit's upper bound; IMPROVED needs the cost's upper bound under improved_ratio x the benefit's lower bound.
     review_z: float = 2.0
     review_window: int = 32
+    # Canary selection key (round 8, T16). Without a key the kernel picks every round(1/share)th task by sequence
+    # number, which an agent can predict and game (complete the canaries, hang the rest: a correct tightening then
+    # reads DEGRADED and a person is asked to undo it). With a key the kernel picks tasks by a keyed hash of
+    # (key, agent, seq) that the agent cannot predict. Set one in production.
+    canary_key: Optional[str] = None
 
 
 def _agent_key(agent_id: Any) -> Optional[str]:
@@ -297,7 +302,10 @@ class TrapBridge:
         original = float(self.defaults["deadline_ns"])
         if current >= original:
             return None
-        return {"share": self.policy.canary_share, "deadline_ns": original}
+        plan = {"share": self.policy.canary_share, "deadline_ns": original}
+        if self.policy.canary_key:
+            plan["key"] = self.policy.canary_key
+        return plan
 
     def _schedule_review(self, agent: str, suffix: str, reply: dict) -> None:
         """Each applied tightening (re)starts the review episode: the first verdict comes validate_after slices after

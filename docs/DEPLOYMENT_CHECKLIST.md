@@ -33,7 +33,7 @@ The drift factor of 1.5 is flat down to 1.3 and breaks at 2.0 for 2x regressions
 
 ## 6. Choose the canary share
 
-`TrapPolicy(validate_after=4, canary_share=...)`. The canary is the validation layer's only evidence. At 10% it confirms gross harm in about 7 slices and marginal harm in 20 or more; confirming benefit is almost impossible. A larger share resolves verdicts faster and gives up that share of the saving on hung tasks (round 6 of `docs/TRACE_TEST_PLAN.md` prices 10, 20 and 30%). Decide what a wrong tightening costs you against what a hung task costs you, and set the share from that.
+`TrapPolicy(validate_after=4, canary_share=...)`. The canary is the validation layer's only evidence. At 10% it confirms gross harm in about 7 slices and marginal harm in 20 or more; confirming benefit is almost impossible. A larger share resolves verdicts faster and gives up that share of the saving on hung tasks (round 6 of `docs/TRACE_TEST_PLAN.md` prices 10, 20 and 30%). Decide what a wrong tightening costs you against what a hung task costs you, and set the share from that. **Set `canary_key`** to a secret the agents cannot read; without it the canary is every tenth task by sequence number, and an agent that completes exactly those and hangs the rest turns the validation layer into a loosening lever (T16). The kernel must not reveal to a task which deadline it runs under.
 
 ## 7. Decide the breaker cap and who acknowledges it
 

@@ -44,6 +44,8 @@ def run_slice(csv_path, agent, rnd, slice_n, defaults, port=None, canary=None):
     cmd += ["--static"] if port is None else ["--port", str(port)]
     if canary:   # the validation layer's canary (TrapBridge.canary_plan); needs the kernel example with --canary-share
         cmd += ["--canary-share", str(canary["share"]), "--canary-ns", str(int(canary["deadline_ns"]))]
+        if canary.get("key"):
+            cmd += ["--canary-key", canary["key"]]
     traps, summary = [], None
     for line in subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.splitlines():
         d = json.loads(line)
