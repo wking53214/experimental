@@ -585,3 +585,76 @@ Five things a referee asks about the rounds 9 and 10 result, each answerable wit
 **11d. Human attention, counted.** Per agent-seed, the number of decisions a person is asked for: breaker holds (a held tightening waiting for acknowledgement) plus restore requests (drift and validation). Prediction R5: under the ratchet, at most one decision per tightened attacker (the breaker hold) and none for untouched healthy agents; under `aimd`, zero decisions and the nine-times-higher harm of round 9. The claim "relocates human effort" becomes a number: decisions per thousand tasks, by policy.
 
 **11e. Intervals.** Bootstrap 95% intervals over seeds for the pooled cost and the sustained saving of each policy in 10c. Prediction R6: ratchet and `aimd` intervals do not overlap on either number; ratchet and `aimd_capped_drift` overlap on both.
+
+### Round 11, results (2026-10-14; `..._round11ab.json` seeds 10001-10020, `..._round11cd.json` seeds 8001-8020)
+
+**11a, other duration shapes** (saved% on attackers / legitimate cost in points):
+
+| Agent | ratchet | aimd | aimd + cap + drift |
+|---|---|---|---|
+| pareto-runaway | 26% / 1.1 | 64% / 31.0 | 25% / 1.1 |
+| pareto-tail | 1.0 | 36.7 | 1.2 |
+| pareto-regressed | **5.8** | 44.8 | **8.6** |
+| pareto-pulse-8 | 20% / 1.0 | 52% / 28.4 | **20%** / 1.0 |
+| pareto pooled should-not | 3.39 | 40.77 | 4.90 |
+| bimodal-runaway | 26% / 2.7 | 65% / 37.8 | 26% / 2.6 |
+| bimodal-tail | 0.0 | 3.2 | 0.6 |
+| bimodal-regressed | 0.0 | 26.3 | 0.0 |
+| bimodal-pulse-8 | 19% / 2.2 | 4% / 2.3 | 2% / 0.3 |
+| bimodal pooled should-not | 0.00 | 14.77 | 0.28 |
+| tight (5% natural tail, no hangs) | tightened 20 of 20, 13.8 | 20 of 20, 67.0 | 20 of 20, 13.3 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| R1 bimodal | cap, drift hold and direction statements all hold | cap 14.77 against 0.28; regression 0.0; pulser 19% against 2%; sustained 26% / 65% | Yes |
+| R1 pareto | same | cap 40.77 against 4.90 and sustained 26% / 64% hold; **the drift statement fails** (regression 8.6 under cap plus drift, and 5.8 under the ratchet itself); **the direction statement fails** (pulser 20% against 20%) | Half, with a mechanism below |
+| R2 | `tight` tightened by all, at least 10 points under all | 20 of 20 and 13.8 / 67.0 / 13.3 | Yes |
+
+**Why Pareto breaks two of three.** A heavy tail puts traps into every slice, so the two-way limiter never sees a calm slice (share under 0.5%) and never increases: it behaves like a ratchet to its floor, grinding honest agents (pareto-tail 36.7 points) and, when capped, never giving a pulser its budget back, so the direction has nothing left to add. The drift hold also weakens: the completed-duration median moves less under a heavy tail than the trap share does, so a 3x regression is held less reliably and the excess release fires more often, which is why even the ratchet costs the honest Pareto regression 5.8 points. Both are statements about the signal, not the direction: **the formula's recovery term assumes calm slices exist, and the drift rule assumes the median tracks the slowdown.** Under heavy tails neither holds well.
+
+**11b, width and intensity** (period 8, saved% ratchet against capped two-way at 2% increase):
+
+| Agent | ratchet | capped | formula says | D (at least 8 under) |
+|---|---|---|---|---|
+| w1, 2% | 6% | 0% | direction matters | no (6 points: the ratchet itself saves little at this intensity) |
+| w1, 5% | 18% | 0% | matters | **D** |
+| w1, 10% | 20% | 1% | matters | **D** |
+| w2, 2% | 15% | 13% | no | no |
+| w2, 5% | 23% | 17% | no | no |
+| w2, 10% | 24% | 16% | no | **D** (8 points exactly) |
+
+R3: four of six cells as predicted; the two misses sit at the 8-point threshold (6 and 8 points). The sign is right in all six: width 1 differs by 6 to 19 points, width 2 by 2 to 8. **Held in direction, not at the stated threshold.**
+
+**11c, the cap as a dial** (v1, seeds 8001-8020):
+
+| k | sustained saved | formula 1 - 0.9^k | pooled should-not cost | slow-from-start cost |
+|---|---|---|---|---|
+| 1 | 9.7% | 10.0% | 0.58 | 4.2 |
+| 2 | 18.2% | 19.0% | 1.23 | 9.4 |
+| 3 | 25.6% | 27.1% | 1.99 | 15.4 |
+| 5 | 37.6% | 41.0% | 3.77 | 29.6 |
+| 8 | 50.1% | 57.0% | 6.61 | 52.0 |
+
+R4: within 3 points of the formula for k up to 3; 3.4 and 6.9 points under it at 5 and 8, because each further step needs a fresh pattern and the later steps arrive late in the run. Cost monotone in k; slow-from-start cost proportional to the cut. **Held for the operating range, overstated by the formula at large k.** The dial is real: every step of the cap buys about 9 points of saving on sustained attackers and about 0.7 points of pooled honest cost (5 points on an agent slow from the start).
+
+**11d, decisions a person is asked for** (v1, 500 agent-seeds):
+
+| Policy | decisions | per 1,000 tasks | on the 100 deadline-attacker agent-seeds | on healthy agents | pooled should-not cost |
+|---|---|---|---|---|---|
+| ratchet (cap 3) | 216 | 0.054 | 156 | 0 | 1.99 |
+| aimd | 0 | 0 | 0 | 0 | 17.75 |
+| aimd + cap + drift | **0** | 0 | 0 | 0 | **1.99** |
+
+R5: no decisions on healthy agents (held); 1.56 decisions per tightened attacker, not at most one (a breaker hold plus, often, a drift restore request). **The sobering row is the third:** the capped two-way limiter with the drift hold reaches the ratchet's honest-agent cost with no human in the loop at all, because its cap is a floor, not a hold waiting for acknowledgement. On this roster the ratchet's 216 decisions buy exactly the direction's narrow benefit (round 10) and the auditability of every change; they do not buy honest-agent safety, which the cap and the drift hold deliver unattended. This belongs in the paper as the price of the human gate, stated in decisions.
+
+**11e, intervals** (bootstrap over seeds, 2,000 resamples, v1):
+
+| Policy | pooled should-not cost | sustained saved |
+|---|---|---|
+| ratchet | [1.96, 2.02] | [25.6%, 25.7%] |
+| aimd | [17.48, 18.00] | [63.8%, 64.5%] |
+| aimd + cap + drift | [1.95, 2.03] | [25.3%, 25.5%] |
+
+R6: ratchet and `aimd` do not overlap on either number (held). Ratchet and cap-plus-drift overlap on cost and **miss by 0.1 point on the saving** (25.5 against 25.6): not met as written; the intervals are tight because the structure is nearly deterministic across seeds, and a 0.2-point difference is real and immaterial.
+
+**What round 11 adds to the defensible claim.** The decomposition holds under a bimodal shape and fails in two of three parts under a heavy tail, for stated reasons about the signal; the direction's formula is right in sign across widths and intensities and coarse at its threshold; the cap is a dial with a measured exchange rate; and the human gate costs about one decision per twenty thousand tasks on this roster for a benefit that a capped two-way limiter with the drift hold matches on honest agents without any decisions. The white paper should carry all of this, including the Pareto failure and the decisions table, because a referee who finds them first will not believe the rest.
