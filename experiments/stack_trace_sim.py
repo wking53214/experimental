@@ -35,6 +35,9 @@ POLICIES = {
     "validated": lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
                                     reasons=("deadline_exceeded",), validate_after=4),
 }
+# Ninth round: the two-way baselines. These need defaults, which replay() supplies through the factory's argument.
+POLICIES["aimd"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02)
+POLICIES["aimd_fast"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.10)
 # Sixth round: canary share and per-class thresholds (docs/TRACE_TEST_PLAN.md). Class = the trace's team column.
 CLASS_RATES = {"core": 0.02, "ext": 0.005}
 for _share in (0.10, 0.20, 0.30):
@@ -48,6 +51,52 @@ for _share in (0.10, 0.20, 0.30):
         min_rate=0.01, min_rate_by_class=dict(CLASS_RATES), drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
         reasons=("deadline_exceeded",), validate_after=4, canary_share=sh))(_share)
 SUFFIX = ("deadline_ns", "tokens_capacity", "memory_capacity_bytes")
+
+
+class AIMDController:
+    """The two-way baseline (ninth round): lower the deadline on trouble, raise it again when calm. Same trigger, step
+    and floor as the ratchet's rate rule; no breaker, no human, no drift rule. It is NOT a TrapBridge and does not go
+    through the governor, because the governor cannot raise a limit, which is the whole difference under test."""
+
+    def __init__(self, defaults, increase=0.02, calm_share=0.005, min_rate=0.01, min_traps=3, factor=0.9, floor=0.20):
+        """Reacts to the CURRENT slice, as AIMD limiters do: decrease when this slice's traps are at least min_traps
+        and at least min_rate of its tasks; increase when its share is under calm_share. (A first version reused the
+        ratchet's 2,000-task trigger window and could never increase while a pulse was still inside the window; it
+        was replaced before any result was scored. docs/TRACE_TEST_PLAN.md, round 9.)"""
+        self.defaults = dict(defaults); self.increase, self.calm_share = increase, calm_share
+        self.min_rate, self.min_traps, self.factor, self.floor = min_rate, min_traps, factor, floor
+        self.limit = {}; self.counts = {"decrease": 0, "increase": 0}; self.verdicts = []
+        self.min_limit = {}
+
+    def canary_plan(self, agent):
+        return None
+
+    def limit_for(self, agent, reason):
+        if reason != "deadline_exceeded":
+            return None
+        return self.limit.get(agent)
+
+    def observe_transactions(self, agent, n, **_):
+        pass
+
+    def observe_slice(self, agent, summary):
+        orig = float(self.defaults["deadline_ns"])
+        cur = self.limit.get(agent, orig)
+        traps = summary["deadline_traps"]
+        share = traps / max(1, summary["tasks"])
+        if traps >= self.min_traps and share >= self.min_rate:
+            cur = max(orig * self.floor, cur * self.factor); self.counts["decrease"] += 1
+        elif share < self.calm_share and cur < orig:
+            cur = min(orig, cur + self.increase * orig); self.counts["increase"] += 1
+        self.limit[agent] = cur
+        self.min_limit[agent] = min(self.min_limit.get(agent, orig), cur)
+
+    def ingest(self, traps):
+        return []
+
+
+def is_controller(obj):
+    return isinstance(obj, AIMDController)
 LIMIT_TO_REASON = {s: r for r, (s, _f) in REASON_TO_LIMIT.items()}
 QUANTILE_POINTS = (50, 75, 90, 95, 99)
 
@@ -157,9 +206,15 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
     results = {"slices": n_slices, "slice_tasks": slice_n, "defaults": defaults, "policies": {}}
     for pname, factory in policies.items():
         gov = Governor(store_path=tempfile.mkdtemp(prefix="sim-"), use_semantic=True)
-        policy_obj = factory()
-        bridge = TrapBridge(gov, policy=policy_obj, defaults=defaults, is_expected=lambda ev: bool(ev.get("expected_load")),
-                            agent_class=lambda a: team_of.get(a))
+        try:
+            policy_obj = factory(defaults=defaults)
+        except TypeError:
+            policy_obj = factory()
+        if is_controller(policy_obj):
+            bridge = policy_obj
+        else:
+            bridge = TrapBridge(gov, policy=policy_obj, defaults=defaults, is_expected=lambda ev: bool(ev.get("expected_load")),
+                                agent_class=lambda a: team_of.get(a))
         governed = {n: [] for n in names}; first = {}; trajectory = {n: [] for n in names}; verdicts = {n: [] for n in names}
         for r in range(n_slices):
             for n in names:   # fixed order, as the kernel replay ingests
@@ -179,25 +234,35 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                     verdicts[n].append({"slice": r, "verdict": v["verdict"], "deadline_ns": v["deadline_ns"],
                                         "bad_in_window": int(sum(x["bad_in_slice"] for x in governed[n][-(policy_obj.validate_after or 1) - 1:-1]))})
                 bridge.ingest(traps)
+                if is_controller(bridge):
+                    bridge.observe_slice(n, s)
                 if n not in first and any((bridge.limit_for(n, LIMIT_TO_REASON[x]) or float(defaults[x])) < float(defaults[x])
                                           for x in SUFFIX):
                     first[n] = r
         per = {}
         for ag in agents:
             n = ag["agent_id"]; limits = {}
-            for x in SUFFIX:
-                bid = bridge.boundary_id(n, x)
-                try:
-                    st = gov.boundary_status(bid)
-                except KeyError:
-                    st = None
-                limits[x] = None if st is None else {"limit": st["limit"], "held": st["held"],
-                                                     "pending": st["pending_operator_requests"],
-                                                     "tightenings": st["automatic_tightenings_since_acknowledgement"]}
-            tightened = any(v and v["limit"] < float(defaults[k]) for k, v in limits.items())
-            restore = [e["payload"] for e in gov.audit.find("signal")
-                       if e["payload"].get("kind") == "loosen_requested" and e["payload"].get("boundary_id") == bridge.boundary_id(n, "deadline_ns")
-                       and str(e["payload"].get("idempotency_key", "")).startswith("review-")]
+            if is_controller(bridge):
+                cur = bridge.limit.get(n); orig = float(defaults["deadline_ns"])
+                limits = {"deadline_ns": None if cur is None else {"limit": cur, "held": False, "pending": 0, "tightenings": 0,
+                                                                   "min_limit": bridge.min_limit.get(n, orig)},
+                          "tokens_capacity": None, "memory_capacity_bytes": None}
+                tightened = bridge.min_limit.get(n, orig) < orig    # ever lowered (it may have recovered since)
+                restore = []
+            else:
+                for x in SUFFIX:
+                    bid = bridge.boundary_id(n, x)
+                    try:
+                        st = gov.boundary_status(bid)
+                    except KeyError:
+                        st = None
+                    limits[x] = None if st is None else {"limit": st["limit"], "held": st["held"],
+                                                         "pending": st["pending_operator_requests"],
+                                                         "tightenings": st["automatic_tightenings_since_acknowledgement"]}
+                tightened = any(v and v["limit"] < float(defaults[k]) for k, v in limits.items())
+                restore = [e["payload"] for e in gov.audit.find("signal")
+                           if e["payload"].get("kind") == "loosen_requested" and e["payload"].get("boundary_id") == bridge.boundary_id(n, "deadline_ns")
+                           and str(e["payload"].get("idempotency_key", "")).startswith("review-")]
             per[n] = {"profile": ag["profile"], "should_tighten": int(ag["should_tighten"]), "tightened": tightened,
                       "first_tightened_slice": first.get(n), "limits": limits,
                       "static": totals(static[n]), "governed": totals(governed[n]),
@@ -205,7 +270,8 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                       "restore_requested": bool(restore)}
         integrity_ok, _checks = gov.verify_governance_integrity()
         results["policies"][pname] = {"agents": per, "bridge_counts": dict(bridge.counts),
-                                      "audit_chain_intact": gov.audit.verify()[0], "integrity_ok": bool(integrity_ok)}
+                                      "audit_chain_intact": gov.audit.verify()[0], "integrity_ok": bool(integrity_ok),
+                                      "controller": is_controller(bridge)}
     return results
 
 

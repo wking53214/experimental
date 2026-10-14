@@ -86,7 +86,18 @@ ROSTER_CANARY = [
     ("control-runaway", "runaway", 1, "batch", "hangs 5% of all tasks", dict(median_ms=20, sigma=.5, p=0.05)),
     ("healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
 ]
-ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY}
+# Ninth round: attackers that earn their budget back from a two-way limiter by behaving between pulses.
+ROSTER_PULSE = [
+    *[(f"attacker-pulse-{n}", "attacker_pulse", 1, "ext", f"hangs 5% of tasks during one slice in every {n}",
+       dict(median_ms=20, sigma=.5, p=0.05, period=n, slice_tasks=250)) for n in (2, 4, 8)],
+    ("runaway-steady", "runaway", 1, "batch", "5% of tasks hang for the whole run", dict(median_ms=20, sigma=.5, p=0.05)),
+    ("attacker-lowslow", "attacker_lowslow", 1, "ext", "hangs 0.8% of tasks", dict(median_ms=20, sigma=.5, p=0.008)),
+    ("regressed-0", "regressed", 0, "web", "3x slower from 4000 (honest)", dict(median_ms=20, sigma=.5, at=4000, until=None)),
+    ("healthy-0", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
+    ("healthy-tail", "healthy_tail", 0, "core", "natural 0.6% timeout tail", dict(median_ms=22, sigma=.6)),
+]
+ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY,
+           "pulse_v1": ROSTER_PULSE}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
@@ -119,6 +130,11 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         hang = rng.random(n) < p
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = {"attacker_inflate": "inflated", "attacker_lowslow": "lowslow"}.get(profile, "runaway")
+    if profile == "attacker_pulse":
+        active = ((seq // prm["slice_tasks"]) % prm["period"]) == 0
+        hang = (rng.random(n) < prm["p"]) & active
+        dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
+        bad[hang] = 1; regime[hang] = "pulse"
     if profile == "attacker_canary":
         hang = (rng.random(n) < prm["p"]) & (seq % prm["every"] != 0)
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
