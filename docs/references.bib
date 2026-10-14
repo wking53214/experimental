@@ -27,3 +27,54 @@
   number={1},
   year={2003}
 }
+
+@inproceedings{chiu1989aimd,
+  author = {Chiu, Dah-Ming and Jain, Raj},
+  title = {Analysis of the Increase and Decrease Algorithms for Congestion Avoidance in Computer Networks},
+  journal = {Computer Networks and ISDN Systems},
+  volume = {17}, number = {1}, pages = {1--14}, year = {1989},
+  note = {The two-way adaptive limiter (AIMD) this project's ratchet is compared against in docs/TRACE_TEST_PLAN.md, rounds 9 and 10}
+}
+
+@misc{netflix2018concurrency,
+  author = {{Netflix}},
+  title = {concurrency-limits: Java library that implements and integrates concepts from TCP congestion control to auto-detect concurrency limits},
+  howpublished = {\url{https://github.com/Netflix/concurrency-limits}}, year = {2018},
+  note = {Production two-way adaptive limiter; prior art for enforcement-driven limit adaptation}
+}
+
+@misc{gitlab2023gitaly,
+  author = {{GitLab}},
+  title = {Gitaly Adaptive Concurrency Limit (design document)},
+  howpublished = {\url{https://handbook.gitlab.com/handbook/engineering/architecture/design-documents/gitaly_adaptive_concurrency_limit}}, year = {2023},
+  note = {AIMD limit on a production service; prior art}
+}
+
+@misc{openbsd2015pledge,
+  author = {{OpenBSD Project}},
+  title = {pledge(2) and unveil(2): restrict system operations and filesystem view, one-way},
+  howpublished = {OpenBSD manual pages}, year = {2015},
+  note = {A process may only reduce its own capabilities; the one-way primitive this project applies to adaptive numeric limits}
+}
+
+@misc{linux2012seccomp,
+  author = {{Linux kernel}},
+  title = {seccomp(2) with PR\_SET\_NO\_NEW\_PRIVS: system-call filters that can only be added},
+  howpublished = {Linux manual pages}, year = {2012},
+  note = {Monotone capability reduction at the process level; prior art for "automation can only tighten"}
+}
+
+@misc{netflix2018kayenta,
+  author = {{Netflix and Google}},
+  title = {Kayenta: Automated Canary Analysis},
+  howpublished = {\url{https://github.com/spinnaker/kayenta}}, year = {2018},
+  note = {Canary-against-baseline statistical judgment of a release; the validation layer here applies the same comparison to a governance action}
+}
+
+@inproceedings{rehak2009challenge,
+  author = {Reh{\'a}k, Martin and Staab, Eugen and Pechoucek, Michal and Stiborek, Jan and Grill, Martin and Bartos, Karel},
+  title = {Dynamic Information Source Selection for Intrusion Detection Systems},
+  booktitle = {Proceedings of the 8th International Conference on Autonomous Agents and Multiagent Systems (AAMAS)},
+  year = {2009},
+  note = {Challenge insertion: inputs of known class slipped into live traffic to score an adaptive detector, chosen so an attacker shaping the inputs cannot steer the adaptation. The direct precedent for the keyed canary (T16) and for validating adaptation against hidden known cases}
+}

@@ -130,3 +130,16 @@ def test_the_aimd_baseline_lowers_on_trouble_raises_when_calm_and_respects_floor
     assert c.limit_for("b", "deadline_exceeded") == 100.0
     c.observe_slice("b", {"tasks": 250, "deadline_traps": 3})       # 3 traps (1.2%): a decrease
     assert c.limit_for("b", "deadline_exceeded") == 90.0
+
+
+def test_the_aimd_baseline_can_carry_the_drift_hold():
+    c = sim.AIMDController({"deadline_ns": 100.0}, increase=0.02, floor=0.729, drift_factor=1.5)
+    for _ in range(5):
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 0, "completed_median_ns": 20.0})
+    c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 60.0})   # slow AND trapping: held
+    assert c.limit_for("a", "deadline_exceeded") is None or c.limit_for("a", "deadline_exceeded") == 100.0
+    c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 20.0})   # trapping, not slow: cut
+    assert c.limit_for("a", "deadline_exceeded") == 90.0
+    for _ in range(10):
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 20.0})
+    assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9                          # the cap as floor
