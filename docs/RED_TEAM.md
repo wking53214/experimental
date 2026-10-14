@@ -77,6 +77,10 @@ Verified equal by the reviewer: trap ordering, double-trip handling, deadline tr
 
 The reviewers were asked what would survive contact with real data. Their answer, which the author accepts: the store-enforced monotonicity and the audit chain; saved% as arithmetic but not as benefit; the cap bounding per-agent harm, at 2 to 10 points rather than near zero once deadlines are set with ordinary headroom; and the qualitative point that a bounded, signal-interpreting limiter protects honest agents where an unbounded one does not. What does not survive: "healthy agents are never tightened", "the drift hold protects regressions at 0.2 points", "the excess release is free", the ratchet-equals-capped-two-way equivalence as a general statement, every threshold as a default, and the claim that the one-way direction has a measured benefit on these traces.
 
+## Follow-up: rounds 12 and 13
+
+Round 12 confirmed B1 and B2 on fresh seeds (the phase-7 pulser: ratchet 2.5%, two-way with hysteresis 18.7%) and T1 and T2 (at 60 ms every honest agent with a tail is tightened and the loop is a net loss of 6% of all task time). Round 13 held the interpretation layer fixed by running the ratchet's own bridge as a two-way limiter: identical on every cell except a 3-point loss on one patient pulser under 8 slices of hysteresis and nothing under 16. Both rounds were pre-registered in their own commits before any run.
+
 ## The standing of the thesis after this
 
 Before the red team, the claim was: bounding automation and interpreting the signal are what protect honest agents; the one-way direction adds a narrow, formula-stated benefit against patient attackers; the human gate costs about one decision per twenty thousand tasks. After it: the first part stands with the headroom condition attached; the second part is withdrawn pending round 12, because the measured benefit came from a cold-start artefact and a baseline without hysteresis; the third part stands, with the 60 decisions on honest agents now broken out. The architecture's security invariant stands with two real fixes (S1, S2), and the default configuration was weaker than the documents said until S2.
