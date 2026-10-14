@@ -19,7 +19,7 @@ from src.governance.proposal import AdaptationDirection
 
 
 def _gov(tmp_path, limit=100, semantic=True):
-    g = Governor(store_path=str(tmp_path), use_semantic=semantic)
+    g = Governor(unverified_operators=True, store_path=str(tmp_path), use_semantic=semantic)
     g.boundaries.create_boundary("b", "cpu", limit)
     return g
 
@@ -34,7 +34,7 @@ class TestObservationOnlyAttacker:
     def test_fuzzed_observations_never_raise_a_limit(self, tmp_path):
         rng = random.Random(0)
         for ep in range(60):
-            g = Governor(store_path=str(tmp_path / f"ep{ep}"), use_semantic=bool(ep % 2))
+            g = Governor(unverified_operators=True, store_path=str(tmp_path / f"ep{ep}"), use_semantic=bool(ep % 2))
             start = rng.choice([1, 10, 100, 1000, 1e6])
             g.boundaries.create_boundary("b", "r", start)
             g.patterns.create_pattern("b_p", "b", 2, 30)

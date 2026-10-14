@@ -67,7 +67,9 @@ def one_job(job):
     policies = {}
     for pname, (kind, args) in specs.items():
         policies[pname] = sim.POLICIES[pname] if kind == "named" else sweep_policy(*args)
-    res = sim.replay(trace, agents, DEFAULTS, policies, slice_n=250, tasks_per_agent=TASKS)
+    defaults = dict(DEFAULTS)
+    defaults["deadline_ns"] = gen_trace.ROSTER_DEADLINE_NS.get(roster, defaults["deadline_ns"])
+    res = sim.replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=TASKS)
     out = {}
     for pname, pr in res["policies"].items():
         out[pname] = {}
@@ -79,9 +81,16 @@ def one_job(job):
                 "legit_cost_points": 100.0 * (g["legit_failed"] - s["legit_failed"]) / max(1, s["legit"]),
                 "legit_fail_rate_static": 100.0 * s["legit_failed"] / max(1, s["legit"]),
                 "bad_ns_static": s["bad_ns"], "bad_ns_governed": g["bad_ns"],
-                "final_deadline_ns": v["limits"]["deadline_ns"]["limit"] if v["limits"]["deadline_ns"] else DEFAULTS["deadline_ns"],
+                "final_deadline_ns": v["limits"]["deadline_ns"]["limit"] if v["limits"]["deadline_ns"] else defaults["deadline_ns"],
                 "verdicts": v.get("verdicts", []), "restore_requested": v.get("restore_requested", False),
                 "operator_decisions": v.get("operator_decisions", 0),
+                # net time (docs/RED_TEAM.md T2): hung time saved, minus what the newly killed legitimate tasks
+                # burned before the kill (net_burn), minus the work a rerun of them repeats (net_rerun)
+                "legit_kills": g["legit_failed"] - s["legit_failed"],
+                "net_burn_ns": (s["bad_ns"] - g["bad_ns"]) - (g["legit_killed_burn_ns"] - s["legit_killed_burn_ns"]),
+                "net_rerun_ns": (s["bad_ns"] - g["bad_ns"]) - (g["legit_killed_burn_ns"] - s["legit_killed_burn_ns"])
+                                - (g["legit_killed_dur_ns"] - s["legit_killed_dur_ns"]),
+                "total_ns_static": s["total_ns"],
             }
         out[pname]["_audit_intact"] = pr["audit_chain_intact"] and pr.get("integrity_ok", True)
     return roster, seed, out

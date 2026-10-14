@@ -43,21 +43,21 @@ def _drive(gov, boundary_id, n):
 
 @pytest.fixture
 def gov(tmp_path):
-    g = Governor(store_path=str(tmp_path / "store"))
+    g = Governor(unverified_operators=True, store_path=str(tmp_path / "store"))
     g.boundaries.create_boundary("cpu", "cpu", 100)
     return g
 
 
 class TestCircuitBreaker:
     def test_breaker_holds_tightening_after_limit(self, tmp_path):
-        g = Governor(store_path=str(tmp_path / "s"), max_auto_tightenings=3)
+        g = Governor(unverified_operators=True, store_path=str(tmp_path / "s"), max_auto_tightenings=3)
         g.boundaries.create_boundary("cpu", "cpu", 100)
         assert _drive(g, "cpu", 10) == 3
         assert g.tightening_holds, "held tightenings are recorded"
         assert "human" in g.tightening_holds[-1]["reason"]
 
     def test_acknowledgement_by_operator_resumes_tightening(self, tmp_path):
-        g = Governor(store_path=str(tmp_path / "s"), max_auto_tightenings=3)
+        g = Governor(unverified_operators=True, store_path=str(tmp_path / "s"), max_auto_tightenings=3)
         g.boundaries.create_boundary("cpu", "cpu", 100)
         _drive(g, "cpu", 10)
         with pytest.raises(ValueError):
@@ -66,7 +66,7 @@ class TestCircuitBreaker:
         assert _drive(g, "cpu", 2) == 2
 
     def test_breaker_is_per_boundary(self, tmp_path):
-        g = Governor(store_path=str(tmp_path / "s"), max_auto_tightenings=3)
+        g = Governor(unverified_operators=True, store_path=str(tmp_path / "s"), max_auto_tightenings=3)
         g.boundaries.create_boundary("cpu", "cpu", 100)
         g.boundaries.create_boundary("mem", "mem", 100)
         _drive(g, "cpu", 10)
@@ -74,13 +74,13 @@ class TestCircuitBreaker:
         assert _drive(g, "mem", 10) == 3
 
     def test_on_by_default(self, tmp_path):
-        g = Governor(store_path=str(tmp_path / "s"))
+        g = Governor(unverified_operators=True, store_path=str(tmp_path / "s"))
         g.boundaries.create_boundary("cpu", "cpu", 100)
         assert _drive(g, "cpu", 10) == Governor.DEFAULT_MAX_AUTO_TIGHTENINGS
         assert g.tightening_holds
 
     def test_can_be_turned_off(self, tmp_path):
-        g = Governor(store_path=str(tmp_path / "s"), max_auto_tightenings=None)
+        g = Governor(unverified_operators=True, store_path=str(tmp_path / "s"), max_auto_tightenings=None)
         g.boundaries.create_boundary("cpu", "cpu", 100)
         assert _drive(g, "cpu", 10) > Governor.DEFAULT_MAX_AUTO_TIGHTENINGS
         assert not g.tightening_holds
@@ -127,7 +127,7 @@ class TestInterpretationLayer:
 
     @pytest.fixture
     def semantic(self, tmp_path):
-        g = Governor(store_path=str(tmp_path / "store"), use_semantic=True)
+        g = Governor(unverified_operators=True, store_path=str(tmp_path / "store"), use_semantic=True)
         g.boundaries.create_boundary("cpu", "cpu", 100)
         return g
 

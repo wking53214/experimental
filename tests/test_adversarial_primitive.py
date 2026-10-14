@@ -92,8 +92,7 @@ class TestAdversarialViolationInjection:
         Without semantic layer: adversary can force blind tightening.
         This shows semantic layer is NECESSARY against violation injection.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_violation_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_violation_{int(time.time()*1000)}",
             use_semantic=False  # No defense
         )
 
@@ -114,8 +113,7 @@ class TestAdversarialViolationInjection:
         With semantic layer: adversary's injected violations are detected as anomalies.
         System MAY tighten, but only if violations are truly anomalous.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_violation_defended_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_violation_defended_{int(time.time()*1000)}",
             use_semantic=True  # Defense active
         )
 
@@ -148,8 +146,7 @@ class TestAdversarialMetricsManipulation:
         Adversary lies about post-adaptation metrics to force rollback.
         Question: Can they cause cascading rollbacks?
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_metrics_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_metrics_{int(time.time()*1000)}",
             use_semantic=False
         )
 
@@ -187,8 +184,7 @@ class TestAdversarialCascadePrevention:
         Adversary tries to trigger 5+ rollbacks in quick succession.
         Prevention rules should block after first few.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_cascade_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_cascade_{int(time.time()*1000)}",
             use_semantic=False
         )
 
@@ -223,8 +219,7 @@ class TestAdversarialBoundedness:
         Adversary requests 10 consecutive tightening proposals.
         System limit should prevent infinite reduction.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_bounded_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_bounded_{int(time.time()*1000)}",
             use_semantic=False
         )
 
@@ -263,8 +258,7 @@ class TestAdversarialMonotonicity:
         Even with rollbacks, version numbers only increase.
         This proves system can't be tricked into earlier state.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_monotonic_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_monotonic_{int(time.time()*1000)}",
             use_semantic=False
         )
 
@@ -304,8 +298,7 @@ class TestAdversarialAuthority:
         Adversary submits 100 LOOSEN proposals.
         Zero should be auto-approved.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_authority_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_authority_{int(time.time()*1000)}",
             use_semantic=False
         )
 
@@ -341,8 +334,7 @@ class TestAdversarialUtility:
         Mix: adversarial violations + real anomalies.
         System should still detect real pattern.
         """
-        governor = Governor(
-            store_path=f"/tmp/adv_utility_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/adv_utility_{int(time.time()*1000)}",
             use_semantic=True  # With semantic layer
         )
 

@@ -39,8 +39,13 @@ class Governor:
                  audit_path: Optional[str] = None, baseline_check_at: Optional[int] = None,
                  strict_patterns: bool = False, evidence_window: Optional[int] = None,
                  audit_anchor: Optional[dict] = None, signal_sources: Optional[OperatorRegistry] = None,
-                 anchor_store=None):
+                 anchor_store=None, unverified_operators: bool = False):
         """Limits on automatic tightening (see docs/THREAT_MODEL.md).
+
+        unverified_operators: without an OperatorRegistry every operator action (approving a loosening,
+        acknowledging held tightenings, registering an expected pattern) is a bare claim of identity, so
+        by default the governor refuses them. Pass True only for demos and tests that have no registry;
+        the audit log then records identity_verified=False on each (red team finding S2, docs/RED_TEAM.md).
 
         use_semantic and max_auto_tightenings are on by default, per the theory document.
         require_fresh_evidence and tighten_cooldown_s stay off by default. Pass None to
@@ -87,6 +92,7 @@ class Governor:
         self.detection = detection
         self.require_fresh_evidence = require_fresh_evidence
         self.tighten_cooldown_s = tighten_cooldown_s
+        self.unverified_operators = bool(unverified_operators)
         self.max_auto_tightenings = max_auto_tightenings
         self.clock = clock
         self._evidence_cursor: dict = {}
@@ -426,6 +432,10 @@ class Governor:
         registry is configured and it does not; False when there is no registry (claim only)."""
         registry = self.authority.operators
         if registry is None:
+            if not self.unverified_operators:
+                self.audit.append("operator_auth_failed", {"operator_id": operator_id, "reason": "no registry"})
+                raise PermissionError("no OperatorRegistry is configured, so this operator action cannot be "
+                                      "authenticated; construct Governor(unverified_operators=True) to accept bare claims")
             return False
         if not registry.authenticate(operator_id, credential):
             self.audit.append("operator_auth_failed", {"operator_id": operator_id})

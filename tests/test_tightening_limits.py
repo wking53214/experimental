@@ -19,7 +19,7 @@ def _drive(g, n, bid="api"):
 
 def make(tmp_path, **kw):
     now = [0.0]
-    g = Governor(store_path=str(tmp_path), clock=lambda: now[0], **kw)
+    g = Governor(unverified_operators=True, store_path=str(tmp_path), clock=lambda: now[0], **kw)
     g.boundaries.create_boundary("api", "rate", 100.0)
     return g, now
 

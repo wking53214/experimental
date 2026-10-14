@@ -14,6 +14,7 @@ committed numbers, not a reading of the Rust source. It is a model of the kernel
 usage: python experiments/stack_trace_sim.py [--csv testdata/traces/stack_trace_v1.csv] [--policies a,b]
        [--slice 250] [--out experiments/stack_trace_sim_results.json] [--quiet]
 """
+import math
 import argparse, csv, json, os, sys, tempfile
 from collections import defaultdict
 from pathlib import Path
@@ -50,6 +51,9 @@ def _recommended_cap(k):
 for _k in (1, 2, 3, 5, 8):
     POLICIES[f"recommended_cap{_k}"] = _recommended_cap(_k)
 # Round 10: the cap plus the drift hold; and the increase-rate sweep for the pulse formula.
+for _k in (8, 16):
+    POLICIES[f"twoway_h{_k}"] = (lambda k: lambda defaults=None: HysteresisController(
+        defaults or {"deadline_ns": 100_000_000}, calm_run=k, steps_per=5, increase=0.02, floor=0.729, drift_factor=1.5))(_k)
 POLICIES["aimd_capped_drift"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02,
                                                                     floor=0.729, drift_factor=1.5)
 for _inc in (0.01, 0.02, 0.05, 0.10):
@@ -126,6 +130,47 @@ class AIMDController:
 
     def ingest(self, traps):
         return []
+
+
+class HysteresisController(AIMDController):
+    """A two-way limiter with the three things the red team gave the baseline that the author's never had
+    (docs/RED_TEAM.md B2): an increase needs calm_run consecutive calm slices, not one; one decrease step per
+    steps_per traps in a slice (at most max_steps), which is the ratchet's own step rule; and declared expected-load
+    traps are not counted (the ratchet's is_expected hook). Everything else is AIMDController unchanged."""
+
+    def __init__(self, defaults, calm_run=16, steps_per=5, max_steps=3, exclude_expected=True, **kw):
+        super().__init__(defaults, **kw)
+        self.calm_run, self.steps_per, self.max_steps, self.exclude_expected = calm_run, steps_per, max_steps, exclude_expected
+        self.calm = {}
+
+    def observe_slice(self, agent, summary):
+        orig = float(self.defaults["deadline_ns"])
+        cur = self.limit.get(agent, orig)
+        traps = summary["deadline_traps"]
+        if self.exclude_expected:
+            traps = max(0, traps - summary.get("expected_trapped", 0))
+        share = traps / max(1, summary["tasks"])
+        drifting = False
+        if self.drift_factor is not None:
+            m = summary.get("completed_median_ns")
+            if m:
+                ms = self.medians.setdefault(agent, []); ms.append(float(m))
+                if agent not in self.baseline and len(ms) >= self.baseline_slices:
+                    srt = sorted(ms[: self.baseline_slices]); self.baseline[agent] = srt[len(srt) // 2]
+                if agent in self.baseline and ms[-1] > self.drift_factor * self.baseline[agent]:
+                    drifting = True; self.counts["drift_held"] = self.counts.get("drift_held", 0) + 1
+        self.calm[agent] = self.calm.get(agent, 0) + 1 if share < self.calm_share else 0
+        if drifting:
+            pass
+        elif traps >= self.min_traps and share >= self.min_rate:
+            steps = 1 if not self.steps_per else max(1, min(self.max_steps, traps // self.steps_per))
+            for _ in range(steps):
+                cur = max(orig * self.floor, cur * self.factor)
+            self.counts["decrease"] += steps
+        elif share < self.calm_share and cur < orig and self.calm[agent] >= self.calm_run:
+            cur = min(orig, cur + self.increase * orig); self.counts["increase"] += 1
+        self.limit[agent] = cur
+        self.min_limit[agent] = min(self.min_limit.get(agent, orig), cur)
 
 
 def is_controller(obj):
@@ -214,17 +259,39 @@ def run_slice(agent, rows, start, stop, limits, canary=None):
         "bad": int((bad == 1).sum()), "bad_caught": int(((bad == 1) & trapped).sum()),
         "deadline_traps": int(over.sum()), "token_traps": int(tok_trap.sum()), "memory_traps": int(mem_trap.sum()),
         "bad_ns": int(burned[bad == 1].sum()), "total_ns": int(burned.sum()),
+        # time accounting for the net-time metric (docs/RED_TEAM.md T2): what the killed legitimate tasks burned
+        # before they were killed, and how long they would have run (the work a rerun has to repeat)
+        "legit_killed_burn_ns": int(burned[legit & trapped & (exp == 0)].sum()),
+        "legit_killed_dur_ns": int(dur[legit & trapped & (exp == 0)].sum()),
         "canary_tasks": int(is_canary.sum()), "canary_deadline_traps": int((is_canary & over).sum()),
         "bad_in_slice": int((bad == 1).sum()),
-        "completed_median_ns": float(np.median(completed)) if len(completed) else None,
-        "completed_q": [float(v) for v in np.percentile(completed, QUANTILE_POINTS, method=os.environ.get("QUANTILE_METHOD", "nearest"))] if len(completed) else None,
+        "completed_median_ns": kernel_median(completed) if len(completed) else None,
+        "completed_q": kernel_quantiles(completed, QUANTILE_POINTS) if len(completed) else None,
     }
     return traps, summary
 
 
+def kernel_median(values) -> float:
+    """The kernel example's median: the upper middle element, sorted[len / 2]. np.median averages the two middles
+    on even counts and differed from the kernel on most slices (red team, docs/RED_TEAM.md K1)."""
+    v = np.sort(np.asarray(values))
+    return float(v[len(v) // 2])
+
+
+def kernel_quantiles(values, points) -> list:
+    """The kernel example's nearest-rank quantiles: index round((n - 1) p) with Rust's f64::round (half away from
+    zero). numpy's "nearest" rounds half to even, which disagrees on every tie. QUANTILE_METHOD=<numpy method> keeps
+    the numpy variants for the sensitivity check in docs/REPRODUCIBILITY.md."""
+    method = os.environ.get("QUANTILE_METHOD", "kernel")
+    if method != "kernel":
+        return [float(x) for x in np.percentile(values, points, method=method)]
+    v = np.sort(np.asarray(values)); n = len(v)
+    return [float(v[int(math.floor((n - 1) * (p / 100.0) + 0.5))]) for p in points]
+
+
 def totals(rows):
     keys = ("tasks", "legit", "legit_failed", "expected_trapped", "bad", "bad_caught", "deadline_traps", "token_traps",
-            "memory_traps", "bad_ns", "total_ns")
+            "memory_traps", "bad_ns", "total_ns", "legit_killed_burn_ns", "legit_killed_dur_ns")
     return {k: int(sum(r[k] for r in rows)) for k in keys}
 
 
