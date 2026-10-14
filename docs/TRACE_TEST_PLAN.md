@@ -450,3 +450,33 @@ A first attempt crashed: the per-slice trap tally skipped traps the policy did n
 **What this would establish.** If Z1 and Z3 hold with Z2, the asymmetry's value is specific and measurable: an attacker cannot earn budget back by behaving, and a legitimate regression is not ground down, at the price of a capped saving on sustained attacks. If Z1 fails, the one-way rule is not where the value is and the claim should say so.
 
 **Change before any result was scored.** The first build of `aimd` reused the ratchet's 2,000-task trigger window for its decrease, so while a pulse was anywhere in that window the increase could never fire (the smoke run showed zero increases), which would have made the comparison a ratchet-to-the-floor against a ratchet. A two-way limiter reacts to its current signal, so the baseline now decreases when the current slice has at least 3 traps and at least 1% of its tasks trapped, and increases when the slice's share is under 0.5%. The first run's results file was deleted unread. Predictions unchanged.
+
+### Round 9, result (2026-10-14; seeds 8001-8020; `experiments/stack_trace_multiseed_results_round9.json`)
+
+Pulse roster, hung-task time saved against static / legitimate-timeout cost in points (20 seeds):
+
+| Agent | ratchet (recommended) | ratchet + validation (keyed 10%) | aimd (+2% per calm slice) | aimd_fast (+10%) |
+|---|---|---|---|---|
+| attacker-pulse-2 | 25% / 0.4 | 22% / 0.4 | **54%** / 23.9 | 13% / 2.9 |
+| attacker-pulse-4 | 23% / 0.5 | 21% / 0.4 | 24% / 5.4 | 0% / 0.0 |
+| attacker-pulse-8 | 16% / 0.4 | 15% / 0.3 | **0%** / 0.0 | 0% / 0.0 |
+| runaway-steady | 26% / 0.5 | 23% / 0.4 | **65%** / 31.0 | 65% / 31.0 |
+| attacker-lowslow (0.8%) | 13% / 0.2 | 11% / 0.1 | **53%** / 22.6 | 41% / 16.0 |
+| regressed-0 (honest, 3x) | tightened 2 of 20, 0.2 | 2 of 20, 0.2 | 20 of 20, **24.3** | 20 of 20, 24.3 |
+| healthy-0 | untouched | untouched | untouched | untouched |
+| healthy-tail (0.6%) | 8 of 20, 0.3 | 8 of 20, 0.1 | 20 of 20, **26.5** | 20 of 20, 24.9 |
+
+Full v1 roster, pooled: hung time saved on deadline attackers 23.7% (ratchet), 21.2% (ratchet + validation), **56.5%** (aimd), 55.8% (aimd_fast); on sustained runaways 25.6% against 64.1%; on the episode runaway 16.7% against 13.9%. Mean legitimate cost over the 16 should-not agents: **1.99 points (ratchet) against 17.75 (aimd)**, worst single agent 19.7 against 67.7.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Z1 | Period-8 pulser: aimd at most 10%, ratchet at least 20%; aimd_fast worse | aimd 0%, aimd_fast 0%; ratchet **16%** | Half: the direction held, the ratchet's number did not. And on periods 2 and 4 the result reversed: aimd saved 54% and 24%, because a 10% decrease per pulse against a 2% increase per calm slice nets downward unless the quiet stretch is long |
+| Z2 | Sustained runaway: aimd saves more (at least 50% against about 26%) | 65% against 26% | Yes |
+| Z3 | Honest regression: aimd at least 30 points, ratchet under 1 | 24.3 against 0.2 | Direction yes, number no |
+| Z4 | Healthy untouched; healthy-tail oscillates under aimd, ratchet about 40% | Untouched; healthy-tail **ground to the floor** under aimd on every seed (26.5 points), not oscillating: three or more traps in a 250-task slice happens about one slice in five at a 0.6% tail, and each costs 10% while a calm slice returns 2%; ratchet 8 of 20 | Half |
+| Z5 | Low-and-slow: neither over 20%; aimd less | aimd **53%**, ratchet 13% | **No** |
+| Z6 | v1 pooled: aimd's legitimate cost higher; aimd saves more on sustained, less on intermittent | 17.75 against 1.99; 64% against 26%; 13.9% against 16.7% | Yes |
+
+**What this establishes, which is not what the thesis said.** The one-way rule by itself is not what protects anyone. A two-way limiter with no breaker goes to the floor on anything that keeps tripping it, honest or not, and so it saves two to four times more hung time than the ratchet *and* ruins every honest agent with a tail or a regression. The ratchet's measured advantage is availability for honest agents, bought with the breaker (a cap on automatic steps), the drift hold, and the human gate; its measured price is a saving capped at the breaker's arithmetic. The specific "attackers cannot earn budget back" benefit exists but is narrow: it shows only when an attacker's quiet stretch is long enough for the increase to outrun the decrease (period 8 here), and even there the ratchet saves 16%, not 20%.
+
+**The question this leaves, pre-registered now as round 9b.** Is it the one-way rule or the cap that protects honest agents? A two-way limiter with the breaker's cap (`aimd_capped`: the same `aimd`, floor at 72.9% of the original instead of 20%) isolates them. Same seeds (8001-8020), same rosters. Predictions: (B1) its legitimate cost on the v1 should-not agents is within 2 points of the ratchet's 1.99, and on regressed-0 and healthy-tail under 3 points each, so the cap, not the direction, is what protects honest agents; (B2) its saving on sustained runaways equals the ratchet's cap (about 26%); (B3) on the period-8 pulser it saves at most 8%, under the ratchet's 16%, because it gives the budget back, which is the one-way rule's only unique contribution; (B4) on the low-and-slow attacker it saves within 5 points of the ratchet's 13%.
