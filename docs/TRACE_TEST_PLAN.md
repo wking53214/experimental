@@ -528,3 +528,41 @@ Three checks a reviewer would ask for, run before any writing.
 **10c. Replication.** The whole comparison (ratchet, `aimd`, `aimd_capped`, `aimd_capped_drift`) on fresh seeds 9001-9020 and on the held-out roster as well as the pulse roster. Prediction D6: the three decomposition statements hold on both (cap protects honest agents, drift hold protects the honest regression, direction matters only for patient pulsers), with every number within 5 points of the round-9 values on the pulse roster.
 
 **Also before writing:** `docs/references.bib` gains the prior art the novelty check named (pledge/unveil, seccomp, AIMD, Netflix concurrency-limits, Kayenta, Rehak 2009). Not a prediction, a debt.
+
+### Round 10, results (2026-10-14; `..._round10ab.json` on seeds 8001-8020, `..._round10c.json` on seeds 9001-9020)
+
+**10a, the capped two-way limiter with the drift hold.**
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| D1 | Honest regression cost at most 1 point | 0.00 (ratchet 0.17) | Yes |
+| D2 | v1 pooled should-not cost within 1 point of the ratchet | **1.99 against 1.99** (cap alone: 3.96) | Yes |
+| D3 | Period-8 pulser still 0%; sustained about 25% | 0% (ratchet 16%); 25% (ratchet 26%) | Yes |
+| D4 | `attacker-inflate` in v1 saved at most 5% without the excess release | 25% (ratchet 26%) | **No, and the prediction was aimed at the wrong agent**: that attacker hangs from its first slice and spends the breaker before it starts inflating (round 1 noted this), so the drift hold never engages. The agents that inflate *first* are in the held-out roster, where the predicted effect appears: `ho-inflate-mild` 19% under the ratchet against **0%** under cap plus drift, `ho-inflate-strong` 21% against 0%, `ho-inflate-ramp` 16% against 8% |
+
+**10b, the formula.** Cells of hung time saved by the capped two-way limiter, against the ratchet in the first column; `*` where `(period - 1) x increase >= 0.10` says the attacker recovers its budget; `D` where the limiter saved at least 8 points less than the ratchet.
+
+| period | ratchet | 1% | 2% | 5% | 10% |
+|---|---|---|---|---|---|
+| 2 | 25% | 23% | 22% | 20% | 6% *D |
+| 4 | 23% | 19% | 15% D | 0% *D | 0% *D |
+| 8 | 16% | 5% D | 0% *D | 0% *D | 0% *D |
+| 16 | 10% | 0% *D | 0% *D | 0% *D | 0% *D |
+
+D5: every cell the formula marks is a D (10 of 10), every cell it does not mark is not, except the two boundary-adjacent cells the prediction allowed (period 4 at 2%: 6% recovery, 8-point drop; period 8 at 1%: 7% recovery, 11-point drop). **Held.** The direction's value is a function of two numbers an operator knows: how long an attacker can afford to wait, and how fast the limiter gives budget back.
+
+**10c, replication on fresh seeds and on the held-out roster** (pooled legitimate cost on should-not agents; hung time saved on attackers):
+
+| | ratchet | aimd (no cap) | aimd + cap | aimd + cap + drift |
+|---|---|---|---|---|
+| pulse roster, pooled cost | 0.12 | 17.04 | 3.23 | 0.55 |
+| pulse roster, honest regression | 0.2 | 24.6 | 8.4 | 0.3 |
+| pulse roster, period-8 / period-16 pulser saved | 17% / 10% | 0% / 0% | 0% / 0% | 0% / 0% |
+| pulse roster, sustained runaway saved | 26% | 65% | 26% | 26% |
+| held-out roster, pooled cost | 2.01 | 21.90 | 4.19 | 1.94 |
+| held-out, 4x regression / 3.5x drift cost | 0.2 / 0.1 | 31.4 / 26.8 | 9.0 / 6.3 | 0.0 / 0.0 |
+| held-out, inflate-first attackers saved (mild / strong / ramp) | 19 / 21 / 16% | 53 / 73 / 67% | 25 / 27 / 27% | **0 / 0 / 8%** |
+
+D6: all three statements hold on both rosters, and every pulse-roster number is within 5 points of round 9. **Held.**
+
+**The decomposition, final form.** On these workloads the ratchet equals: a cap (protects honest agents, caps the saving) plus a drift hold (protects honest regressions and drifts) plus an excess release (recovers the saving against attackers who inflate first, which the drift hold alone gives away entirely) plus the one-way rule (keeps the budget from an attacker who can wait, by the formula above). A two-way limiter with the first two matches the ratchet on every honest agent to within a point and on every sustained attacker; it loses to the ratchet only against patient pulsers and, without the excess rule, against inflate-first attackers. The human gate is the price of the direction: nobody but a person restores anyone's budget. That is the claim the project can defend.
