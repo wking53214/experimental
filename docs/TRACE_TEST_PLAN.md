@@ -390,3 +390,40 @@ A first attempt crashed: the per-slice trap tally skipped traps the policy did n
 **What this round settles.** Criterion 10(d)'s 6-slice bar, at a 10% canary, asks the first look to confirm, and at this volume it confirms gross harm about two times in three and marginal harm almost never. A 30% canary confirms gross harm 56 to 59 times in 60 and costs a third of the saving. Neither clears the bar once the late-released regressions and the 1.5%-tail agent are in the denominator, and no cadence trick changes that. The honest options are the ones in `docs/DEPLOYMENT_CHECKLIST.md`: pick a canary share for the harm you fear, or rewrite the bar as a judgment call and say so.
 
 **Same-seed control** (`..._round7_control.json`: seeds 6001-6020, per-class, 10% canary, reverted code): slow-from-start within 6 slices 39 of 60, wrong tightenings 47 of 108, runaways falsely DEGRADED **11 of 80**. So the 10 of 80 above was the seeds, not the change: on identical code the runaway false-DEGRADED share is 4% on seeds 5001-5020 and 14% on seeds 6001-6020. Criterion 10's "at most 10%" on that half sits inside seed-to-seed variation at 80 agent-seeds, which is one more reason not to read a pass or fail on it as settled by a single 20-seed run.
+
+## Eighth round: gaming the canary (T16), predictions written before any code ran
+
+**The attack.** The validation layer keeps every tenth task by sequence number on the original deadline and compares that group's trap share with the rest. The rule is public and the sequence number is the agent's own. An agent that hangs tasks but completes the ones it knows are canaries makes the main share high and the canary share near zero: the verdict reads DEGRADED, a restore request is filed for a person, and automatic tightening of that boundary is held until the person decides. The validation layer, built to catch wrong tightenings, becomes a way to get a right one undone and to freeze the ratchet meanwhile. Listed as untested in `p3-2-governance-research/experiments/adversarial-testbed.md`.
+
+**The fix.** Choose canary tasks by a keyed hash of (key, agent, sequence number) with a key the agent cannot read, so membership is unpredictable from the agent's side. With the same hash in the Python model and the Rust example (64-bit FNV-1a over the UTF-8 bytes of `key|agent|seq`), the kernel check carries over. The share stays the same; only the choice of tasks changes.
+
+**Roster `canary_v1`** (3 agents x 8,000 tasks, generated under each seed): `attacker-canary` hangs 5% of its non-canary tasks (sequence number not a multiple of 10) and never a canary task; `control-runaway` hangs 5% of all tasks; `healthy`. Validated policy, 10% canary, predictable selection against keyed selection. 20 fresh seeds (7001-7020).
+
+| # | Prediction |
+|---|---|
+| T1 | Predictable selection: the attacker is tightened by the rate rule in 20 of 20 seeds, then receives a DEGRADED verdict with a restore request in at least 18 of 20, and its boundary enters the review hold. The layer is gamed |
+| T2 | Predictable selection: the control runaway gets no restore request in at least 18 of 20 (as in round 5) |
+| T3 | Keyed selection: the same attacker, still sparing tasks whose sequence number is a multiple of 10, gets no DEGRADED verdict in at least 18 of 20, and its hung-task saving is within 5 points of the control runaway's |
+| T4 | Keyed selection changes nothing for the control runaway or the healthy agent |
+| T5 | Not measured, argued: against keyed selection an agent has no better strategy than hanging uniformly, which is the runaway case the layer already handles. An agent that can read the key, or observe which of its tasks got the longer deadline before deciding to hang, is outside this fix; the kernel must not reveal the deadline to the task |
+
+**What would change my mind.** If T1 fails (the attacker is not gamed under predictable selection), the attack does not exist and the keyed selection is unnecessary complexity. If T3 fails, the hash is not hiding membership and the fix is wrong.
+
+### Round 8, result (2026-10-14; seeds 7001-7020; `experiments/stack_trace_multiseed_results_round8.json`)
+
+| Policy | attacker-canary | control-runaway | healthy |
+|---|---|---|---|
+| recommended (no canary) | tightened 20 of 20, saved 25.9% | tightened 20 of 20, saved 26.0% | untouched |
+| validated, predictable canary | tightened 20 of 20; **DEGRADED on 140 of 140 reviews; restore request 20 of 20; review hold 20 of 20**; saved 25.9% (its canaries never hang, so the canary costs it nothing) | no DEGRADED; 5 IMPROVED, 135 UNCHANGED; saved 23.4% | untouched |
+| validated, keyed canary | tightened 20 of 20; DEGRADED 4 of 140 reviews, restore request 1 of 20; 20 IMPROVED; saved 23.2% | DEGRADED 1 of 140, restore 1 of 20; 19 IMPROVED; saved 23.3% | untouched |
+
+| # | Prediction | Held? |
+|---|---|---|
+| T1 | Predictable: attacker tightened 20 of 20, DEGRADED with restore in at least 18, review hold | Yes, on every review of every seed |
+| T2 | Predictable: control runaway no restore in at least 18 | Yes, 20 of 20 |
+| T3 | Keyed: attacker no DEGRADED in at least 18; saving within 5 points of the control | Yes: 19 of 20; 23.2% against 23.3% |
+| T4 | Keyed changes nothing for the control and the healthy agent | Yes (the control's 1 of 20 is the seed noise seen in rounds 5 to 7) |
+
+**What this establishes.** With a predictable canary the validation layer is a loosening lever: an agent that completes exactly its canary tasks and hangs the rest gets a correct tightening declared harmful on every review, a restore request filed to a person, and automatic tightening of its boundary frozen while that request waits. A person who trusts the verdict hands the attacker its full budget back. Keyed selection closes it: the same attacker, still sparing every tenth task, is treated like the honest runaway, and the honest runaway is unchanged. The key is now `TrapPolicy(canary_key=...)`, passed to the kernel in the canary plan, and `docs/DEPLOYMENT_CHECKLIST.md` item 6 says to set it. Kernel side: `governed_workload --canary-key`, same hash (reference vectors in `tests/test_trace_sim.py`).
+
+**Limits.** An agent that can read the key, or that can tell which deadline a task is running under before deciding whether to hang it, defeats this; the kernel must not expose the deadline to the task. A share of 10% chosen by hash is still a share of 10%: everything round 5 said about confirmation speed and benefit still holds. Not measured: an attacker that probes membership by hanging a task and watching whether it is killed at 72.9 or 100 ms, then adapts per task; that needs per-task observability the trace model does not represent, and is the next thing to rule out if the kernel ever leaks it.

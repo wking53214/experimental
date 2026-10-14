@@ -79,7 +79,14 @@ ROSTER_HOLDOUT = [
     ("ho-slowstart", "slow_from_start", 0, "ml", "slow from the first task", dict(median_ms=55, sigma=.5)),
     ("ho-batch", "scheduled_batch", 0, "data", "declared heavy jobs", dict(median_ms=15, sigma=.4, every=600)),
 ]
-ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT}
+# Eighth round (T16): an attacker that knows the canary rule (every 10th task by seq) completes exactly those tasks.
+ROSTER_CANARY = [
+    ("attacker-canary", "attacker_canary", 1, "ext", "hangs 5% of non-canary tasks (seq % 10 != 0), never a canary task",
+     dict(median_ms=20, sigma=.5, p=0.05, every=10)),
+    ("control-runaway", "runaway", 1, "batch", "hangs 5% of all tasks", dict(median_ms=20, sigma=.5, p=0.05)),
+    ("healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
+]
+ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
@@ -112,6 +119,10 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         hang = rng.random(n) < p
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = {"attacker_inflate": "inflated", "attacker_lowslow": "lowslow"}.get(profile, "runaway")
+    if profile == "attacker_canary":
+        hang = (rng.random(n) < prm["p"]) & (seq % prm["every"] != 0)
+        dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
+        bad[hang] = 1; regime[hang] = "canary_gamed"
     if profile == "attacker_inflate_first":
         f = 1 + (prm.get("factor", 2.2) - 1) * np.clip((seq - prm["infl_at"]) / float(prm.get("ramp", 1)), 0, 1)
         dur *= np.where(seq >= prm["infl_at"], f, 1.0)

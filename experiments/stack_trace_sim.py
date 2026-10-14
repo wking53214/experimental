@@ -38,6 +38,9 @@ POLICIES = {
 # Sixth round: canary share and per-class thresholds (docs/TRACE_TEST_PLAN.md). Class = the trace's team column.
 CLASS_RATES = {"core": 0.02, "ext": 0.005}
 for _share in (0.10, 0.20, 0.30):
+    POLICIES[f"keyed_c{int(_share * 100)}"] = (lambda sh: lambda: TrapPolicy(
+        min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",),
+        validate_after=4, canary_share=sh, canary_key="k-7f3a"))(_share)
     POLICIES[f"validated_c{int(_share * 100)}"] = (lambda sh: lambda: TrapPolicy(
         min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",),
         validate_after=4, canary_share=sh))(_share)
@@ -67,6 +70,22 @@ def load_trace(csv_path):
     return out
 
 
+def fnv1a64(data: bytes) -> int:
+    h = 0xcbf29ce484222325
+    for b in data:
+        h ^= b
+        h = (h * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF
+    return h
+
+
+def canary_mask(seq, every, agent, key=None):
+    """Which tasks run on the original deadline. Without a key: every `every`th task by seq (predictable, T16). With
+    a key: tasks whose FNV-1a 64 hash of "key|agent|seq" is a multiple of `every` (the Rust example does the same)."""
+    if key is None:
+        return (seq % every) == 0
+    return np.array([fnv1a64(f"{key}|{agent}|{int(q)}".encode("utf-8")) % every == 0 for q in seq], dtype=bool)
+
+
 def run_slice(agent, rows, start, stop, limits, canary=None):
     """The kernel's job for one slice: check each task against the limits it read at the start of the slice.
 
@@ -85,7 +104,7 @@ def run_slice(agent, rows, start, stop, limits, canary=None):
     is_canary = np.zeros(len(dur), dtype=bool)
     if canary and canary.get("share", 0) > 0:
         every = max(1, int(round(1.0 / canary["share"])))
-        is_canary = (seq % every) == 0
+        is_canary = canary_mask(seq, every, agent, canary.get("key"))
     dl_task = np.where(is_canary, int(canary["deadline_ns"]) if canary else int(dl), int(dl))
     over = dur > dl_task
     tok_trap = (~over) & (tok > tc)
