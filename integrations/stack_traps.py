@@ -110,7 +110,11 @@ class TrapPolicy:
 def _agent_key(agent_id: Any) -> Optional[str]:
     if not isinstance(agent_id, str) or not agent_id:
         return None
-    return agent_id if _SAFE_ID.match(agent_id) else "h-" + hashlib.sha256(agent_id.encode("utf-8", "replace")).hexdigest()[:24]
+    # "h-" is reserved for hashed keys: an ASCII id spelled like a victim's hashed key is hashed again
+    # instead of landing on the victim's boundary (red team finding S4, docs/RED_TEAM.md).
+    if _SAFE_ID.match(agent_id) and not agent_id.startswith("h-"):
+        return agent_id
+    return "h-" + hashlib.sha256(agent_id.encode("utf-8", "replace")).hexdigest()[:24]
 
 
 class TrapBridge:
@@ -141,6 +145,9 @@ class TrapBridge:
         self.verdicts: List[dict] = []             # every verdict issued, in order (also in the audit log)
         self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
+        self._tightened_boundaries: set = set()   # boundaries this bridge has tightened: never evicted
+        self._last_seen: Dict[str, int] = {}      # agent -> ingest sequence of its last event or report
+        self._seen_seq = 0
         self.counts = defaultdict(int)  # skipped_malformed, unmapped, expected, duplicate, agent_cap, ...
 
     def boundary_id(self, agent_key: str, suffix: str) -> str:
@@ -154,6 +161,31 @@ class TrapBridge:
         return float(self.gov.boundaries.get_boundary(self.boundary_id(key, spec[0])).current_limit)
 
     QUANTILE_POINTS = (0.50, 0.75, 0.90, 0.95, 0.99)
+
+    def _touch(self, agent: str) -> None:
+        self._seen_seq += 1
+        self._last_seen[agent] = self._seen_seq
+
+    def _evict_idle_agent(self) -> bool:
+        """Make room for a new agent by forgetting the registered agent that has been quiet longest and whose
+        limits were never tightened. A flood of throwaway ids then churns instead of locking later agents out
+        for good (red team finding S3, docs/RED_TEAM.md). An agent whose limit was tightened is never evicted:
+        its boundary and its evidence must survive. Returns False when every agent has been tightened."""
+        candidates = [a for a in self._agents if not any(
+            self.boundary_id(a, s) in self._tightened_boundaries for _r, (s, _f) in REASON_TO_LIMIT.items())]
+        if not candidates:
+            return False
+        victim = min(candidates, key=lambda a: self._last_seen.get(a, -1))
+        self._agents.discard(victim)
+        for d in (self._tasks, self._slices, self._baseline, self._last_seen, self._medians, self._quantiles,
+                  self._base_q, self._tallied, self._reviews):
+            d.pop(victim, None)
+        for d in (self._recent, self._stamps):
+            for k in [k for k in d if k.startswith(victim + "|")]:
+                d.pop(k, None)
+        self._drifting.discard(victim)
+        self.counts["agent_evicted"] += 1
+        return True
 
     def observe_transactions(self, agent_id: str, n: int, completed_median_ns: Optional[float] = None,
                              completed_quantiles: Optional[list] = None, canary_tasks: int = 0,
@@ -169,6 +201,7 @@ class TrapBridge:
                 and canary_deadline_traps <= canary_tasks):
             canary_tasks, canary_deadline_traps = 0, 0
         self._review_if_due(key)            # over completed slices only: this slice's traps are not in yet
+        self._touch(key)
         self._tasks[key] += n
         self._slices[key].append([n, 0, canary_tasks, canary_deadline_traps])
         q = completed_quantiles
@@ -409,6 +442,8 @@ class TrapBridge:
         if reason not in REASON_TO_LIMIT:
             self.counts["unmapped"] += 1
             return None
+        if agent in self._agents:
+            self._touch(agent)
         if self.policy.reasons is not None and reason not in self.policy.reasons:
             self.counts["reason_not_enforced"] += 1
             return None
@@ -426,10 +461,11 @@ class TrapBridge:
             self.counts["review_hold"] += 1       # a DEGRADED verdict is waiting for a person: no more tightening
             return None
         if agent not in self._agents:
-            if len(self._agents) >= self.max_agents:
+            if len(self._agents) >= self.max_agents and not self._evict_idle_agent():
                 self.counts["agent_cap"] += 1
                 return None
             self._agents.add(agent)
+            self._touch(agent)
             for _r, (s, f) in REASON_TO_LIMIT.items():
                 ctx = ev.get("context") if isinstance(ev.get("context"), dict) else {}
                 configured = ctx.get(f)
@@ -492,5 +528,6 @@ class TrapBridge:
         window.clear()  # the next tightening needs a fresh pattern
         stamps.clear()
         if reply.get("status") in ("applied", "applied_clamped"):
+            self._tightened_boundaries.add(self.boundary_id(agent, suffix))
             self._schedule_review(agent, suffix, reply)
         return reply

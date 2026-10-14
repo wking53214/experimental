@@ -658,3 +658,33 @@ R5: no decisions on healthy agents (held); 1.56 decisions per tightened attacker
 R6: ratchet and `aimd` do not overlap on either number (held). Ratchet and cap-plus-drift overlap on cost and **miss by 0.1 point on the saving** (25.5 against 25.6): not met as written; the intervals are tight because the structure is nearly deterministic across seeds, and a 0.2-point difference is real and immaterial.
 
 **What round 11 adds to the defensible claim.** The decomposition holds under a bimodal shape and fails in two of three parts under a heavy tail, for stated reasons about the signal; the direction's formula is right in sign across widths and intensities and coarse at its threshold; the cap is a dial with a measured exchange rate; and the human gate costs about one decision per twenty thousand tasks on this roster for a benefit that a capped two-way limiter with the drift hold matches on honest agents without any decisions. The white paper should carry all of this, including the Pareto failure and the decisions table, because a referee who finds them first will not believe the rest.
+
+### Round 12, pre-registered before any run (2026-10-14): the red team's findings put to the test
+
+**Context.** Six hostile reviewers attacked the evidence (docs/RED_TEAM.md). Three findings change what rounds 9 to 11 mean and need fresh measurements rather than re-reading: the pulsers were caught in slice 0 by a rate rule whose window had not filled (B1); a two-way limiter with hysteresis on its increase matched or beat the ratchet everywhere (B2); the honest-agent results depend on deadline headroom (T1), and the saving metric is arithmetic while the net time is negative (T2). The model's completed-duration statistics also differed from the kernel's (K1) and are now the kernel's.
+
+**Process change, after finding P1.** This section is committed alone, before any run is launched. The results commit follows and carries the JSON. A referee can check the two commit times against a run's duration.
+
+**Runs.**
+- 12a: roster `phase_v1`, seeds 12001 to 12020, policies `recommended`, `aimd_capped_drift`, `twoway_h8`, `twoway_h16`.
+- 12b: rosters `headroom75_v1` and `headroom60_v1` (the v1 agents under 75 ms and 60 ms deadlines), seeds 12001 to 12020, policies `recommended`, `aimd_capped_drift`, `twoway_h16`.
+- 12c: rosters `v1`, `pulse_v1`, `holdout_v1`, the same seeds as rounds 9 to 11 (8001 to 8020), policies `recommended`, `aimd`, `aimd_capped_drift`, `twoway_h16`, under the kernel-exact statistics. Every number is reported beside its round 9 to 11 value.
+
+All outcomes now carry `legit_kills`, `net_burn_ns` (hung time saved minus what the newly killed legitimate tasks had burned) and `net_rerun_ns` (the same minus the work a rerun repeats). `experiments/score_rounds.py` computes every table below from the JSON and is committed with this section.
+
+**Predictions.**
+
+| # | Prediction | Threshold |
+|---|---|---|
+| Q1 (B1) | The ratchet does not catch a patient pulser. On `pulse-8-ph7` and `pulse-8-ph11` it saves under 5% and tightens in fewer than half the seeds; on `pulse-16-ph15` under 3%. On `pulse-8-ph0` it saves what pulse_v1 gave (16 ± 3%). | all four cells |
+| Q2 (B2) | `twoway_h16` saves at least 14% on the period-8 pulser at every phase and at least 8% on `pulse-16-ph15`, and beats the ratchet by at least 8 points on the ph7, ph11 and ph15 cells. | all cells |
+| Q3 (B2) | `twoway_h16` pooled should-not cost on `phase_v1` is within 0.5 points of the ratchet's; on v1 (12c) within 0.5 points with the slow-from-start pair included and within 0.2 without it. | both |
+| Q4 (T2) | In net time with burn (`net_burn_ns`), the period-8 and period-16 pulsers and `attacker-lowslow` are net negative under every policy that tightens them, in at least 15 of 20 seeds each; `runaway-steady` and `runaway-mild` are net positive under every policy in at least 18 of 20. | all |
+| Q5 (T1) | At 60 ms, the ratchet tightens should-not agents in more than half of agent-seeds and its pooled should-not cost exceeds 6 points; at 75 ms the cost is between the 100 ms value and the 60 ms value. | both |
+| Q6 (T1, T2) | At 60 ms the roster's total net time (burn) is negative under every policy, and `runaway-steady` itself is net negative under the ratchet in at least 15 of 20 seeds. | both |
+| Q7 (T1) | The ratchet and `twoway_h16` stay within 1.0 point of each other in pooled should-not cost at 75 ms and at 60 ms: headroom hurts both alike. | both |
+| Q8 (K1) | Under the kernel-exact statistics, on seeds 8001 to 8020: v1 pooled should-not cost for the ratchet within 0.1 of 1.99; sustained saving within 0.5 point of 25.6%; `pulse_v1` `attacker-pulse-8` within 2 points of 16%; the number of restore requests and operator decisions on v1 within 10% of round 11's 216. | all four |
+| Q9 (M4) | Of the ratchet's operator decisions on v1, at least 50 fall on should-not agents and at least 35 of those on the slow-from-start pair; `attacker-inflate` alone accounts for more than half of the attacker decisions. | all three |
+| Q10 (B2, the headline) | Taking 12a, 12b and 12c together there is no cell in which the ratchet beats `twoway_h16` by 8 or more points of saving, and no honest agent on which `twoway_h16` costs 1.0 point or more above the ratchet except `healthy-tail`. If this holds, the "direction matters" claim is withdrawn, not softened. | both |
+
+**What would falsify the red team.** Q1 or Q2 failing means the cold-start explanation is wrong or hysteresis does not travel to fresh seeds; Q5 failing means the headroom dependence was seed noise; Q8 failing means the committed rounds must be regenerated before they are cited again.

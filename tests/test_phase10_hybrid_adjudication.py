@@ -13,14 +13,14 @@ class TestPhase10BHybridDefault:
         # (docs/BASELINE_COMPARISON.md): the hybrid's traditional layer alarms on ~every step of
         # real many-metric telemetry.
         from src.governance.phase9_integration import GenerativePipeline
-        gov = Governor(store_path="/tmp/p10b_generative", use_semantic=False)
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10b_generative", use_semantic=False)
         gov.boundaries.create_boundary("svc", "cpu", 100)
         for i in range(25):
             gov.ingest_metrics("svc", 1000.0 + i, {"cpu": 40.0 + (i % 3), "mem": 50.0})
         assert isinstance(gov.detector_pipelines["svc"], GenerativePipeline)
 
     def test_ingest_uses_hybrid_pipeline_when_requested(self):
-        gov = Governor(store_path="/tmp/p10b_hybrid", use_semantic=False, detection="hybrid")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10b_hybrid", use_semantic=False, detection="hybrid")
         gov.boundaries.create_boundary("svc", "cpu", 100)
         for i in range(25):
             gov.ingest_metrics("svc", 1000.0 + i, {"cpu": 40.0 + (i % 3), "mem": 50.0})
@@ -28,7 +28,7 @@ class TestPhase10BHybridDefault:
         assert isinstance(gov.detector_pipelines["svc"], HybridDetectorPipeline)
 
     def test_detect_from_pipeline_returns_none_when_calm(self):
-        gov = Governor(store_path="/tmp/p10b_calm", use_semantic=False)
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10b_calm", use_semantic=False)
         gov.boundaries.create_boundary("svc", "cpu", 100)
         gov.patterns.create_pattern("p", "svc", 2, 60)
         for i in range(30):
@@ -37,7 +37,7 @@ class TestPhase10BHybridDefault:
         assert prop is None or prop.direction == AdaptationDirection.TIGHTEN
 
     def test_hybrid_attack_can_propose_tighten(self):
-        gov = Governor(store_path="/tmp/p10b_atk", use_semantic=False)
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10b_atk", use_semantic=False)
         gov.boundaries.create_boundary("svc", "cpu", 100)
         gov.patterns.create_pattern("p", "svc", 2, 60)
         for i in range(30):
@@ -67,14 +67,14 @@ class TestPhase10CAdjudication:
         )
 
     def test_loosen_requires_human_review(self):
-        gov = Governor(store_path="/tmp/p10c_req")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10c_req")
         prop = self._make_loosen_proposal(gov)
         _, result = gov.authorize_proposal(prop)
         assert result == AuthorizationResult.REQUIRES_HUMAN_REVIEW
         assert gov.authority.verify_no_auto_loosen()
 
     def test_submit_for_review(self):
-        gov = Governor(store_path="/tmp/p10c_sub")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10c_sub")
         prop = self._make_loosen_proposal(gov)
         updated = gov.submit_for_review(prop)
         assert updated.status == ProposalStatus.PENDING_REVIEW
@@ -82,7 +82,7 @@ class TestPhase10CAdjudication:
         assert any(p.proposal_id == prop.proposal_id for p in pending)
 
     def test_operator_approve_loosen(self):
-        gov = Governor(store_path="/tmp/p10c_approve")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10c_approve")
         prop = self._make_loosen_proposal(gov)
         gov.submit_for_review(prop)
         approved, version = gov.apply_operator_decision(
@@ -96,7 +96,7 @@ class TestPhase10CAdjudication:
         assert any(d.decided_by == "operator_alice" for d in decisions)
 
     def test_operator_reject_loosen(self):
-        gov = Governor(store_path="/tmp/p10c_reject")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10c_reject")
         prop = self._make_loosen_proposal(gov)
         gov.submit_for_review(prop)
         rejected, result = gov.apply_operator_decision(
@@ -108,7 +108,7 @@ class TestPhase10CAdjudication:
         assert b.current_limit == 50
 
     def test_evidence_pack(self):
-        gov = Governor(store_path="/tmp/p10c_evidence")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10c_evidence")
         prop = self._make_loosen_proposal(gov)
         gov.execute_against_boundary("cpu", 60)
         pack = gov.get_evidence_pack(prop.proposal_id)
@@ -118,7 +118,7 @@ class TestPhase10CAdjudication:
         assert "recent_violations" in pack
 
     def test_tighten_cannot_submit_for_review(self):
-        gov = Governor(store_path="/tmp/p10c_tighten")
+        gov = Governor(unverified_operators=True, store_path="/tmp/p10c_tighten")
         gov.boundaries.create_boundary("cpu", "cpu", 100)
         prop = gov.proposals.create_proposal(
             boundary_id="cpu",

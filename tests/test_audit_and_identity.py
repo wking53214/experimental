@@ -124,7 +124,7 @@ def _gov(tmp_path, **kw):
     reg = OperatorRegistry(iterations=1000)
     reg.register("alice", "alice-secret-1")
     reg.register("bob", "bob-secret-22")
-    g = Governor(store_path=str(tmp_path), operators=reg, **kw)
+    g = Governor(unverified_operators=True, store_path=str(tmp_path), operators=reg, **kw)
     g.boundaries.create_boundary("api", "rate", 50.0)
     return g
 
@@ -166,7 +166,7 @@ class TestVerifiedIdentity:
             g.apply_operator_decision(p.proposal_id, "reject", "alice", credential=None)
 
     def test_without_a_registry_behavior_is_unchanged(self, tmp_path):
-        g = Governor(store_path=str(tmp_path))
+        g = Governor(unverified_operators=True, store_path=str(tmp_path))
         g.boundaries.create_boundary("api", "rate", 50.0)
         p = _loosen(g)
         _, nv = g.apply_operator_decision(p.proposal_id, "approve_loosen", "alice")

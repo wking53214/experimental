@@ -1,10 +1,7 @@
 """The Python model of the kernel (experiments/stack_trace_sim.py) must reproduce the Rust kernel's committed replay
-results: identical static totals and identical tightening decisions on all three committed traces.
-
-Known, accepted difference: in the committed v1 run the kernel example did not act on a tightened MEMORY cap (the leak
-agents' memory traps stayed at their static count after the cap came down), while the model applies whatever limit
-the governor holds. Only the leak agents' memory_traps and legit_failed under memory-tightening policies differ, and
-the recommended policy never tightens memory. That is excluded below and recorded in docs/TRACE_TEST_PLAN.md.
+results: identical static totals, identical tightening decisions and identical bridge counters on all three committed
+traces. (An earlier v1 reference came from a kernel that refused fractional memory caps and needed a hand exception;
+it was regenerated with the current kernel after the red team, docs/RED_TEAM.md K2.)
 """
 import json
 import sys
@@ -36,13 +33,6 @@ def _run(tag):
     return ref, got
 
 
-def _memory_exception(policy, agent, key, ref_agent):
-    """The kernel example ignored a tightened memory cap: see the module docstring."""
-    mem = ref_agent["limits"]["memory_capacity_bytes"]
-    tightened_memory = mem is not None and mem["limit"] < 536870912.0
-    return tightened_memory and agent.startswith("leak-") and key in ("memory_traps", "legit_failed")
-
-
 @pytest.mark.parametrize("tag", sorted(CASES))
 def test_model_matches_the_kernel_replay(tag):
     ref, got = _run(tag)
@@ -50,16 +40,18 @@ def test_model_matches_the_kernel_replay(tag):
     for pname, pr in ref["policies"].items():
         gp = got["policies"][pname]
         assert gp["audit_chain_intact"] and pr["audit_chain_intact"]
+        # The bridge's own counters (drift holds, releases, reviews, below-rate skips) must match slice for slice:
+        # the red team found the old model's median and quantiles disagreed with the kernel's on most slices and
+        # flipped a release and a restore request while every total still matched (docs/RED_TEAM.md K1).
+        assert gp["bridge_counts"] == pr["bridge_counts"], (tag, pname, "bridge_counts")
         for agent, v in pr["agents"].items():
             w = gp["agents"][agent]
             if pname == first:
-                assert w["static"] == {k: v["static"][k] for k in TOTAL_KEYS}, (tag, agent, "static")
+                assert {k: w["static"][k] for k in TOTAL_KEYS} == {k: v["static"][k] for k in TOTAL_KEYS}, (tag, agent, "static")
             assert (w["tightened"], w["first_tightened_slice"]) == (v["tightened"], v["first_tightened_slice"]), (tag, pname, agent)
             for x, lim in v["limits"].items():
                 assert (w["limits"][x] and w["limits"][x]["limit"]) == (lim and lim["limit"]), (tag, pname, agent, x)
             for k in TOTAL_KEYS:
-                if _memory_exception(pname, agent, k, v):
-                    continue
                 assert w["governed"][k] == v["governed"][k], (tag, pname, agent, k)
 
 

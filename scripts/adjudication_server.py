@@ -19,8 +19,12 @@ from src.governance.governor import Governor
 from src.governance.operators import OperatorRegistry
 from src.governance.proposal import AdaptationDirection
 
+# Without ADJUDICATION_OPERATOR_TOKENS the server has no way to authenticate a person, so operator
+# decisions are bare claims (identity_verified=false in the audit log). The governor refuses such
+# claims by default; the server opts in explicitly so the demo still works (docs/RED_TEAM.md S2).
 GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True,
-               audit_path=os.environ.get("ADJUDICATION_AUDIT_LOG") or None)
+               audit_path=os.environ.get("ADJUDICATION_AUDIT_LOG") or None,
+               unverified_operators=not os.environ.get("ADJUDICATION_OPERATOR_TOKENS", "").strip())
 ADJUDICATION_TOKEN = os.environ.get("ADJUDICATION_TOKEN", "").strip()
 MAX_BODY_BYTES = 1_000_000
 DECISIONS = ("approve", "approve_loosen", "approve_disable", "reject", "rejected")
