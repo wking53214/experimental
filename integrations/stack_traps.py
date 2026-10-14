@@ -102,6 +102,7 @@ class TrapBridge:
         self._base_q: Dict[str, list] = {}                      # frozen baseline quantile vector
         self._slices: Dict[str, Deque[list]] = defaultdict(lambda: deque(maxlen=64))   # [tasks, deadline traps]
         self._drifting: set = set()
+        self._slow_cache: Dict[tuple, float] = {}
         self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
         self.counts = defaultdict(int)  # skipped_malformed, unmapped, expected, duplicate, agent_cap, ...
@@ -168,6 +169,9 @@ class TrapBridge:
         five quantiles are fitted (least squares on the logs, geometric grid from 1x to 20x)."""
         if key not in self._base_q or not observed_q:
             return None
+        memo = (key, tuple(observed_q), float(deadline_ns))   # the baseline is frozen, so this is a pure function
+        if memo in self._slow_cache:
+            return self._slow_cache[memo]
         cdf = lambda x: 1.0 - self._survival(key, x)
 
         def inv(target):                                         # baseline quantile function by bisection
@@ -187,6 +191,9 @@ class TrapBridge:
                       for p, o in zip(self.QUANTILE_POINTS, observed_q))
             if err < best:
                 best, best_f = err, f
+        if len(self._slow_cache) >= 4096:
+            self._slow_cache.clear()
+        self._slow_cache[memo] = best_f
         return best_f
 
     def excess_released(self, agent_key: str, deadline_ns: float) -> bool:
@@ -294,18 +301,28 @@ class TrapBridge:
                 self.counts["below_rate"] += 1
                 return None
         if self.policy.drift_factor is not None:
-            if self.drifting(agent) and self.policy.drift_excess and self.excess_released(
+            drifting = self.drifting(agent)
+            if drifting and self.policy.drift_excess and self.excess_released(
                     agent, float(self.gov.boundaries.get_boundary(self.boundary_id(agent, suffix)).current_limit)
                     if suffix == "deadline_ns" else float(self.defaults["deadline_ns"])):
                 self.counts["drift_released"] += 1
                 self._drifting.discard(agent)
-            elif self.drifting(agent):
+            elif drifting:
                 self.counts["drift_held"] += 1
                 if agent not in self._drifting:
                     self._drifting.add(agent)
                     self._report_drift(agent, suffix, reason)
                 return None
-            self._drifting.discard(agent)
+            elif agent in self._drifting:
+                # Completions have recovered while the hold stood. The traps gathered during the slowdown were
+                # explained by it and are spent: without this, the first natural trap after a recovery tightened
+                # on the slow period's evidence (found in the multi-seed replays, docs/TRACE_TEST_PLAN.md).
+                # An agent released by the excess rule is no longer in _drifting, so its evidence is kept.
+                self.counts["drift_recovered"] += 1
+                self._drifting.discard(agent)
+                window.clear(); stamps.clear()
+                window.append(trap_id); stamps.append(self._tasks[agent])
+                return None
         evidence = {k: ev.get(k) for k in ("trap_id", "agent_id", "boundary_layer", "trap_reason", "trap_outcome",
                                             "tokens_deficit", "nanoseconds_since_deadline", "memory_requested_bytes")}
         evidence["traps_in_window"] = len(window)

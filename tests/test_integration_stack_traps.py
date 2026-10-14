@@ -274,8 +274,35 @@ class TestDriftRule:
             assert self.round(b, 60) == []
         for _ in range(2):
             self.round(b, 20, traps=0)                          # completions recover
-        replies = self.round(b, 20)
+        replies = self.round(b, 20)                             # and a genuinely high rate follows: 25 in 500
         assert replies and replies[0]["status"] == "applied"
+
+    def test_the_slow_periods_traps_do_not_tighten_after_a_recovery(self, tmp_path):
+        """The evidence gathered while the hold stood was explained by the slowdown. After completions recover,
+        one natural trap must not tighten on that stale evidence; a fresh pattern at a fresh rate is needed."""
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        self.slow_down(b)
+        for _ in range(3):
+            assert self.round(b, 60) == []                      # 75 held traps in the last 1500 tasks
+        self.round(b, 20, traps=0)                              # recovered
+        assert self.round(b, 20, traps=1) == []                 # one trap: the window is spent, nothing happens
+        assert b.counts["drift_recovered"] == 1 and "agent-7" not in b._drifting
+        assert self.round(b, 20, traps=3) == []                 # 4 traps in 500 (0.8%) is below the rate rule
+        assert b.limit_for("agent-7", "token_exhausted") == 100.0
+        replies = self.round(b, 20, traps=25)                   # a real pattern at 5% does tighten
+        assert replies and replies[0]["status"] == "applied"
+
+    def test_an_excess_release_keeps_its_evidence_through_a_recovery(self, tmp_path):
+        """Only an agent that was still held when it recovered has its evidence cleared."""
+        g, b = make(tmp_path, policy=self.pol())
+        self.baseline(b)
+        self.slow_down(b)
+        self.round(b, 60, traps=3)                              # held (3 traps queued)
+        b._drifting.discard("agent-7")                          # as the excess rule does on release
+        self.round(b, 20, traps=0)
+        self.round(b, 20, traps=3)                              # 6 traps now in the window, none cleared
+        assert b.counts.get("drift_recovered", 0) == 0 and len(b._recent["agent-7|token_exhausted"]) == 6
 
     @pytest.mark.parametrize("bad", [0, -5, float("nan"), float("inf"), True, "20", None])
     def test_bad_medians_are_ignored(self, tmp_path, bad):

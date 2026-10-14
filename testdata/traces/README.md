@@ -36,3 +36,9 @@ Defaults used by the replay (also in `MANIFEST.json`): deadline budget 100 ms, t
 ## `stack_agents_v1.csv` columns
 
 `agent_id, profile, should_tighten, team, description`. `should_tighten` is 1 when the right behaviour is for the limit to come down on its own, 0 when it is not (healthy, legitimately slow, scheduled batch, regressed). It is the label the replay scores tightening decisions against.
+
+## Replaying
+
+`experiments/stack_trace_replay.py` replays a trace through the real Rust kernel (`governed_workload`, STACK-Kernel) and is the reference. `experiments/stack_trace_sim.py` replays it through a Python model of the kernel's limit checks with the same bridge, governor and audit log, in seconds and without the Rust toolchain; `tests/test_trace_sim.py` holds it to the kernel's committed decisions on all three traces. `experiments/stack_trace_multiseed.py` regenerates the rosters under fresh seeds in memory (no files written) and replays them through the model, with a threshold sweep. Results and predictions: `docs/TRACE_TEST_PLAN.md`.
+
+Three sets exist: `v1` (25 agents, seed 20261009), `inflate_v1` (7 agents built around the drift-suppression weakness, seed 20261009) and `holdout_v1` (14 agents, seed 777, generated before the excess-rate rule was re-run and used once for that). Each has its own `stack_agents_<set>.csv` and `MANIFEST_<set>.json`.
