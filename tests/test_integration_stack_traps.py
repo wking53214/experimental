@@ -614,3 +614,24 @@ class TestSliceTally:
             b.observe_transactions("a", 500, canary_tasks=50, canary_deadline_traps=5)         # reviews keep running
             b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(20)])
         assert all(0.0 <= v.get("main_share", 0.0) <= 1.0 for v in b.verdicts)
+
+
+class TestReviewCadence:
+    """The review episode is measured from the first tightening; the breaker's later steps do not postpone it."""
+
+    DEF = {"deadline_ns": 100_000_000, "tokens_capacity": 4000, "memory_capacity_bytes": 2**29}
+
+    def test_three_quick_tightenings_are_reviewed_from_the_first(self, tmp_path):
+        g = Governor(store_path=str(tmp_path / "ev"))      # breaker at 3
+        b = TrapBridge(g, defaults=self.DEF, policy=TrapPolicy(min_rate=0.01, reasons=("deadline_exceeded",), validate_after=4))
+        for i in range(3):                                  # slices 1-3: a tightening each (90, 81, 72.9)
+            b.observe_transactions("a", 5000, canary_tasks=500 if i else 0, canary_deadline_traps=0)
+            b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(400)])
+        assert b.limit_for("a", "deadline_exceeded") == 72_900_000.0
+        assert b._reviews["a"]["since"] == 1 and b._reviews["a"]["version"] is not None
+        for i in range(2):                                  # slices 4-5
+            b.observe_transactions("a", 5000, canary_tasks=500, canary_deadline_traps=0)
+            b.ingest([trap(agent="a", reason="deadline_exceeded") for _ in range(400)])
+        assert not b.verdicts
+        b.observe_transactions("a", 5000, canary_tasks=500, canary_deadline_traps=0)   # slice 6: 4 after the FIRST
+        assert b.verdicts and b.verdicts[-1]["verdict"] == "DEGRADED" and b.verdicts[-1]["slices"] == 4

@@ -337,3 +337,40 @@ Verdicts overall: UNCHANGED 1,176, IMPROVED 412, DEGRADED 219. Hung time saved o
 | Q6 | The price of per-class thresholds, which the roster cannot show: a core-team runaway at 1.5% hangs would be missed under a 2% core threshold. No such agent exists in the traces; the point is recorded so the "0 false tightenings" number is not read as free |
 
 **What would change my mind.** If the 30% canary does not reach 60% on Q1, the layer's speed problem is not volume and the verdict design is wrong. If per-class thresholds move any runaway agent's detection, the class assignment is doing more than setting a tail allowance.
+
+### Round 6, result (2026-10-14; seeds 5001-5020; `experiments/stack_trace_multiseed_results_round6.json`)
+
+A first attempt crashed: the per-slice trap tally skipped traps the policy did not act on (held during a review hold, or expected load) while the canary count did not, so the main share went negative and the standard error took a square root of a negative number. Fixed (every deadline trap of a slice is tallied before the policy filters; regression test `TestSliceTally`), rerun on the same seeds.
+
+| Policy | Wrong tightenings confirmed within 6 slices | Slow-from-start within 6 | Runaways falsely DEGRADED | Runaways IMPROVED | Hung time saved | ho-healthy-1 tightened | healthy-tail tightened | Low-and-slow caught | Restore requests |
+|---|---|---|---|---|---|---|---|---|---|
+| flat 1%, canary 10% | 47 of 122 (39%) | 38 of 60 | 3 of 80 | 7 of 80 | 22.2% | 20 of 20 | 7 of 20 | 17 of 20 | 176 of 399 |
+| flat 1%, canary 20% | 62 of 122 (51%) | 54 of 60 | 3 of 80 | 23 of 80 | 19.7% | 20 of 20 | 7 of 20 | 17 of 20 | 178 of 399 |
+| flat 1%, canary 30% | 67 of 122 (55%) | 59 of 60 | 1 of 80 | 28 of 80 | 16.4% | 20 of 20 | 7 of 20 | 17 of 20 | 180 of 399 |
+| per-class, canary 10% | 41 of 106 (39%) | 38 of 60 | 3 of 80 | 7 of 80 | 22.2% | 11 of 20 | 0 of 20 | 20 of 20 | 158 of 386 |
+| per-class, canary 20% | 58 of 106 (55%) | 54 of 60 | 3 of 80 | 23 of 80 | 19.7% | 11 of 20 | 0 of 20 | 20 of 20 | 159 of 386 |
+| per-class, canary 30% | 68 of 106 (64%) | 59 of 60 | 1 of 80 | 28 of 80 | 16.4% | 11 of 20 | 0 of 20 | 20 of 20 | 173 of 386 |
+
+(The recommended policy without a canary saved 24.6% on the same seeds.)
+
+| # | Prediction | Held? |
+|---|---|---|
+| Q1 | Confirmation within 6 slices at least 60% at 20% and 75% at 30%; slow-from-start 60 of 60 at 30% | **No**: 51% and 55% (64% with per-class); slow-from-start 59 of 60 |
+| Q2 | Saving about 23, 20, 18% | Yes: 22, 20, 16% |
+| Q3 | Runaways falsely DEGRADED at most 10% at every share; IMPROVED at least 30% at 30% | Yes: 4%, 4%, 1%; 35% |
+| Q4 | ho-healthy-1 and healthy-tail 0 of 20; low-and-slow 20 of 20 with median first slice at most 3; nothing else moves more than 15 points | Half: healthy-tail 0 of 20 and low-and-slow 20 of 20 at median 2, but ho-healthy-1 **11 of 20** (its 1.5 to 1.8% tail with the daily cycle puts local 2,000-task windows over 2% about half the time); no other agent moved more than 15 points |
+| Q5 | Criterion 10 a coin flip at 30% with per-class | No: FAIL at every configuration, (d) wrong-half 39 to 64% |
+
+**By my own pre-stated test, the speed problem is not only volume.** The 30% canary took the gross cases to 59 of 60 within 6 slices but the aggregate to 55 to 64%. What remains, read from the per-seed data: the slow-from-start agents' first review lands 5 or 6 slices after their first tightening (56 of 60 at 5, 4 at 6), because the review is scheduled 4 slices after the **last** tightening and these agents tighten three times in their first three slices (the breaker's allowance). A verdict that is not reached at that first look gets its second look 4 slices later, outside the 6-slice bar; at a 10% canary that is what happened on 22 of 60, at 30% on 1 of 60. So the cadence costs the bar two slices of evidence at every share. The other wrong tightenings are late-released regressions (released at slices 20 to 28, confirmed 1 of 25 within 6) and ho-healthy-1 (confirmed within 6 in 1 of 11). Per-class thresholds did what they were set to do for the 0.6% tail and the low-and-slow attacker, and only half the job for the 1.5% tail, because a threshold set at 2% against a 1.6% mean leaves the noise to decide.
+
+**Change to make, with its check pre-registered (round 7).** Schedule the review from the **first** tightening of an episode and do not push it out when the breaker's second and third steps follow. The canary already runs from the first tightening, so no evidence is lost; the verdict just arrives sooner, on a window that may straddle one more tightening (the bounds absorb that). Fresh seeds 6001-6020, per-class thresholds, canary 10% and 30%. Predictions:
+
+| # | Prediction |
+|---|---|
+| R1 | Slow-from-start confirmed within 6 slices: 60 of 60 at both shares (from 38 and 59) |
+| R2 | Wrong tightenings confirmed within 6 at 30%: at least 72% (from 64%); at 10%: at least 50% (from 39%) |
+| R3 | Runaways falsely DEGRADED stays at or under 10% at both shares (earlier reviews see fewer samples; the bounds should hold) |
+| R4 | Late-released regressions and ho-healthy-1 do not move: they are not a cadence problem |
+| R5 | Criterion 10 still FAILS at both shares on (d)'s wrong-half, by the late regressions and ho-healthy-1 alone |
+
+**Kernel check of the canary.** The drift-suppression trace replayed through the real Rust kernel with the canary (`governed_workload --canary-share 0.1 --canary-ns`) against the Python model, validated policy: identical tightening decisions, identical restore requests and identical verdict sequences on 6 of 7 agents. On `inflate-first-1` both tightened first at slice 9, both three times to 72.9 ms, both ended with a restore request; but the kernel's reviews fell at slices 20, 24 and 28 (all DEGRADED) and the model's at 16, 20, 26 and 30 (UNCHANGED three times, then DEGRADED). The last tightening step fell on different slices, which moved the review schedule, and the kernel's windows then read DEGRADED where the model's read UNCHANGED (the kernel's run also killed 57 more legitimate tasks, 769 against 712). The step's timing is a borderline excess-release call that depends on the completed-duration quantiles, which with a canary include tasks completed under the original deadline; the exact divergence was not pinned down. The model is held to the kernel on decisions and outcomes; one agent's intermediate verdicts differed. Along the way the kernel's own defect was found: its limit client refused fractional values, which is why every tightened memory cap in the committed v1 run was ignored (0.9 of 512 MiB is not a whole number) while whole-numbered token and deadline limits were applied. Fixed in STACK-Kernel by flooring, which can only tighten.

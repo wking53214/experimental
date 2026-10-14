@@ -300,10 +300,17 @@ class TrapBridge:
         return {"share": self.policy.canary_share, "deadline_ns": original}
 
     def _schedule_review(self, agent: str, suffix: str, reply: dict) -> None:
+        """A review episode starts at the FIRST tightening and is not pushed out by the breaker's later steps (round 7
+        of docs/TRACE_TEST_PLAN.md: with three steps in three slices, scheduling from the last one delayed every
+        verdict by two slices). The canary runs from the first tightening, so the window loses nothing."""
         if self.policy.validate_after is None or suffix != "deadline_ns":
             return
-        self._reviews[agent] = {"at_slice": len(self._slices[agent]), "since": len(self._slices[agent]),
-                                "version": reply.get("version"), "limit": reply.get("limit_after")}
+        rv = self._reviews.get(agent)
+        if rv is None:
+            self._reviews[agent] = {"at_slice": len(self._slices[agent]), "since": len(self._slices[agent]),
+                                    "version": reply.get("version"), "limit": reply.get("limit_after")}
+        else:
+            rv["version"], rv["limit"] = reply.get("version"), reply.get("limit_after")
 
     def _review_if_due(self, agent: str) -> None:
         """Validation layer: judge the agent's tightened deadline against the canary, every validate_after slices."""
