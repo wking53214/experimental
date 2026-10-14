@@ -38,6 +38,8 @@ POLICIES = {
 # Ninth round: the two-way baselines. These need defaults, which replay() supplies through the factory's argument.
 POLICIES["aimd"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02)
 POLICIES["aimd_fast"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.10)
+# Round 9b: the two-way limiter with the ratchet's breaker cap as its floor, to separate the cap from the direction.
+POLICIES["aimd_capped"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02, floor=0.729)
 # Sixth round: canary share and per-class thresholds (docs/TRACE_TEST_PLAN.md). Class = the trace's team column.
 CLASS_RATES = {"core": 0.02, "ext": 0.005}
 for _share in (0.10, 0.20, 0.30):
