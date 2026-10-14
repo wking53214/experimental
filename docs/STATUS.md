@@ -12,7 +12,7 @@ Can a governance layer that lets automation only **tighten** limits (and only a 
 
 | Claim | Status | Basis |
 |---|---|---|
-| Automation cannot loosen a limit, and every change is attributable | **Holds within the stated threat model** | Criterion 1: 36 of 36 soak runs plus fuzzing; criteria 7 and 8 (restart, outside signals). 728 tests pass locally (plus 46 that need DGK). Not covered: code inside the process, network attackers, malicious operators (`docs/THREAT_MODEL.md`). |
+| Automation cannot loosen a limit, and every change is attributable | **Holds within the stated threat model** | Criterion 1: 36 of 36 soak runs plus fuzzing; criteria 7 and 8 (restart, outside signals). 733 tests pass locally (plus 46 that need DGK). Not covered: code inside the process, network attackers, malicious operators (`docs/THREAT_MODEL.md`). |
 | It can govern a real system's limits | **Shown for DGK and for the Rust kernel's deadline** | DGK's three hardcoded limits run governed against the real DGK (46 tests); the Rust `stack-p3-2` kernel reads governed budgets over HTTP and obeys them (`docs/STACK_CLOSED_LOOP.md`). |
 | It finds real defects | **Yes** | NaN/infinity handling in DGK, found by running its code and fixed on DGK `main` (`4a0ecd2`). |
 | It saves something against a runaway | **Yes, bounded** | 27% less time spent on runaway tasks, exactly the breaker cap's arithmetic (3 steps of 10%). A perfect human does better on sustained attacks. |
