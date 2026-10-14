@@ -110,3 +110,23 @@ def test_canary_plan_carries_the_key_only_when_set(tmp_path):
         plan = b.canary_plan("a")
         assert plan["share"] == 0.10 and plan["deadline_ns"] == 100e6
         assert plan.get("key") == key
+
+
+def test_the_aimd_baseline_lowers_on_trouble_raises_when_calm_and_respects_floor_and_ceiling():
+    """The two-way limiter used as the comparison in round 9: same trigger, step and floor as the ratchet's rate rule,
+    plus an increase the ratchet never has."""
+    c = sim.AIMDController({"deadline_ns": 100.0}, increase=0.10)
+    assert c.limit_for("a", "deadline_exceeded") is None and c.limit_for("a", "token_exhausted") is None
+    for _ in range(20):                                             # 5% traps: down by 0.9 each slice to the floor
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 13})
+    assert c.limit_for("a", "deadline_exceeded") == 20.0            # 20% floor
+    for _ in range(8):                                              # calm: +10 per slice
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 0})
+    assert c.limit_for("a", "deadline_exceeded") == 100.0           # never above the original
+    assert c.min_limit["a"] == 20.0 and c.counts["decrease"] >= 15 and c.counts["increase"] >= 8
+    c.observe_slice("a", {"tasks": 250, "deadline_traps": 1})       # 0.4%: calm but already at the ceiling
+    assert c.limit_for("a", "deadline_exceeded") == 100.0
+    c.observe_slice("b", {"tasks": 250, "deadline_traps": 2})       # 2 traps: under min_traps, nothing happens
+    assert c.limit_for("b", "deadline_exceeded") == 100.0
+    c.observe_slice("b", {"tasks": 250, "deadline_traps": 3})       # 3 traps (1.2%): a decrease
+    assert c.limit_for("b", "deadline_exceeded") == 90.0

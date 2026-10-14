@@ -427,3 +427,26 @@ A first attempt crashed: the per-slice trap tally skipped traps the policy did n
 **What this establishes.** With a predictable canary the validation layer is a loosening lever: an agent that completes exactly its canary tasks and hangs the rest gets a correct tightening declared harmful on every review, a restore request filed to a person, and automatic tightening of its boundary frozen while that request waits. A person who trusts the verdict hands the attacker its full budget back. Keyed selection closes it: the same attacker, still sparing every tenth task, is treated like the honest runaway, and the honest runaway is unchanged. The key is now `TrapPolicy(canary_key=...)`, passed to the kernel in the canary plan, and `docs/DEPLOYMENT_CHECKLIST.md` item 6 says to set it. Kernel side: `governed_workload --canary-key`, same hash (reference vectors in `tests/test_trace_sim.py`).
 
 **Limits.** An agent that can read the key, or that can tell which deadline a task is running under before deciding whether to hang it, defeats this; the kernel must not expose the deadline to the task. A share of 10% chosen by hash is still a share of 10%: everything round 5 said about confirmation speed and benefit still holds. Not measured: an attacker that probes membership by hanging a task and watching whether it is killed at 72.9 or 100 ms, then adapts per task; that needs per-task observability the trace model does not represent, and is the next thing to rule out if the kernel ever leaks it.
+
+## Ninth round: the ratchet against a two-way adaptive limiter (design and predictions written before any code ran)
+
+**The question.** The nearest existing thing is a two-way adaptive limiter: lower the limit on trouble, raise it again when things look calm (TCP's AIMD, Netflix `concurrency-limits`, GitLab's Gitaly limit). The thesis says the one-way version with a human gate is safer. That has not been tested head to head. This round runs both on the same traces, same seeds, and measures what each attacker gets and what each legitimate agent pays.
+
+**The baseline.** `aimd`: per agent, deadline only. Decrease: the same trigger as the ratchet's rate rule (at least 5 traps and at least 1% of the last 2,000 tasks), the same step (x0.9), the same 20% floor. Increase: after any slice whose trap share is under 0.5%, raise the limit by 2% of the original, never above the original. No breaker and no human: those are the ratchet's features, and the point is to see what they buy. `aimd_fast`: the same with a 10% increase per calm slice. Against them: `recommended` (the ratchet with rate, drift and excess rules) and `keyed_c10` (the same with the validation layer and a keyed canary).
+
+**Roster `pulse_v1`** (8 agents x 8,000 tasks per seed): `attacker-pulse-2`, `-4`, `-8` hang 5% of tasks during one slice out of every 2, 4 or 8 and behave in between (an attacker that earns its budget back); `runaway-steady` (5% always); `attacker-lowslow` (0.8% always); `regressed-0` (3x slower from task 4,000, honest); `healthy-0`; `healthy-tail` (0.6% natural tail). Also the full `v1` roster for the broad comparison. 20 fresh seeds (8001-8020).
+
+**Predictions.**
+
+| # | Prediction |
+|---|---|
+| Z1 | Pulse attackers: under `aimd` the limit recovers between pulses, so hung-task time saved is at most half the ratchet's on the period-8 attacker (ratchet at least 20%, `aimd` at most 10%); `aimd_fast` worse than `aimd` |
+| Z2 | Sustained runaway: `aimd` saves **more** than the ratchet (at least 50% against about 26%), because without a breaker it goes to the floor. This is the breaker's price and it is recorded as such, not hidden |
+| Z3 | Honest regression (3x slower, never calm again): `aimd` drives it to the floor; its legitimate timeouts rise by at least 30 points. The ratchet holds it (drift rule) at a cost under 1 point and files one restore request |
+| Z4 | Healthy agents: untouched by all policies; `healthy-tail` (0.6%): `aimd` tightens and recovers repeatedly (oscillates), ratchet tightens in about 40% of seeds and holds |
+| Z5 | Low-and-slow: both tighten late; neither saves more than 20%; `aimd` gives the budget back in calm windows and saves less |
+| Z6 | On the full `v1` roster, summed over should-not agents, `aimd`'s legitimate cost is higher than the ratchet's; summed over should-tighten agents, `aimd` saves more on sustained ones and less on intermittent ones |
+
+**What this would establish.** If Z1 and Z3 hold with Z2, the asymmetry's value is specific and measurable: an attacker cannot earn budget back by behaving, and a legitimate regression is not ground down, at the price of a capped saving on sustained attacks. If Z1 fails, the one-way rule is not where the value is and the claim should say so.
+
+**Change before any result was scored.** The first build of `aimd` reused the ratchet's 2,000-task trigger window for its decrease, so while a pulse was anywhere in that window the increase could never fire (the smoke run showed zero increases), which would have made the comparison a ratchet-to-the-floor against a ratchet. A two-way limiter reacts to its current signal, so the baseline now decreases when the current slice has at least 3 traps and at least 1% of its tasks trapped, and increases when the slice's share is under 0.5%. The first run's results file was deleted unread. Predictions unchanged.
