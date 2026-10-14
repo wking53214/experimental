@@ -54,6 +54,11 @@ for _k in (1, 2, 3, 5, 8):
 for _k in (8, 16):
     POLICIES[f"twoway_h{_k}"] = (lambda k: lambda defaults=None: HysteresisController(
         defaults or {"deadline_ns": 100_000_000}, calm_run=k, steps_per=5, increase=0.02, floor=0.729, drift_factor=1.5))(_k)
+for _k in (8, 16):
+    POLICIES[f"twoway_bridge_h{_k}"] = (lambda k: lambda defaults=None: BridgeTwoWay(
+        defaults or {"deadline_ns": 100_000_000, "tokens_capacity": 4000, "memory_capacity_bytes": 512 * 1024 * 1024},
+        TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",)),
+        calm_run=k))(_k)
 POLICIES["aimd_capped_drift"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02,
                                                                     floor=0.729, drift_factor=1.5)
 for _inc in (0.01, 0.02, 0.05, 0.10):
@@ -171,6 +176,102 @@ class HysteresisController(AIMDController):
             cur = min(orig, cur + self.increase * orig); self.counts["increase"] += 1
         self.limit[agent] = cur
         self.min_limit[agent] = min(self.min_limit.get(agent, orig), cur)
+
+
+class _LimitBook:
+    """Stands in for the Governor under BridgeTwoWay: it holds limits, applies the bridge's tightenings against a
+    floor instead of a breaker, lets the controller raise them, and shows nothing to a person. The TrapBridge
+    calls ensure_boundary, boundaries.get_boundary, propose_tightening, request_loosening and audit.append."""
+
+    class _B:
+        __slots__ = ("current_limit",)
+
+        def __init__(self, v):
+            self.current_limit = v
+
+    def __init__(self, floor):
+        self.limits = {}; self.floors = {}; self.floor = floor
+        self.boundaries = self
+        self.audit = self; self.validations = self
+        self.counts = {"applied": 0, "floor_held": 0, "loosen_requested": 0}
+
+    def ensure_boundary(self, bid, _resource, start):
+        if bid not in self.limits:
+            self.limits[bid] = float(start); self.floors[bid] = float(start) * self.floor
+
+    def get_boundary(self, bid):
+        return self._B(self.limits[bid])
+
+    def propose_tightening(self, bid, factor=0.9, **_kw):
+        cur = self.limits[bid]; new = max(self.floors[bid], cur * factor)
+        if new >= cur:
+            self.counts["floor_held"] += 1
+            return {"status": "held", "reason": "floor"}
+        self.limits[bid] = new; self.counts["applied"] += 1
+        return {"status": "applied", "new_limit": new}
+
+    def request_loosening(self, _bid, **_kw):
+        self.counts["loosen_requested"] += 1   # a person is not asked: the controller recovers on its own
+        return {"status": "recorded"}
+
+    def append(self, _kind, _payload):
+        return None
+
+    def record_validation(self, *_a, **_k):
+        return None
+
+
+class BridgeTwoWay(AIMDController):
+    """Round 13: a two-way limiter that carries the ratchet's ENTIRE interpretation layer, because it is the ratchet's
+    own TrapBridge (rate rule over the filling window, drift hold with the truncation-aware slowdown fit, excess
+    release, recovery clearing, expected-load hook) driving a limit book instead of the governor. Differences from
+    the ratchet: the cap is a floor at `floor` x original rather than three steps and a hold; nobody is asked
+    anything; and after `calm_run` consecutive calm slices the limit comes back up by `increase` x original per slice.
+    If this matches the ratchet on the cells the plain two-way lost (inflate-first attackers, 75 ms regressions), those
+    cells were interpretation, not direction."""
+
+    def __init__(self, defaults, policy, calm_run=16, increase=0.02, floor=0.729, calm_share=0.005):
+        super().__init__(defaults, increase=increase, calm_share=calm_share, floor=floor)
+        self.book = _LimitBook(floor)
+        self.bridge = TrapBridge(self.book, policy=policy, defaults=defaults,
+                                 is_expected=lambda ev: bool(ev.get("expected_load")))
+        self.calm_run, self.calm = calm_run, {}
+
+    @property
+    def counts(self):
+        return {**self.bridge.counts, **self.book.counts, "increase": self._increases}
+
+    @counts.setter
+    def counts(self, v):
+        self._increases = 0
+
+    def _bid(self, agent):
+        from integrations.stack_traps import _agent_key
+        return self.bridge.boundary_id(_agent_key(agent), "deadline_ns")
+
+    def observe_transactions(self, agent, n, **kw):
+        self.bridge.observe_transactions(agent, n, **kw)
+
+    def ingest(self, traps):
+        return self.bridge.ingest(traps)
+
+    def _sync(self, agent):
+        orig = float(self.defaults["deadline_ns"]); bid = self._bid(agent)
+        if bid in self.book.limits:
+            cur = self.book.limits[bid]
+            self.limit[agent] = cur
+            self.min_limit[agent] = min(self.min_limit.get(agent, orig), cur)
+
+    def observe_slice(self, agent, summary):
+        orig = float(self.defaults["deadline_ns"]); bid = self._bid(agent)
+        self._sync(agent)
+        traps = max(0, summary["deadline_traps"] - summary.get("expected_trapped", 0))
+        share = traps / max(1, summary["tasks"])
+        self.calm[agent] = self.calm.get(agent, 0) + 1 if share < self.calm_share else 0
+        if bid in self.book.limits and self.book.limits[bid] < orig and self.calm[agent] >= self.calm_run:
+            self.book.limits[bid] = min(orig, self.book.limits[bid] + self.increase * orig)
+            self._increases += 1
+            self._sync(agent)
 
 
 def is_controller(obj):

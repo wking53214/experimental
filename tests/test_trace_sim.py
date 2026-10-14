@@ -135,3 +135,32 @@ def test_the_aimd_baseline_can_carry_the_drift_hold():
     for _ in range(10):
         c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 20.0})
     assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9                          # the cap as floor
+
+
+def test_the_bridge_two_way_is_the_ratchets_bridge_with_a_floor_and_a_recovery():
+    """Round 13: the same TrapBridge drives a limit book; tightenings go through the bridge's own rules; after calm_run
+    calm slices the limit comes back up; nobody is asked anything."""
+    from integrations.stack_traps import TrapPolicy
+    d = {"deadline_ns": 100.0, "tokens_capacity": 4000, "memory_capacity_bytes": 1 << 29}
+    c = sim.BridgeTwoWay(d, TrapPolicy(min_rate=None, min_traps=5, drift_factor=None, reasons=("deadline_exceeded",)),
+                         calm_run=3, increase=0.1, floor=0.729)
+    def trap(i):
+        return {"trap_id": f"t{i}", "agent_id": "a", "trap_reason": "deadline_exceeded", "trap_outcome": "HALT",
+                "boundary_layer": 3, "nanoseconds_since_deadline": 1}
+    bad = {"tasks": 250, "deadline_traps": 10, "expected_trapped": 0, "completed_median_ns": 20.0, "completed_q": None}
+    calm = {"tasks": 250, "deadline_traps": 0, "expected_trapped": 0, "completed_median_ns": 20.0, "completed_q": None}
+    assert c.limit_for("a", "deadline_exceeded") is None
+    c.observe_transactions("a", 250); c.ingest([trap(i) for i in range(10)]); c.observe_slice("a", bad)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 81.0) < 1e-9          # two steps: one per five traps
+    for i in range(30):                                                       # floor, not a breaker
+        c.observe_transactions("a", 250); c.ingest([trap(100 + 10 * i + j) for j in range(10)]); c.observe_slice("a", bad)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9
+    for _ in range(2):
+        c.observe_transactions("a", 250); c.ingest([]); c.observe_slice("a", calm)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9          # not yet: three calm slices needed
+    c.observe_transactions("a", 250); c.ingest([]); c.observe_slice("a", calm)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 82.9) < 1e-9          # +10% of the original
+    for _ in range(5):
+        c.observe_transactions("a", 250); c.ingest([]); c.observe_slice("a", calm)
+    assert c.limit_for("a", "deadline_exceeded") == 100.0                     # never above the original
+    assert abs(c.min_limit["a"] - 72.9) < 1e-9 and c.counts["increase"] >= 3 and c.counts["loosen_requested"] == 0
