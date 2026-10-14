@@ -566,3 +566,22 @@ D5: every cell the formula marks is a D (10 of 10), every cell it does not mark 
 D6: all three statements hold on both rosters, and every pulse-roster number is within 5 points of round 9. **Held.**
 
 **The decomposition, final form.** On these workloads the ratchet equals: a cap (protects honest agents, caps the saving) plus a drift hold (protects honest regressions and drifts) plus an excess release (recovers the saving against attackers who inflate first, which the drift hold alone gives away entirely) plus the one-way rule (keeps the budget from an attacker who can wait, by the formula above). A two-way limiter with the first two matches the ratchet on every honest agent to within a point and on every sustained attacker; it loses to the ratchet only against patient pulsers and, without the excess rule, against inflate-first attackers. The human gate is the price of the direction: nobody but a person restores anyone's budget. That is the claim the project can defend.
+
+## Eleventh round: robustness of the decomposition (design and predictions written before any code ran)
+
+Five things a referee asks about the rounds 9 and 10 result, each answerable with the existing harness.
+
+**11a. Other duration shapes and headroom** (roster `robust_v1`). The generator draws task durations from a lognormal with log-spread 0.5. Variants: `pareto` (heavy tail, shape 2.5, scaled to the same median) and `bimodal` (80% of tasks at the median, 20% at three times it). For each shape: a 5% runaway, a 0.6%-tail healthy agent, a 3x honest regression at task 4,000, and a period-8 pulser. Plus a `tight` agent: lognormal, median 50 ms under the 100 ms deadline, so about a 5% natural tail with no hangs, the known wide-tail limit under a different name. Policies: ratchet, `aimd`, `aimd_capped_drift`. Seeds 10001-10020.
+
+| # | Prediction |
+|---|---|
+| R1 | Under both other shapes the three statements hold: `aimd`'s pooled legitimate cost at least three times `aimd_capped_drift`'s (cap); the honest regression at most 1 point under `aimd_capped_drift` (drift hold); the period-8 pulser at least 10% saved under the ratchet and at most 3% under `aimd_capped_drift` (direction). Sustained runaway within 5 points of 26% (ratchet) and at least 50% (`aimd`) |
+| R2 | The `tight` agent is tightened by every policy and costs at least 10 points under every policy, the ratchet included. The decomposition does not help it; nothing in the trap stream can |
+
+**11b. The pulse formula generalised** (roster `pulse2_v1`): period 8, active width `w` of 1 or 2 slices, hang intensity 2%, 5% or 10% during active slices. A two-way limiter loses about `1 - 0.9^w` per cycle and regains `(period - w) x increase`. Prediction R3: with the 2% increase, every width-1 agent shows the direction mattering (`aimd_capped` at least 8 points under the ratchet) and no width-2 agent does (14% recovery against 10% loss for width 1; 12% against 19% for width 2), at every intensity.
+
+**11c. The cap as a dial.** The ratchet with `max_auto_tightenings` of 1, 2, 3, 5 and 8 on the v1 roster, seeds 8001-8020. Prediction R4: hung time saved on sustained runaways within 3 points of `1 - 0.9^k` (10, 19, 27, 41, 57%); pooled legitimate cost on should-not agents rises monotonically with k; the slow-from-start agents' cost rises roughly in proportion to the cut.
+
+**11d. Human attention, counted.** Per agent-seed, the number of decisions a person is asked for: breaker holds (a held tightening waiting for acknowledgement) plus restore requests (drift and validation). Prediction R5: under the ratchet, at most one decision per tightened attacker (the breaker hold) and none for untouched healthy agents; under `aimd`, zero decisions and the nine-times-higher harm of round 9. The claim "relocates human effort" becomes a number: decisions per thousand tasks, by policy.
+
+**11e. Intervals.** Bootstrap 95% intervals over seeds for the pooled cost and the sustained saving of each policy in 10c. Prediction R6: ratchet and `aimd` intervals do not overlap on either number; ratchet and `aimd_capped_drift` overlap on both.
