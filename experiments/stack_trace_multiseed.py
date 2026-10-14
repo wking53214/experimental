@@ -81,6 +81,7 @@ def one_job(job):
                 "bad_ns_static": s["bad_ns"], "bad_ns_governed": g["bad_ns"],
                 "final_deadline_ns": v["limits"]["deadline_ns"]["limit"] if v["limits"]["deadline_ns"] else DEFAULTS["deadline_ns"],
                 "verdicts": v.get("verdicts", []), "restore_requested": v.get("restore_requested", False),
+                "operator_decisions": v.get("operator_decisions", 0),
             }
         out[pname]["_audit_intact"] = pr["audit_chain_intact"] and pr.get("integrity_ok", True)
     return roster, seed, out

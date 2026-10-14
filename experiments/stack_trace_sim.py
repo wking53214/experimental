@@ -40,6 +40,15 @@ POLICIES["aimd"] = lambda defaults=None: AIMDController(defaults or {"deadline_n
 POLICIES["aimd_fast"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.10)
 # Round 9b: the two-way limiter with the ratchet's breaker cap as its floor, to separate the cap from the direction.
 POLICIES["aimd_capped"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02, floor=0.729)
+# Round 11c: the breaker cap as a dial on the recommended policy.
+def _recommended_cap(k):
+    def make(defaults=None):
+        pol = TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",))
+        pol.governor_kwargs = {"max_auto_tightenings": k}
+        return pol
+    return make
+for _k in (1, 2, 3, 5, 8):
+    POLICIES[f"recommended_cap{_k}"] = _recommended_cap(_k)
 # Round 10: the cap plus the drift hold; and the increase-rate sweep for the pulse formula.
 POLICIES["aimd_capped_drift"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02,
                                                                     floor=0.729, drift_factor=1.5)
@@ -229,11 +238,12 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
     static = {n: [run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, defaults)[1] for r in range(n_slices)] for n in names}
     results = {"slices": n_slices, "slice_tasks": slice_n, "defaults": defaults, "policies": {}}
     for pname, factory in policies.items():
-        gov = Governor(store_path=tempfile.mkdtemp(prefix="sim-"), use_semantic=True)
         try:
             policy_obj = factory(defaults=defaults)
         except TypeError:
             policy_obj = factory()
+        gov_kwargs = dict(getattr(policy_obj, "governor_kwargs", {}) or {})    # round 11c: the breaker cap as a dial
+        gov = Governor(store_path=tempfile.mkdtemp(prefix="sim-"), use_semantic=True, **gov_kwargs)
         if is_controller(policy_obj):
             bridge = policy_obj
         else:
@@ -272,7 +282,7 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                                                                    "min_limit": bridge.min_limit.get(n, orig)},
                           "tokens_capacity": None, "memory_capacity_bytes": None}
                 tightened = bridge.min_limit.get(n, orig) < orig    # ever lowered (it may have recovered since)
-                restore = []
+                restore = []; decisions = 0
             else:
                 for x in SUFFIX:
                     bid = bridge.boundary_id(n, x)
@@ -284,14 +294,20 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                                                          "pending": st["pending_operator_requests"],
                                                          "tightenings": st["automatic_tightenings_since_acknowledgement"]}
                 tightened = any(v and v["limit"] < float(defaults[k]) for k, v in limits.items())
+                dbid = bridge.boundary_id(n, "deadline_ns")
                 restore = [e["payload"] for e in gov.audit.find("signal")
-                           if e["payload"].get("kind") == "loosen_requested" and e["payload"].get("boundary_id") == bridge.boundary_id(n, "deadline_ns")
+                           if e["payload"].get("kind") == "loosen_requested" and e["payload"].get("boundary_id") == dbid
                            and str(e["payload"].get("idempotency_key", "")).startswith("review-")]
+                # round 11d: every decision a person is asked for about this agent's deadline: breaker holds (one per
+                # episode, audited as tightening_held) and restore requests of either kind (drift or validation)
+                decisions = sum(1 for e in gov.audit.find("tightening_held") if e["payload"].get("boundary_id") == dbid)
+                decisions += sum(1 for e in gov.audit.find("signal")
+                                 if e["payload"].get("kind") == "loosen_requested" and e["payload"].get("boundary_id") == dbid)
             per[n] = {"profile": ag["profile"], "should_tighten": int(ag["should_tighten"]), "tightened": tightened,
                       "first_tightened_slice": first.get(n), "limits": limits,
                       "static": totals(static[n]), "governed": totals(governed[n]),
                       "deadline_trajectory_ns": trajectory[n], "verdicts": verdicts[n],
-                      "restore_requested": bool(restore)}
+                      "restore_requested": bool(restore), "operator_decisions": int(decisions)}
         integrity_ok, _checks = gov.verify_governance_integrity()
         results["policies"][pname] = {"agents": per, "bridge_counts": dict(bridge.counts),
                                       "audit_chain_intact": gov.audit.verify()[0], "integrity_ok": bool(integrity_ok),

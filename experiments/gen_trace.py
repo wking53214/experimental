@@ -99,8 +99,21 @@ ROSTER_PULSE = [
     ("attacker-pulse-16", "attacker_pulse", 1, "ext", "hangs 5% of tasks during one slice in every 16",
      dict(median_ms=20, sigma=.5, p=0.05, period=16, slice_tasks=250)),
 ]
+# Eleventh round: other duration shapes and headroom; pulse width and intensity.
+ROSTER_ROBUST = []
+for _shape in ("pareto", "bimodal"):
+    ROSTER_ROBUST += [
+        (f"{_shape}-runaway", "runaway", 1, "batch", f"{_shape} durations, 5% hang", dict(median_ms=20, sigma=.5, p=0.05, dist=_shape)),
+        (f"{_shape}-tail", "healthy_tail", 0, "core", f"{_shape} durations, natural tail", dict(median_ms=22, sigma=.6, dist=_shape)),
+        (f"{_shape}-regressed", "regressed", 0, "web", f"{_shape} durations, 3x from 4000", dict(median_ms=20, sigma=.5, at=4000, until=None, dist=_shape)),
+        (f"{_shape}-pulse-8", "attacker_pulse", 1, "ext", f"{_shape} durations, period-8 pulser", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, dist=_shape)),
+    ]
+ROSTER_ROBUST.append(("tight", "healthy_tail", 0, "core", "lognormal, median 50 ms under a 100 ms deadline: about a 5% natural tail, no hangs",
+                      dict(median_ms=50, sigma=.5)))
+ROSTER_PULSE2 = [(f"pulse-w{w}-p{int(p*100)}", "attacker_pulse", 1, "ext", f"period 8, {w} active slice(s), {int(p*100)}% hangs when active",
+                  dict(median_ms=20, sigma=.5, p=p, period=8, width=w, slice_tasks=250)) for w in (1, 2) for p in (0.02, 0.05, 0.10)]
 ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY,
-           "pulse_v1": ROSTER_PULSE}
+           "pulse_v1": ROSTER_PULSE, "robust_v1": ROSTER_ROBUST, "pulse2_v1": ROSTER_PULSE2}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
@@ -122,7 +135,14 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         f = np.clip((seq - prm["start"]) / 4000.0, 0, 1); med *= 1 + prm.get("gain", 1.5) * f; regime[f > 0.05] = "drifting"
     elif profile == "slow_from_start":
         regime[:] = "normal"
-    dur = rng.lognormal(math.log(1.0), prm["sigma"], n) * med * diurnal * MS
+    shape = prm.get("dist", "lognormal")
+    if shape == "pareto":           # heavy tail, scaled to the same median
+        a = 2.5; base = (rng.pareto(a, n) + 1.0) / (2.0 ** (1.0 / a))
+    elif shape == "bimodal":        # 80% at the median, 20% three times slower, each with a narrow spread
+        base = np.where(rng.random(n) < 0.8, 1.0, 3.0) * rng.lognormal(0.0, 0.15, n)
+    else:
+        base = rng.lognormal(math.log(1.0), prm["sigma"], n)
+    dur = base * med * diurnal * MS
     tok = rng.lognormal(math.log(800), 0.4, n)
     mem = rng.lognormal(math.log(120 * 2**20), 0.3, n)
     if profile in ("runaway", "runaway_episode", "attacker_inflate", "attacker_lowslow"):
@@ -134,7 +154,7 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = {"attacker_inflate": "inflated", "attacker_lowslow": "lowslow"}.get(profile, "runaway")
     if profile == "attacker_pulse":
-        active = ((seq // prm["slice_tasks"]) % prm["period"]) == 0
+        active = ((seq // prm["slice_tasks"]) % prm["period"]) < prm.get("width", 1)
         hang = (rng.random(n) < prm["p"]) & active
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = "pulse"
