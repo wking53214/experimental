@@ -104,7 +104,7 @@ class TestRobustness:
         assert all(" " not in n and "/" not in n and "\x00" not in n and "\n" not in n and "<" not in n for n in names)
         assert len({n.split(".")[2] for n in names}) == len(weird)       # every hostile id got its own safe key
         b.ingest([trap(agent=f"a{i}", trap_id=f"n{i}") for i in range(200)])
-        assert len(b._agents) == 50 and b.counts["agent_cap"] > 0
+        assert len(b._agents) == 50 and b.counts["agent_evicted"] > 0 and b.counts["agent_cap"] == 0
 
     def test_a_flood_from_one_agent_is_bounded_by_the_breaker(self, tmp_path):
         g, b = make(tmp_path)

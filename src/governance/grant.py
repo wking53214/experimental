@@ -13,6 +13,7 @@ BoundaryStore exists to make that visible afterwards.
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -24,15 +25,39 @@ def is_loosening(current: Any, new: Any) -> bool:
     """True unless `new` is provably no looser than `current`.
 
     Anything that is not a pair of comparable, non-NaN numbers counts as loosening,
-    because it cannot be shown to be a tightening.
+    because it cannot be shown to be a tightening. The comparison is exact: two
+    integers that round to the same double (10**18 and 10**18 + 50) are not equal
+    here, so a raise below the resolution of a float still needs a grant (found by
+    the red team, docs/RED_TEAM.md S1).
     """
-    try:
-        c, n = float(current), float(new)
-    except (TypeError, ValueError):
+    if isinstance(current, bool) or isinstance(new, bool):
         return True
-    if math.isnan(c) or math.isnan(n):
+    try:
+        c, n = _exact(current), _exact(new)
+    except (TypeError, ValueError, OverflowError):
+        return True
+    if c is None or n is None:
         return True
     return n > c
+
+
+def _exact(v: Any):
+    """An exact rational for ints, floats, Decimals and numeric strings; None for NaN or an infinity."""
+    if isinstance(v, int):
+        return Fraction(v)
+    if isinstance(v, float):
+        if math.isnan(v) or math.isinf(v):
+            return None
+        return Fraction(v)
+    if isinstance(v, str):
+        v = v.strip()
+        if v.lower() in ("nan", "inf", "+inf", "-inf", "infinity", "-infinity", "+infinity"):
+            return None
+        return Fraction(v)
+    f = float(v)                     # Decimal, numpy scalars
+    if math.isnan(f) or math.isinf(f):
+        return None
+    return Fraction(v)
 
 
 @dataclass

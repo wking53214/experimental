@@ -18,7 +18,7 @@ def registry():
 
 
 def boot(tmp_path, **kw):
-    return Governor(store_path=str(tmp_path / "events"), audit_path=str(tmp_path / "audit.jsonl"), **kw)
+    return Governor(unverified_operators=True, store_path=str(tmp_path / "events"), audit_path=str(tmp_path / "audit.jsonl"), **kw)
 
 
 def flood(g, n=40, bid="api"):
@@ -138,10 +138,10 @@ class TestRestartKeepsTheRatchet:
 
     def test_without_an_audit_path_nothing_is_persisted(self, tmp_path):
         """The old behavior, now an explicit choice: no audit_path means no durability."""
-        g = Governor(store_path=str(tmp_path))
+        g = Governor(unverified_operators=True, store_path=str(tmp_path))
         g.boundaries.create_boundary("api", "rate", 100.0)
         flood(g)
-        g2 = Governor(store_path=str(tmp_path))
+        g2 = Governor(unverified_operators=True, store_path=str(tmp_path))
         with pytest.raises(KeyError):
             g2.boundaries.get_boundary("api")
 

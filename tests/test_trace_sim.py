@@ -1,10 +1,7 @@
 """The Python model of the kernel (experiments/stack_trace_sim.py) must reproduce the Rust kernel's committed replay
-results: identical static totals and identical tightening decisions on all three committed traces.
-
-Known, accepted difference: in the committed v1 run the kernel example did not act on a tightened MEMORY cap (the leak
-agents' memory traps stayed at their static count after the cap came down), while the model applies whatever limit
-the governor holds. Only the leak agents' memory_traps and legit_failed under memory-tightening policies differ, and
-the recommended policy never tightens memory. That is excluded below and recorded in docs/TRACE_TEST_PLAN.md.
+results: identical static totals, identical tightening decisions and identical bridge counters on all three committed
+traces. (An earlier v1 reference came from a kernel that refused fractional memory caps and needed a hand exception;
+it was regenerated with the current kernel after the red team, docs/RED_TEAM.md K2.)
 """
 import json
 import sys
@@ -36,13 +33,6 @@ def _run(tag):
     return ref, got
 
 
-def _memory_exception(policy, agent, key, ref_agent):
-    """The kernel example ignored a tightened memory cap: see the module docstring."""
-    mem = ref_agent["limits"]["memory_capacity_bytes"]
-    tightened_memory = mem is not None and mem["limit"] < 536870912.0
-    return tightened_memory and agent.startswith("leak-") and key in ("memory_traps", "legit_failed")
-
-
 @pytest.mark.parametrize("tag", sorted(CASES))
 def test_model_matches_the_kernel_replay(tag):
     ref, got = _run(tag)
@@ -50,16 +40,18 @@ def test_model_matches_the_kernel_replay(tag):
     for pname, pr in ref["policies"].items():
         gp = got["policies"][pname]
         assert gp["audit_chain_intact"] and pr["audit_chain_intact"]
+        # The bridge's own counters (drift holds, releases, reviews, below-rate skips) must match slice for slice:
+        # the red team found the old model's median and quantiles disagreed with the kernel's on most slices and
+        # flipped a release and a restore request while every total still matched (docs/RED_TEAM.md K1).
+        assert gp["bridge_counts"] == pr["bridge_counts"], (tag, pname, "bridge_counts")
         for agent, v in pr["agents"].items():
             w = gp["agents"][agent]
             if pname == first:
-                assert w["static"] == {k: v["static"][k] for k in TOTAL_KEYS}, (tag, agent, "static")
+                assert {k: w["static"][k] for k in TOTAL_KEYS} == {k: v["static"][k] for k in TOTAL_KEYS}, (tag, agent, "static")
             assert (w["tightened"], w["first_tightened_slice"]) == (v["tightened"], v["first_tightened_slice"]), (tag, pname, agent)
             for x, lim in v["limits"].items():
                 assert (w["limits"][x] and w["limits"][x]["limit"]) == (lim and lim["limit"]), (tag, pname, agent, x)
             for k in TOTAL_KEYS:
-                if _memory_exception(pname, agent, k, v):
-                    continue
                 assert w["governed"][k] == v["governed"][k], (tag, pname, agent, k)
 
 
@@ -110,3 +102,65 @@ def test_canary_plan_carries_the_key_only_when_set(tmp_path):
         plan = b.canary_plan("a")
         assert plan["share"] == 0.10 and plan["deadline_ns"] == 100e6
         assert plan.get("key") == key
+
+
+def test_the_aimd_baseline_lowers_on_trouble_raises_when_calm_and_respects_floor_and_ceiling():
+    """The two-way limiter used as the comparison in round 9: same trigger, step and floor as the ratchet's rate rule,
+    plus an increase the ratchet never has."""
+    c = sim.AIMDController({"deadline_ns": 100.0}, increase=0.10)
+    assert c.limit_for("a", "deadline_exceeded") is None and c.limit_for("a", "token_exhausted") is None
+    for _ in range(20):                                             # 5% traps: down by 0.9 each slice to the floor
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 13})
+    assert c.limit_for("a", "deadline_exceeded") == 20.0            # 20% floor
+    for _ in range(8):                                              # calm: +10 per slice
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 0})
+    assert c.limit_for("a", "deadline_exceeded") == 100.0           # never above the original
+    assert c.min_limit["a"] == 20.0 and c.counts["decrease"] >= 15 and c.counts["increase"] >= 8
+    c.observe_slice("a", {"tasks": 250, "deadline_traps": 1})       # 0.4%: calm but already at the ceiling
+    assert c.limit_for("a", "deadline_exceeded") == 100.0
+    c.observe_slice("b", {"tasks": 250, "deadline_traps": 2})       # 2 traps: under min_traps, nothing happens
+    assert c.limit_for("b", "deadline_exceeded") == 100.0
+    c.observe_slice("b", {"tasks": 250, "deadline_traps": 3})       # 3 traps (1.2%): a decrease
+    assert c.limit_for("b", "deadline_exceeded") == 90.0
+
+
+def test_the_aimd_baseline_can_carry_the_drift_hold():
+    c = sim.AIMDController({"deadline_ns": 100.0}, increase=0.02, floor=0.729, drift_factor=1.5)
+    for _ in range(5):
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 0, "completed_median_ns": 20.0})
+    c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 60.0})   # slow AND trapping: held
+    assert c.limit_for("a", "deadline_exceeded") is None or c.limit_for("a", "deadline_exceeded") == 100.0
+    c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 20.0})   # trapping, not slow: cut
+    assert c.limit_for("a", "deadline_exceeded") == 90.0
+    for _ in range(10):
+        c.observe_slice("a", {"tasks": 250, "deadline_traps": 25, "completed_median_ns": 20.0})
+    assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9                          # the cap as floor
+
+
+def test_the_bridge_two_way_is_the_ratchets_bridge_with_a_floor_and_a_recovery():
+    """Round 13: the same TrapBridge drives a limit book; tightenings go through the bridge's own rules; after calm_run
+    calm slices the limit comes back up; nobody is asked anything."""
+    from integrations.stack_traps import TrapPolicy
+    d = {"deadline_ns": 100.0, "tokens_capacity": 4000, "memory_capacity_bytes": 1 << 29}
+    c = sim.BridgeTwoWay(d, TrapPolicy(min_rate=None, min_traps=5, drift_factor=None, reasons=("deadline_exceeded",)),
+                         calm_run=3, increase=0.1, floor=0.729)
+    def trap(i):
+        return {"trap_id": f"t{i}", "agent_id": "a", "trap_reason": "deadline_exceeded", "trap_outcome": "HALT",
+                "boundary_layer": 3, "nanoseconds_since_deadline": 1}
+    bad = {"tasks": 250, "deadline_traps": 10, "expected_trapped": 0, "completed_median_ns": 20.0, "completed_q": None}
+    calm = {"tasks": 250, "deadline_traps": 0, "expected_trapped": 0, "completed_median_ns": 20.0, "completed_q": None}
+    assert c.limit_for("a", "deadline_exceeded") is None
+    c.observe_transactions("a", 250); c.ingest([trap(i) for i in range(10)]); c.observe_slice("a", bad)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 81.0) < 1e-9          # two steps: one per five traps
+    for i in range(30):                                                       # floor, not a breaker
+        c.observe_transactions("a", 250); c.ingest([trap(100 + 10 * i + j) for j in range(10)]); c.observe_slice("a", bad)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9
+    for _ in range(2):
+        c.observe_transactions("a", 250); c.ingest([]); c.observe_slice("a", calm)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 72.9) < 1e-9          # not yet: three calm slices needed
+    c.observe_transactions("a", 250); c.ingest([]); c.observe_slice("a", calm)
+    assert abs(c.limit_for("a", "deadline_exceeded") - 82.9) < 1e-9          # +10% of the original
+    for _ in range(5):
+        c.observe_transactions("a", 250); c.ingest([]); c.observe_slice("a", calm)
+    assert c.limit_for("a", "deadline_exceeded") == 100.0                     # never above the original
+    assert abs(c.min_limit["a"] - 72.9) < 1e-9 and c.counts["increase"] >= 3 and c.counts["loosen_requested"] == 0

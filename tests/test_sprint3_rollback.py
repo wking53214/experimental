@@ -130,8 +130,7 @@ class TestRollbackExecution:
 
     def test_execute_rollback_reverts_boundary(self):
         """Executing rollback reverts boundary to previous version."""
-        governor = Governor(
-            store_path=f"/tmp/test_rollback_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/test_rollback_{int(time.time()*1000)}",
             use_semantic=False
         )
 
@@ -171,8 +170,7 @@ class TestRollbackExecution:
 
     def test_cannot_rollback_initial_version(self):
         """Cannot rollback when at initial version."""
-        governor = Governor(
-            store_path=f"/tmp/test_rollback_initial_{int(time.time()*1000)}",
+        governor = Governor(unverified_operators=True, store_path=f"/tmp/test_rollback_initial_{int(time.time()*1000)}",
             use_semantic=False
         )
 

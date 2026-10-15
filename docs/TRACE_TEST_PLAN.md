@@ -427,3 +427,375 @@ A first attempt crashed: the per-slice trap tally skipped traps the policy did n
 **What this establishes.** With a predictable canary the validation layer is a loosening lever: an agent that completes exactly its canary tasks and hangs the rest gets a correct tightening declared harmful on every review, a restore request filed to a person, and automatic tightening of its boundary frozen while that request waits. A person who trusts the verdict hands the attacker its full budget back. Keyed selection closes it: the same attacker, still sparing every tenth task, is treated like the honest runaway, and the honest runaway is unchanged. The key is now `TrapPolicy(canary_key=...)`, passed to the kernel in the canary plan, and `docs/DEPLOYMENT_CHECKLIST.md` item 6 says to set it. Kernel side: `governed_workload --canary-key`, same hash (reference vectors in `tests/test_trace_sim.py`).
 
 **Limits.** An agent that can read the key, or that can tell which deadline a task is running under before deciding whether to hang it, defeats this; the kernel must not expose the deadline to the task. A share of 10% chosen by hash is still a share of 10%: everything round 5 said about confirmation speed and benefit still holds. Not measured: an attacker that probes membership by hanging a task and watching whether it is killed at 72.9 or 100 ms, then adapts per task; that needs per-task observability the trace model does not represent, and is the next thing to rule out if the kernel ever leaks it.
+
+## Ninth round: the ratchet against a two-way adaptive limiter (design and predictions written before any code ran)
+
+**The question.** The nearest existing thing is a two-way adaptive limiter: lower the limit on trouble, raise it again when things look calm (TCP's AIMD, Netflix `concurrency-limits`, GitLab's Gitaly limit). The thesis says the one-way version with a human gate is safer. That has not been tested head to head. This round runs both on the same traces, same seeds, and measures what each attacker gets and what each legitimate agent pays.
+
+**The baseline.** `aimd`: per agent, deadline only. Decrease: the same trigger as the ratchet's rate rule (at least 5 traps and at least 1% of the last 2,000 tasks), the same step (x0.9), the same 20% floor. Increase: after any slice whose trap share is under 0.5%, raise the limit by 2% of the original, never above the original. No breaker and no human: those are the ratchet's features, and the point is to see what they buy. `aimd_fast`: the same with a 10% increase per calm slice. Against them: `recommended` (the ratchet with rate, drift and excess rules) and `keyed_c10` (the same with the validation layer and a keyed canary).
+
+**Roster `pulse_v1`** (8 agents x 8,000 tasks per seed): `attacker-pulse-2`, `-4`, `-8` hang 5% of tasks during one slice out of every 2, 4 or 8 and behave in between (an attacker that earns its budget back); `runaway-steady` (5% always); `attacker-lowslow` (0.8% always); `regressed-0` (3x slower from task 4,000, honest); `healthy-0`; `healthy-tail` (0.6% natural tail). Also the full `v1` roster for the broad comparison. 20 fresh seeds (8001-8020).
+
+**Predictions.**
+
+| # | Prediction |
+|---|---|
+| Z1 | Pulse attackers: under `aimd` the limit recovers between pulses, so hung-task time saved is at most half the ratchet's on the period-8 attacker (ratchet at least 20%, `aimd` at most 10%); `aimd_fast` worse than `aimd` |
+| Z2 | Sustained runaway: `aimd` saves **more** than the ratchet (at least 50% against about 26%), because without a breaker it goes to the floor. This is the breaker's price and it is recorded as such, not hidden |
+| Z3 | Honest regression (3x slower, never calm again): `aimd` drives it to the floor; its legitimate timeouts rise by at least 30 points. The ratchet holds it (drift rule) at a cost under 1 point and files one restore request |
+| Z4 | Healthy agents: untouched by all policies; `healthy-tail` (0.6%): `aimd` tightens and recovers repeatedly (oscillates), ratchet tightens in about 40% of seeds and holds |
+| Z5 | Low-and-slow: both tighten late; neither saves more than 20%; `aimd` gives the budget back in calm windows and saves less |
+| Z6 | On the full `v1` roster, summed over should-not agents, `aimd`'s legitimate cost is higher than the ratchet's; summed over should-tighten agents, `aimd` saves more on sustained ones and less on intermittent ones |
+
+**What this would establish.** If Z1 and Z3 hold with Z2, the asymmetry's value is specific and measurable: an attacker cannot earn budget back by behaving, and a legitimate regression is not ground down, at the price of a capped saving on sustained attacks. If Z1 fails, the one-way rule is not where the value is and the claim should say so.
+
+**Change before any result was scored.** The first build of `aimd` reused the ratchet's 2,000-task trigger window for its decrease, so while a pulse was anywhere in that window the increase could never fire (the smoke run showed zero increases), which would have made the comparison a ratchet-to-the-floor against a ratchet. A two-way limiter reacts to its current signal, so the baseline now decreases when the current slice has at least 3 traps and at least 1% of its tasks trapped, and increases when the slice's share is under 0.5%. The first run's results file was deleted unread. Predictions unchanged.
+
+### Round 9, result (2026-10-14; seeds 8001-8020; `experiments/stack_trace_multiseed_results_round9.json`)
+
+Pulse roster, hung-task time saved against static / legitimate-timeout cost in points (20 seeds):
+
+| Agent | ratchet (recommended) | ratchet + validation (keyed 10%) | aimd (+2% per calm slice) | aimd_fast (+10%) |
+|---|---|---|---|---|
+| attacker-pulse-2 | 25% / 0.4 | 22% / 0.4 | **54%** / 23.9 | 13% / 2.9 |
+| attacker-pulse-4 | 23% / 0.5 | 21% / 0.4 | 24% / 5.4 | 0% / 0.0 |
+| attacker-pulse-8 | 16% / 0.4 | 15% / 0.3 | **0%** / 0.0 | 0% / 0.0 |
+| runaway-steady | 26% / 0.5 | 23% / 0.4 | **65%** / 31.0 | 65% / 31.0 |
+| attacker-lowslow (0.8%) | 13% / 0.2 | 11% / 0.1 | **53%** / 22.6 | 41% / 16.0 |
+| regressed-0 (honest, 3x) | tightened 2 of 20, 0.2 | 2 of 20, 0.2 | 20 of 20, **24.3** | 20 of 20, 24.3 |
+| healthy-0 | untouched | untouched | untouched | untouched |
+| healthy-tail (0.6%) | 8 of 20, 0.3 | 8 of 20, 0.1 | 20 of 20, **26.5** | 20 of 20, 24.9 |
+
+Full v1 roster, pooled: hung time saved on deadline attackers 23.7% (ratchet), 21.2% (ratchet + validation), **56.5%** (aimd), 55.8% (aimd_fast); on sustained runaways 25.6% against 64.1%; on the episode runaway 16.7% against 13.9%. Mean legitimate cost over the 16 should-not agents: **1.99 points (ratchet) against 17.75 (aimd)**, worst single agent 19.7 against 67.7.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Z1 | Period-8 pulser: aimd at most 10%, ratchet at least 20%; aimd_fast worse | aimd 0%, aimd_fast 0%; ratchet **16%** | Half: the direction held, the ratchet's number did not. And on periods 2 and 4 the result reversed: aimd saved 54% and 24%, because a 10% decrease per pulse against a 2% increase per calm slice nets downward unless the quiet stretch is long |
+| Z2 | Sustained runaway: aimd saves more (at least 50% against about 26%) | 65% against 26% | Yes |
+| Z3 | Honest regression: aimd at least 30 points, ratchet under 1 | 24.3 against 0.2 | Direction yes, number no |
+| Z4 | Healthy untouched; healthy-tail oscillates under aimd, ratchet about 40% | Untouched; healthy-tail **ground to the floor** under aimd on every seed (26.5 points), not oscillating: three or more traps in a 250-task slice happens about one slice in five at a 0.6% tail, and each costs 10% while a calm slice returns 2%; ratchet 8 of 20 | Half |
+| Z5 | Low-and-slow: neither over 20%; aimd less | aimd **53%**, ratchet 13% | **No** |
+| Z6 | v1 pooled: aimd's legitimate cost higher; aimd saves more on sustained, less on intermittent | 17.75 against 1.99; 64% against 26%; 13.9% against 16.7% | Yes |
+
+**What this establishes, which is not what the thesis said.** The one-way rule by itself is not what protects anyone. A two-way limiter with no breaker goes to the floor on anything that keeps tripping it, honest or not, and so it saves two to four times more hung time than the ratchet *and* ruins every honest agent with a tail or a regression. The ratchet's measured advantage is availability for honest agents, bought with the breaker (a cap on automatic steps), the drift hold, and the human gate; its measured price is a saving capped at the breaker's arithmetic. The specific "attackers cannot earn budget back" benefit exists but is narrow: it shows only when an attacker's quiet stretch is long enough for the increase to outrun the decrease (period 8 here), and even there the ratchet saves 16%, not 20%.
+
+**The question this leaves, pre-registered now as round 9b.** Is it the one-way rule or the cap that protects honest agents? A two-way limiter with the breaker's cap (`aimd_capped`: the same `aimd`, floor at 72.9% of the original instead of 20%) isolates them. Same seeds (8001-8020), same rosters. Predictions: (B1) its legitimate cost on the v1 should-not agents is within 2 points of the ratchet's 1.99, and on regressed-0 and healthy-tail under 3 points each, so the cap, not the direction, is what protects honest agents; (B2) its saving on sustained runaways equals the ratchet's cap (about 26%); (B3) on the period-8 pulser it saves at most 8%, under the ratchet's 16%, because it gives the budget back, which is the one-way rule's only unique contribution; (B4) on the low-and-slow attacker it saves within 5 points of the ratchet's 13%.
+
+### Round 9b, result (2026-10-14; same seeds 8001-8020; `experiments/stack_trace_multiseed_results_round9b.json`)
+
+| Agent | ratchet | aimd_capped (two-way, floor at the breaker's cap) |
+|---|---|---|
+| attacker-pulse-2 | 25% / 0.4 | 22% / 0.4 |
+| attacker-pulse-4 | 23% / 0.5 | 15% / 0.3 |
+| attacker-pulse-8 | 16% / 0.4 | **0%** / 0.0 |
+| runaway-steady | 26% / 0.5 | 25% / 0.4 |
+| attacker-lowslow | 13% / 0.2 | 22% / 0.4 |
+| regressed-0 (honest) | 2 of 20 tightened, 0.2 | 20 of 20, **8.3** |
+| healthy-tail | 8 of 20, 0.3 | 20 of 20, 1.3 |
+| v1 pooled: saved on deadline attackers / should-not cost | 23.7% / 1.99 | 23.6% / 3.96 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| B1 | Legitimate cost within 2 points of the ratchet's pooled; regressed-0 and healthy-tail under 3 each | pooled 3.96 against 1.99 (1.97 apart); healthy-tail 1.3; regressed-0 **8.3** | Half |
+| B2 | Sustained saving equals the cap | 25.4% against 25.6% | Yes |
+| B3 | Period-8 pulser at most 8%, under the ratchet's 16% | 0% | Yes |
+| B4 | Low-and-slow within 5 points of the ratchet | 22% against 13%: the capped two-way limiter saves **more**, because its per-slice trigger fires on an 0.8% hang rate more often than the ratchet's 2,000-task rate rule | No |
+
+**The decomposition, which is the result of the round.** Take the ratchet apart into its four features and the same seeds say what each buys:
+
+- **The cap** (three automatic steps, then stop) is what protects honest agents from being ground to the floor: it takes the pooled legitimate cost from 17.75 points to 3.96, and healthy-tail from 26.5 to 1.3. It is also what caps the saving at about 26% on anything sustained. A two-way limiter with the same cap matches the ratchet on sustained runaways to within a point.
+- **The drift hold** (and the human gate behind it) is what protects the honest *regression*: 8.3 points under the capped two-way limiter against 0.2 under the ratchet. A cap alone does not know the agent is slow for an honest reason.
+- **The one-way rule itself** has one measurable, narrow contribution: an attacker who can wait out the limiter's recovery keeps its budget under a two-way limiter and loses it under the ratchet (period 8: 0% against 16%; period 4: 15% against 23%). Against sustained or frequent attackers the direction makes no difference, and the slower-firing rate rule the ratchet uses even costs it 9 points on the low-and-slow attacker.
+- **The human gate** has no measured benefit in these traces because no human acts in them; what it does is turn the cap's "stop" into "stop until someone looks", which is a property of the operation, not of the replay.
+
+**Where this leaves the thesis.** "Automation may only tighten" is not, by itself, the source of safety. Safety against grinding honest agents comes from bounding automation (the cap) and from an interpretation rule (the drift hold) that a two-way limiter could also have. What the direction uniquely gives is that an adversary cannot restore its own budget by behaving for a while, which is real but narrow, and the price is that nobody but a person can restore anyone's. The claim should now be stated that way, and the comparison table above belongs in the paper's evaluation, not in a footnote.
+
+## Tenth round: making the decomposition defensible (design and predictions written before any code ran)
+
+Three checks a reviewer would ask for, run before any writing.
+
+**10a. A two-way limiter with the cap and the drift hold** (`aimd_capped_drift`): `aimd_capped` plus the ratchet's drift rule (baseline = median of the first five slices' completed-duration medians; no decrease while the latest median exceeds 1.5x baseline). No excess release, deliberately: that rule is the ratchet's answer to T15, and the question is what transfers.
+
+| # | Prediction |
+|---|---|
+| D1 | Honest regression (`regressed-0`): cost at most 1 point (from 8.3 under `aimd_capped`; 0.2 under the ratchet) |
+| D2 | v1 pooled should-not cost within 1 point of the ratchet's 1.99 |
+| D3 | Period-8 pulser still 0% saved (the direction's contribution is untouched by the drift rule); sustained runaway about 25% |
+| D4 | The inflate-first attacker in v1 (`attacker-inflate`, T15): saving falls to at most 5% (from 26% under the ratchet, which has the excess release), because the drift hold without the release holds it for the whole attack. So the interpretation rules transfer, and so does their weakness, and the ratchet's advantage there is the excess rule, not the direction |
+
+**10b. When does the direction matter? A formula, then a sweep.** Under a two-way limiter, an attacker that hangs during one slice in every `period` and behaves otherwise loses about 10% per pulse and regains `increase` per calm slice. Its budget recovers between pulses when `(period - 1) x increase >= 0.10`. Prediction D5: `aimd_capped` saves at least 8 points less than the ratchet exactly in the cells where that inequality holds, and within 8 points of the ratchet elsewhere, allowing one cell either side of the boundary. Sweep: periods 2, 4, 8, 16 (a `attacker-pulse-16` is added at the end of the pulse roster, which leaves every other agent's seed unchanged) x increase 1%, 2%, 5%, 10%. From the formula the direction should matter at: 1% only for period 16; 2% for 8 and 16; 5% for 4, 8 and 16; 10% for 2 (boundary), 4, 8 and 16. Round 9 already gave three cells consistent with this (2%: period 8 at 0% against 16%; 10%: periods 4 and 8 at 0%).
+
+**10c. Replication.** The whole comparison (ratchet, `aimd`, `aimd_capped`, `aimd_capped_drift`) on fresh seeds 9001-9020 and on the held-out roster as well as the pulse roster. Prediction D6: the three decomposition statements hold on both (cap protects honest agents, drift hold protects the honest regression, direction matters only for patient pulsers), with every number within 5 points of the round-9 values on the pulse roster.
+
+**Also before writing:** `docs/references.bib` gains the prior art the novelty check named (pledge/unveil, seccomp, AIMD, Netflix concurrency-limits, Kayenta, Rehak 2009). Not a prediction, a debt.
+
+### Round 10, results (2026-10-14; `..._round10ab.json` on seeds 8001-8020, `..._round10c.json` on seeds 9001-9020)
+
+**10a, the capped two-way limiter with the drift hold.**
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| D1 | Honest regression cost at most 1 point | 0.00 (ratchet 0.17) | Yes |
+| D2 | v1 pooled should-not cost within 1 point of the ratchet | **1.99 against 1.99** (cap alone: 3.96) | Yes |
+| D3 | Period-8 pulser still 0%; sustained about 25% | 0% (ratchet 16%); 25% (ratchet 26%) | Yes |
+| D4 | `attacker-inflate` in v1 saved at most 5% without the excess release | 25% (ratchet 26%) | **No, and the prediction was aimed at the wrong agent**: that attacker hangs from its first slice and spends the breaker before it starts inflating (round 1 noted this), so the drift hold never engages. The agents that inflate *first* are in the held-out roster, where the predicted effect appears: `ho-inflate-mild` 19% under the ratchet against **0%** under cap plus drift, `ho-inflate-strong` 21% against 0%, `ho-inflate-ramp` 16% against 8% |
+
+**10b, the formula.** Cells of hung time saved by the capped two-way limiter, against the ratchet in the first column; `*` where `(period - 1) x increase >= 0.10` says the attacker recovers its budget; `D` where the limiter saved at least 8 points less than the ratchet.
+
+| period | ratchet | 1% | 2% | 5% | 10% |
+|---|---|---|---|---|---|
+| 2 | 25% | 23% | 22% | 20% | 6% *D |
+| 4 | 23% | 19% | 15% D | 0% *D | 0% *D |
+| 8 | 16% | 5% D | 0% *D | 0% *D | 0% *D |
+| 16 | 10% | 0% *D | 0% *D | 0% *D | 0% *D |
+
+D5: every cell the formula marks is a D (10 of 10), every cell it does not mark is not, except the two boundary-adjacent cells the prediction allowed (period 4 at 2%: 6% recovery, 8-point drop; period 8 at 1%: 7% recovery, 11-point drop). **Held.** The direction's value is a function of two numbers an operator knows: how long an attacker can afford to wait, and how fast the limiter gives budget back.
+
+**10c, replication on fresh seeds and on the held-out roster** (pooled legitimate cost on should-not agents; hung time saved on attackers):
+
+| | ratchet | aimd (no cap) | aimd + cap | aimd + cap + drift |
+|---|---|---|---|---|
+| pulse roster, pooled cost | 0.12 | 17.04 | 3.23 | 0.55 |
+| pulse roster, honest regression | 0.2 | 24.6 | 8.4 | 0.3 |
+| pulse roster, period-8 / period-16 pulser saved | 17% / 10% | 0% / 0% | 0% / 0% | 0% / 0% |
+| pulse roster, sustained runaway saved | 26% | 65% | 26% | 26% |
+| held-out roster, pooled cost | 2.01 | 21.90 | 4.19 | 1.94 |
+| held-out, 4x regression / 3.5x drift cost | 0.2 / 0.1 | 31.4 / 26.8 | 9.0 / 6.3 | 0.0 / 0.0 |
+| held-out, inflate-first attackers saved (mild / strong / ramp) | 19 / 21 / 16% | 53 / 73 / 67% | 25 / 27 / 27% | **0 / 0 / 8%** |
+
+D6: all three statements hold on both rosters, and every pulse-roster number is within 5 points of round 9. **Held.**
+
+**The decomposition, final form.** On these workloads the ratchet equals: a cap (protects honest agents, caps the saving) plus a drift hold (protects honest regressions and drifts) plus an excess release (recovers the saving against attackers who inflate first, which the drift hold alone gives away entirely) plus the one-way rule (keeps the budget from an attacker who can wait, by the formula above). A two-way limiter with the first two matches the ratchet on every honest agent to within a point and on every sustained attacker; it loses to the ratchet only against patient pulsers and, without the excess rule, against inflate-first attackers. The human gate is the price of the direction: nobody but a person restores anyone's budget. That is the claim the project can defend.
+
+## Eleventh round: robustness of the decomposition (design and predictions written before any code ran)
+
+Five things a referee asks about the rounds 9 and 10 result, each answerable with the existing harness.
+
+**11a. Other duration shapes and headroom** (roster `robust_v1`). The generator draws task durations from a lognormal with log-spread 0.5. Variants: `pareto` (heavy tail, shape 2.5, scaled to the same median) and `bimodal` (80% of tasks at the median, 20% at three times it). For each shape: a 5% runaway, a 0.6%-tail healthy agent, a 3x honest regression at task 4,000, and a period-8 pulser. Plus a `tight` agent: lognormal, median 50 ms under the 100 ms deadline, so about a 5% natural tail with no hangs, the known wide-tail limit under a different name. Policies: ratchet, `aimd`, `aimd_capped_drift`. Seeds 10001-10020.
+
+| # | Prediction |
+|---|---|
+| R1 | Under both other shapes the three statements hold: `aimd`'s pooled legitimate cost at least three times `aimd_capped_drift`'s (cap); the honest regression at most 1 point under `aimd_capped_drift` (drift hold); the period-8 pulser at least 10% saved under the ratchet and at most 3% under `aimd_capped_drift` (direction). Sustained runaway within 5 points of 26% (ratchet) and at least 50% (`aimd`) |
+| R2 | The `tight` agent is tightened by every policy and costs at least 10 points under every policy, the ratchet included. The decomposition does not help it; nothing in the trap stream can |
+
+**11b. The pulse formula generalised** (roster `pulse2_v1`): period 8, active width `w` of 1 or 2 slices, hang intensity 2%, 5% or 10% during active slices. A two-way limiter loses about `1 - 0.9^w` per cycle and regains `(period - w) x increase`. Prediction R3: with the 2% increase, every width-1 agent shows the direction mattering (`aimd_capped` at least 8 points under the ratchet) and no width-2 agent does (14% recovery against 10% loss for width 1; 12% against 19% for width 2), at every intensity.
+
+**11c. The cap as a dial.** The ratchet with `max_auto_tightenings` of 1, 2, 3, 5 and 8 on the v1 roster, seeds 8001-8020. Prediction R4: hung time saved on sustained runaways within 3 points of `1 - 0.9^k` (10, 19, 27, 41, 57%); pooled legitimate cost on should-not agents rises monotonically with k; the slow-from-start agents' cost rises roughly in proportion to the cut.
+
+**11d. Human attention, counted.** Per agent-seed, the number of decisions a person is asked for: breaker holds (a held tightening waiting for acknowledgement) plus restore requests (drift and validation). Prediction R5: under the ratchet, at most one decision per tightened attacker (the breaker hold) and none for untouched healthy agents; under `aimd`, zero decisions and the nine-times-higher harm of round 9. The claim "relocates human effort" becomes a number: decisions per thousand tasks, by policy.
+
+**11e. Intervals.** Bootstrap 95% intervals over seeds for the pooled cost and the sustained saving of each policy in 10c. Prediction R6: ratchet and `aimd` intervals do not overlap on either number; ratchet and `aimd_capped_drift` overlap on both.
+
+### Round 11, results (2026-10-14; `..._round11ab.json` seeds 10001-10020, `..._round11cd.json` seeds 8001-8020)
+
+**11a, other duration shapes** (saved% on attackers / legitimate cost in points):
+
+| Agent | ratchet | aimd | aimd + cap + drift |
+|---|---|---|---|
+| pareto-runaway | 26% / 1.1 | 64% / 31.0 | 25% / 1.1 |
+| pareto-tail | 1.0 | 36.7 | 1.2 |
+| pareto-regressed | **5.8** | 44.8 | **8.6** |
+| pareto-pulse-8 | 20% / 1.0 | 52% / 28.4 | **20%** / 1.0 |
+| pareto pooled should-not | 3.39 | 40.77 | 4.90 |
+| bimodal-runaway | 26% / 2.7 | 65% / 37.8 | 26% / 2.6 |
+| bimodal-tail | 0.0 | 3.2 | 0.6 |
+| bimodal-regressed | 0.0 | 26.3 | 0.0 |
+| bimodal-pulse-8 | 19% / 2.2 | 4% / 2.3 | 2% / 0.3 |
+| bimodal pooled should-not | 0.00 | 14.77 | 0.28 |
+| tight (5% natural tail, no hangs) | tightened 20 of 20, 13.8 | 20 of 20, 67.0 | 20 of 20, 13.3 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| R1 bimodal | cap, drift hold and direction statements all hold | cap 14.77 against 0.28; regression 0.0; pulser 19% against 2%; sustained 26% / 65% | Yes |
+| R1 pareto | same | cap 40.77 against 4.90 and sustained 26% / 64% hold; **the drift statement fails** (regression 8.6 under cap plus drift, and 5.8 under the ratchet itself); **the direction statement fails** (pulser 20% against 20%) | Half, with a mechanism below |
+| R2 | `tight` tightened by all, at least 10 points under all | 20 of 20 and 13.8 / 67.0 / 13.3 | Yes |
+
+**Why Pareto breaks two of three.** A heavy tail puts traps into every slice, so the two-way limiter never sees a calm slice (share under 0.5%) and never increases: it behaves like a ratchet to its floor, grinding honest agents (pareto-tail 36.7 points) and, when capped, never giving a pulser its budget back, so the direction has nothing left to add. The drift hold also weakens: the completed-duration median moves less under a heavy tail than the trap share does, so a 3x regression is held less reliably and the excess release fires more often, which is why even the ratchet costs the honest Pareto regression 5.8 points. Both are statements about the signal, not the direction: **the formula's recovery term assumes calm slices exist, and the drift rule assumes the median tracks the slowdown.** Under heavy tails neither holds well.
+
+**11b, width and intensity** (period 8, saved% ratchet against capped two-way at 2% increase):
+
+| Agent | ratchet | capped | formula says | D (at least 8 under) |
+|---|---|---|---|---|
+| w1, 2% | 6% | 0% | direction matters | no (6 points: the ratchet itself saves little at this intensity) |
+| w1, 5% | 18% | 0% | matters | **D** |
+| w1, 10% | 20% | 1% | matters | **D** |
+| w2, 2% | 15% | 13% | no | no |
+| w2, 5% | 23% | 17% | no | no |
+| w2, 10% | 24% | 16% | no | **D** (8 points exactly) |
+
+R3: four of six cells as predicted; the two misses sit at the 8-point threshold (6 and 8 points). The sign is right in all six: width 1 differs by 6 to 19 points, width 2 by 2 to 8. **Held in direction, not at the stated threshold.**
+
+**11c, the cap as a dial** (v1, seeds 8001-8020):
+
+| k | sustained saved | formula 1 - 0.9^k | pooled should-not cost | slow-from-start cost |
+|---|---|---|---|---|
+| 1 | 9.7% | 10.0% | 0.58 | 4.2 |
+| 2 | 18.2% | 19.0% | 1.23 | 9.4 |
+| 3 | 25.6% | 27.1% | 1.99 | 15.4 |
+| 5 | 37.6% | 41.0% | 3.77 | 29.6 |
+| 8 | 50.1% | 57.0% | 6.61 | 52.0 |
+
+R4: within 3 points of the formula for k up to 3; 3.4 and 6.9 points under it at 5 and 8, because each further step needs a fresh pattern and the later steps arrive late in the run. Cost monotone in k; slow-from-start cost proportional to the cut. **Held for the operating range, overstated by the formula at large k.** The dial is real: every step of the cap buys about 9 points of saving on sustained attackers and about 0.7 points of pooled honest cost (5 points on an agent slow from the start).
+
+**11d, decisions a person is asked for** (v1, 500 agent-seeds):
+
+| Policy | decisions | per 1,000 tasks | on the 100 deadline-attacker agent-seeds | on healthy agents | pooled should-not cost |
+|---|---|---|---|---|---|
+| ratchet (cap 3) | 216 | 0.054 | 156 | 0 | 1.99 |
+| aimd | 0 | 0 | 0 | 0 | 17.75 |
+| aimd + cap + drift | **0** | 0 | 0 | 0 | **1.99** |
+
+R5: no decisions on healthy agents (held); 1.56 decisions per tightened attacker, not at most one (a breaker hold plus, often, a drift restore request). **The sobering row is the third:** the capped two-way limiter with the drift hold reaches the ratchet's honest-agent cost with no human in the loop at all, because its cap is a floor, not a hold waiting for acknowledgement. On this roster the ratchet's 216 decisions buy exactly the direction's narrow benefit (round 10) and the auditability of every change; they do not buy honest-agent safety, which the cap and the drift hold deliver unattended. This belongs in the paper as the price of the human gate, stated in decisions.
+
+**11e, intervals** (bootstrap over seeds, 2,000 resamples, v1):
+
+| Policy | pooled should-not cost | sustained saved |
+|---|---|---|
+| ratchet | [1.96, 2.02] | [25.6%, 25.7%] |
+| aimd | [17.48, 18.00] | [63.8%, 64.5%] |
+| aimd + cap + drift | [1.95, 2.03] | [25.3%, 25.5%] |
+
+R6: ratchet and `aimd` do not overlap on either number (held). Ratchet and cap-plus-drift overlap on cost and **miss by 0.1 point on the saving** (25.5 against 25.6): not met as written; the intervals are tight because the structure is nearly deterministic across seeds, and a 0.2-point difference is real and immaterial.
+
+**What round 11 adds to the defensible claim.** The decomposition holds under a bimodal shape and fails in two of three parts under a heavy tail, for stated reasons about the signal; the direction's formula is right in sign across widths and intensities and coarse at its threshold; the cap is a dial with a measured exchange rate; and the human gate costs about one decision per twenty thousand tasks on this roster for a benefit that a capped two-way limiter with the drift hold matches on honest agents without any decisions. The white paper should carry all of this, including the Pareto failure and the decisions table, because a referee who finds them first will not believe the rest.
+
+### Round 12, pre-registered before any run (2026-10-14): the red team's findings put to the test
+
+**Context.** Six hostile reviewers attacked the evidence (docs/RED_TEAM.md). Three findings change what rounds 9 to 11 mean and need fresh measurements rather than re-reading: the pulsers were caught in slice 0 by a rate rule whose window had not filled (B1); a two-way limiter with hysteresis on its increase matched or beat the ratchet everywhere (B2); the honest-agent results depend on deadline headroom (T1), and the saving metric is arithmetic while the net time is negative (T2). The model's completed-duration statistics also differed from the kernel's (K1) and are now the kernel's.
+
+**Process change, after finding P1.** This section is committed alone, before any run is launched. The results commit follows and carries the JSON. A referee can check the two commit times against a run's duration.
+
+**Runs.**
+- 12a: roster `phase_v1`, seeds 12001 to 12020, policies `recommended`, `aimd_capped_drift`, `twoway_h8`, `twoway_h16`.
+- 12b: rosters `headroom75_v1` and `headroom60_v1` (the v1 agents under 75 ms and 60 ms deadlines), seeds 12001 to 12020, policies `recommended`, `aimd_capped_drift`, `twoway_h16`.
+- 12c: rosters `v1`, `pulse_v1`, `holdout_v1`, the same seeds as rounds 9 to 11 (8001 to 8020), policies `recommended`, `aimd`, `aimd_capped_drift`, `twoway_h16`, under the kernel-exact statistics. Every number is reported beside its round 9 to 11 value.
+
+All outcomes now carry `legit_kills`, `net_burn_ns` (hung time saved minus what the newly killed legitimate tasks had burned) and `net_rerun_ns` (the same minus the work a rerun repeats). `experiments/score_rounds.py` computes every table below from the JSON and is committed with this section.
+
+**Predictions.**
+
+| # | Prediction | Threshold |
+|---|---|---|
+| Q1 (B1) | The ratchet does not catch a patient pulser. On `pulse-8-ph7` and `pulse-8-ph11` it saves under 5% and tightens in fewer than half the seeds; on `pulse-16-ph15` under 3%. On `pulse-8-ph0` it saves what pulse_v1 gave (16 ± 3%). | all four cells |
+| Q2 (B2) | `twoway_h16` saves at least 14% on the period-8 pulser at every phase and at least 8% on `pulse-16-ph15`, and beats the ratchet by at least 8 points on the ph7, ph11 and ph15 cells. | all cells |
+| Q3 (B2) | `twoway_h16` pooled should-not cost on `phase_v1` is within 0.5 points of the ratchet's; on v1 (12c) within 0.5 points with the slow-from-start pair included and within 0.2 without it. | both |
+| Q4 (T2) | In net time with burn (`net_burn_ns`), the period-8 and period-16 pulsers and `attacker-lowslow` are net negative under every policy that tightens them, in at least 15 of 20 seeds each; `runaway-steady` and `runaway-mild` are net positive under every policy in at least 18 of 20. | all |
+| Q5 (T1) | At 60 ms, the ratchet tightens should-not agents in more than half of agent-seeds and its pooled should-not cost exceeds 6 points; at 75 ms the cost is between the 100 ms value and the 60 ms value. | both |
+| Q6 (T1, T2) | At 60 ms the roster's total net time (burn) is negative under every policy, and `runaway-steady` itself is net negative under the ratchet in at least 15 of 20 seeds. | both |
+| Q7 (T1) | The ratchet and `twoway_h16` stay within 1.0 point of each other in pooled should-not cost at 75 ms and at 60 ms: headroom hurts both alike. | both |
+| Q8 (K1) | Under the kernel-exact statistics, on seeds 8001 to 8020: v1 pooled should-not cost for the ratchet within 0.1 of 1.99; sustained saving within 0.5 point of 25.6%; `pulse_v1` `attacker-pulse-8` within 2 points of 16%; the number of restore requests and operator decisions on v1 within 10% of round 11's 216. | all four |
+| Q9 (M4) | Of the ratchet's operator decisions on v1, at least 50 fall on should-not agents and at least 35 of those on the slow-from-start pair; `attacker-inflate` alone accounts for more than half of the attacker decisions. | all three |
+| Q10 (B2, the headline) | Taking 12a, 12b and 12c together there is no cell in which the ratchet beats `twoway_h16` by 8 or more points of saving, and no honest agent on which `twoway_h16` costs 1.0 point or more above the ratchet except `healthy-tail`. If this holds, the "direction matters" claim is withdrawn, not softened. | both |
+
+**What would falsify the red team.** Q1 or Q2 failing means the cold-start explanation is wrong or hysteresis does not travel to fresh seeds; Q5 failing means the headroom dependence was seed noise; Q8 failing means the committed rounds must be regenerated before they are cited again.
+
+### Round 12, results (2026-10-14; `..._round12a/b/c.json`; predictions committed at 19:09:23 UTC in 1e247c7, runs launched after, scored by `experiments/score_rounds.py`)
+
+**12a, phase-shifted pulsers** (saved% / seeds tightened; net time with burn, ms per seed, and seeds negative):
+
+| agent | ratchet | capped + drift | two-way, 16-slice hysteresis |
+|---|---|---|---|
+| pulse-8, first pulse slice 0 | 17.0% / 20 (-1069, 19 neg) | 0.1% / 20 | 18.5% / 20 (-1455, 20 neg) |
+| pulse-8, slice 3 | 7.5% / 16 | 0.8% / 20 | 18.2% / 20 |
+| pulse-8, slice 7 | **2.5% / 6** | 0.0% / 20 | **18.7% / 20** |
+| pulse-8, "slice 11" (see below) | 8.8% / 19 | 0.7% / 20 | 19.2% / 20 |
+| pulse-16, slice 15 | **0.0% / 0** | 0.0% / 20 | **10.8% / 20** |
+| pulse-4, slice 3 (steady 1.25%, above the rule) | 18.0% / 20 (+112, 10 neg) | 14.4% / 20 | 22.6% / 20 (+39, 12 neg) |
+| pulse-8 width 2, slice 7 | 22.2% / 20 (+99, 9 neg) | 12.9% / 20 | 23.1% / 20 (+51, 11 neg) |
+| runaway-steady | 26.0% (+8204, 0 neg) | 25.5% | 26.0% (+8210, 0 neg) |
+| pooled should-not cost | 0.26 | 0.49 | 0.60 (healthy-tail 1.38 against 0.40) |
+| operator decisions | 92 | 0 | 0 |
+
+The "slice 11" agent is mis-specified: with period 8, a phase of 11 wraps to 3 (Python's modulo), so it pulses in slice 3 as well, where the window is still filling. It is a second phase-3 agent under different seeds and reads like one.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Q1 | ratchet under 5% and under half the seeds on ph7 and "ph11"; under 3% on ph15; 16 ± 3% on ph0 | ph7 2.5% / 6 of 20; ph15 0.0% / 0 of 20; ph0 17.0%; **"ph11" 8.8% / 19 of 20** (the wrapped agent) | 3 of 4 as written; the miss is the mis-specified agent |
+| Q2 | two-way with hysteresis at least 14% on period 8 at every phase, at least 8% on ph15, at least 8 points over the ratchet on ph7, "ph11", ph15 | 18.2 to 19.2% at every phase; 10.8% on ph15; margins 16.2, 10.4, 10.8 | **Yes, every cell** |
+| Q3 | pooled should-not cost within 0.5 of the ratchet on phase_v1; on v1 within 0.5 with the slow-from-start pair and 0.2 without | 0.60 against 0.26; v1 2.07 against 2.00, and 0.17 against 0.08 | Yes |
+
+**12b, deadline headroom** (v1 agents; pooled should-not cost, with and without the slow-from-start pair; should-not agent-seeds tightened of 320; net time with burn as a share of all static time):
+
+| deadline | ratchet | capped + drift | two-way, hysteresis |
+|---|---|---|---|
+| 100 ms (12c) | 2.00 / 0.08; 47 of 320; -2.8% | 1.99 / 0.15; 49; -2.8% | 2.07 / 0.17; 46; -2.9% |
+| 75 ms | 3.36 / 0.76; 109 of 320; -3.6% | 5.55 / 3.36; 231; -5.6% | 5.95 / 3.72; 232; -5.9% |
+| 60 ms | 8.24 / 6.15; 220 of 320; -6.2% | 8.32 / 6.35; 221; -6.4% | 8.40 / 6.34; 221; -6.4% |
+
+At 75 ms the ratchet holds the honest regressions and drifts (regressed-0 1.49 points, drift-0 1.36) where the two-way policies do not (10.45 and 10.59): the ratchet's drift machinery fits the slowdown under deadline truncation (`_slowdown`), the transplanted hold compares a raw, truncated median. It pays 131 operator decisions on should-not agents for that. At 60 ms every policy tightens every regression, drift, slow-from-start and tail agent in every seed, and `runaway-steady` itself is net negative in time (20 of 20 seeds under the ratchet: 4.6 points of its own completing tasks killed for a 26% cut in hung time).
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Q5 | at 60 ms more than half the should-not agent-seeds tightened and pooled cost over 6; 75 ms in between | 220 of 320, 8.24; 75 ms 3.36 | Yes |
+| Q6 | at 60 ms total net time negative under every policy; runaway-steady net negative under the ratchet in 15 of 20 | -6.2%, -6.4%, -6.4%; 20 of 20 | Yes |
+| Q7 | ratchet and two-way within 1.0 point at both headrooms | 60 ms: 0.16 apart; **75 ms: 2.59 apart, in the ratchet's favour** | Half: the ratchet's truncation-aware drift fit is a real advantage at 75 ms, and it is a feature of the bridge, not of the direction |
+
+**12c, the decisive rosters under the kernel-exact statistics** (seeds 8001 to 8020, the same as rounds 9 to 11):
+
+| number | rounds 9 to 11 | round 12c | moved? |
+|---|---|---|---|
+| v1 pooled should-not cost, ratchet | 1.99 | 2.00 | no |
+| v1 sustained saved, ratchet | 25.6% | 25.6% | no |
+| v1 operator decisions, ratchet | 216 (156 attackers, 60 should-not) | 216 (154, 62) | two decisions moved between groups |
+| v1 pooled cost, plain AIMD | 17.75 | 17.75 | no |
+| pulse_v1 attacker-pulse-8, ratchet / capped + drift | 16% / 0% | 16.5% / 0.0% | no |
+| holdout inflate-first, ratchet (mild / strong / ramp) | 19 / 21 / 16% | 19.1 / 20.6 / 16.2% | no |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Q8 | every headline number within its stated tolerance | all within | Yes: the K1 divergence does not move the multi-seed headlines, only single-trace verdicts |
+| Q9 | at least 50 should-not decisions, at least 35 on slow-from-start, inflate more than half the attacker decisions | 62, 40, 86 of 154 | Yes |
+| Q4 | period-8 and period-16 pulsers and low-and-slow net negative (burn) in at least 15 of 20 under every policy that tightens them; sustained runaways net positive in at least 18 of 20 | narrow pulsers: 19, 20 (ratchet), 20, 20 (two-way), 17, 12 (capped + drift, which barely tightens them); **width-2 pulser about even (9 to 11 of 20)**; **low-and-slow under the ratchet 10 and 11 of 20, under the two-way 18 and 19**; runaways 20 of 20 everywhere. Under the rerun accounting every pulser and the low-and-slow attacker are negative in nearly every seed under every policy | Half: a one-slice pulser is a net loss to tighten; a two-slice pulser and the low-and-slow attacker sit at the break-even |
+| Q10 | no cell where the ratchet beats the two-way by 8 or more points; no honest agent 1.0 point worse under the two-way except healthy-tail | **holdout inflate-first attackers: 19.1 / 20.6 / 16.2% against 0 / 0 / 7.3%**; **75 ms regressions and drifts 5 to 9 points worse under the two-way** | **No, on both parts.** Both are features the two-way policy was not given: the excess release (round 10c) and the truncation-aware slowdown fit. Neither is the direction. |
+
+**What round 12 settles.**
+1. The one-way direction's measured benefit in rounds 9 to 11 was the cold start (Q1, Q2). A patient pulser that waits for the rate window to fill is not caught by the ratchet at all (2.5% and 0%), and a two-way limiter with 16 slices of hysteresis catches it at every phase (18 to 19%, 11%) with no human decisions. **The "direction matters" claim is withdrawn.** What remains to the direction is the auditability of every change and the fact that no workload can move a limit up; neither is measured by these replays.
+2. The ratchet's bridge still beats the transplanted two-way on two things, and both are interpretation, not direction: the excess release against inflate-first attackers (Q10) and the truncation-aware drift fit at 75 ms headroom (Q7). A two-way limiter could carry both; that is the obvious next experiment and it is not run here.
+3. The honest-agent numbers are a headroom result (Q5, Q6). At three times the slowest honest median, every policy tightens every honest agent with a tail and the whole loop is a net loss of 6% of all task time; at 100 ms the loop is a net loss of 2.8% under every policy, carried by the inflate attacker's and the slow-from-start agents' killed tasks. Only sustained runaways are a net win in time.
+4. The kernel-exact statistics do not move the multi-seed headlines (Q8); they moved single-trace verdicts and one restore request in the kernel comparison, which is where K1 was found.
+5. Strict count: Q2, Q3, Q5, Q6, Q8, Q9 held; Q1, Q4, Q7 half; Q10 failed. The two misses that matter (Q7 at 75 ms, Q10) both favour the bridge's interpretation rules over the direction, and both say the decomposition was incomplete rather than wrong.
+
+### Round 13, pre-registered before any run (2026-10-14): the same bridge, three directions
+
+**Question.** Round 12 left two cells where the ratchet beat the plain two-way limiter: the inflate-first attackers (the excess release) and the 75 ms regressions (the truncation-aware slowdown fit). Both are interpretation rules the two-way was not given. Round 12 also showed the plain two-way catching the phase-7 pulser, which the ratchet's rate rule misses; that comes from its per-slice trigger, not its direction. To separate direction from everything else, this round holds the interpretation layer constant: `twoway_bridge_h8` and `twoway_bridge_h16` are the ratchet's own `TrapBridge` with the recommended policy, driving a limit book instead of the governor (`BridgeTwoWay` in `experiments/stack_trace_sim.py`). Same rate rule over the filling window, same drift hold and slowdown fit, same excess release, same recovery clearing, same expected-load hook, same one-step-per-five-traps. Differences: the cap is a floor at 72.9% rather than three steps and a hold; nobody is asked anything; after 8 or 16 consecutive calm slices the limit comes back up by 2% of the original per slice. Any difference between `recommended` and these two is the direction alone.
+
+**Runs** (launched after this commit): rosters `v1`, `pulse_v1`, `holdout_v1` on seeds 8001 to 8020 and `phase_v1`, `headroom75_v1` on seeds 12001 to 12020; policies `recommended`, `twoway_bridge_h8`, `twoway_bridge_h16`. Scored with `experiments/score_rounds.py` beside round 12's `twoway_h16` columns.
+
+**Predictions.**
+
+| # | Prediction | Threshold |
+|---|---|---|
+| X1 | Interpretation travels: on every should-tighten agent of v1, pulse_v1, holdout_v1 and phase_v1, both bridge two-ways save within 2 points of the ratchet, except the two cells named in X2 and the episodic runaway. | all cells but those |
+| X2 | The one direction cell, by the formula `(period - 1 - K) x increase >= 0.10`: on `attacker-pulse-16` and `pulse-16-ph15`, `twoway_bridge_h8` (7 x 0.02 = 0.14) saves at least 5 points less than the ratchet, and `twoway_bridge_h16` (negative) within 2 points of it. | both agents, both policies |
+| X3 | Recovery replaces the human restore at no measured cost: pooled should-not cost under `twoway_bridge_h8` is at or below the ratchet's on v1 and on headroom75_v1, and within 1.0 point of it on headroom75_v1 (the plain two-way was 2.6 points worse there). | all three |
+| X4 | The inflate cell closes: on `ho-inflate-mild`, `-strong`, `-ramp` both bridge two-ways save within 3 points of the ratchet (19.1 / 20.6 / 16.2%), where the plain two-way saved 0 / 0 / 7.3%. | all three agents |
+| X5 | Both bridge two-ways ask zero operator decisions on every roster; the ratchet asks 216 on v1 and more than 100 on headroom75_v1. | all |
+| X6 | Headline: across every cell of the five rosters, the only places the ratchet beats a bridge two-way by 5 or more points of saving are the period-16 pulsers under `h8`. If so, the decomposition is complete: everything else the ratchet does is cap and interpretation, the direction's measured value is exactly the formula's cell, and hysteresis of `K >= period - 1 - 0.10 / increase` removes it at no honest cost on these traces. | the headline |
+
+**What would falsify this.** X1 or X4 failing means the limit book and the governor differ in something other than direction (a bug in `BridgeTwoWay`, to be found before anything is concluded). X2 failing in the h8 cell means the formula is wrong even with the interpretation layer held fixed. X3 failing means automatic recovery costs honest agents something the restore request does not.
+
+### Round 13, results (2026-10-14; `..._round13a.json`, `..._round13b.json`; predictions committed at 23:44:51 UTC in ffb7cb1, runs launched after)
+
+With the interpretation layer held fixed, the three directions are **identical on every cell of all five rosters except two**: the saving, the legitimate cost, the seeds tightened, the net time, all equal to the printed precision, with the ratchet asking 216 decisions on v1 and 269 on headroom75_v1 and the two-way bridges asking none.
+
+| cell | ratchet | bridge two-way, K = 8 | bridge two-way, K = 16 |
+|---|---|---|---|
+| `attacker-pulse-16` (pulse_v1, first pulse in slice 0), saved | 10.4% | **7.4%** | 10.4% |
+| `regressed-0` (phase_v1), cost | 0.38 | **0.23** | 0.38 |
+| everything else (v1, pulse_v1, holdout_v1, phase_v1, headroom75_v1) | = | = | = |
+| `ho-inflate-mild / -strong / -ramp`, saved (plain two-way in round 12: 0 / 0 / 7.3%) | 19.1 / 20.6 / 16.2% | same | same |
+| headroom75_v1 pooled should-not cost (plain two-way in round 12: 5.95) | 3.36 | 3.36 | 3.36 |
+| operator decisions, v1 / headroom75_v1 | 216 / 269 | 0 / 0 | 0 / 0 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| X1 | interpretation travels: within 2 points everywhere but the named cells | identical everywhere but the named cells | Yes |
+| X2 | pulse-16 under K = 8 at least 5 points under the ratchet; under K = 16 within 2 | **3.0 points under** (7.4 against 10.4), sign right, size short; K = 16 identical. The phase-15 agent is caught by nobody (0 / 0 / 0), so that cell is empty | Half |
+| X3 | recovery at or below the ratchet's honest cost on v1 and headroom75_v1, within 1.0 there | equal (2.00, 3.36); on phase_v1 lower (0.21 against 0.26) | Yes, with equality |
+| X4 | the inflate cell closes | identical | Yes |
+| X5 | zero decisions; ratchet 216 and over 100 | 0; 216 and 269 | Yes |
+| X6 | the only cells the ratchet wins by 5 or more are period-16 pulsers under K = 8 | the ratchet wins no cell by 5 or more; its largest edge is 3.0 points on one agent under K = 8 and nothing under K = 16 | Yes, more strongly than written |
+
+**Why they are identical.** The two-way bridge raises a limit only after K consecutive calm slices, and on these traces the agents that get tightened are the ones that keep trapping: the slow-from-start agents, the tail agents at 75 ms, the inflate attackers, the sustained runaways. The drift hold already keeps the transient ones (regressions, drifts) from being tightened. So the recovery rule almost never fires, and when it does (the period-16 pulser, with 15 calm slices between pulses; a regression that was tightened before its hold engaged) it changes one number by 3 points or 0.15 points. Within a 32-slice run, the direction is nearly moot. The breaker's three steps and the floor at 72.9% are the same depth, so the cap does not separate them either.
+
+**What rounds 12 and 13 settle together.** Everything the ratchet's bridge does that protects an honest agent or catches an attacker is cap and interpretation, and a two-way limiter carrying the same rules reproduces it exactly with no human in the loop. The one-way direction's measured value on these traces is 3 points of saving on one patient pulser against a limiter with 8 slices of hysteresis, and nothing against one with 16. What the direction still buys is not in these replays: every change attributable to a signal or a named person, no path by which a workload moves a limit up, and a held tightening that waits for a person rather than decaying on its own. Those are properties of the audit and the authority model, and the paper should claim them as such, not as measured protection.

@@ -86,7 +86,54 @@ ROSTER_CANARY = [
     ("control-runaway", "runaway", 1, "batch", "hangs 5% of all tasks", dict(median_ms=20, sigma=.5, p=0.05)),
     ("healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
 ]
-ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY}
+# Ninth round: attackers that earn their budget back from a two-way limiter by behaving between pulses.
+ROSTER_PULSE = [
+    *[(f"attacker-pulse-{n}", "attacker_pulse", 1, "ext", f"hangs 5% of tasks during one slice in every {n}",
+       dict(median_ms=20, sigma=.5, p=0.05, period=n, slice_tasks=250)) for n in (2, 4, 8)],
+    ("runaway-steady", "runaway", 1, "batch", "5% of tasks hang for the whole run", dict(median_ms=20, sigma=.5, p=0.05)),
+    ("attacker-lowslow", "attacker_lowslow", 1, "ext", "hangs 0.8% of tasks", dict(median_ms=20, sigma=.5, p=0.008)),
+    ("regressed-0", "regressed", 0, "web", "3x slower from 4000 (honest)", dict(median_ms=20, sigma=.5, at=4000, until=None)),
+    ("healthy-0", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
+    ("healthy-tail", "healthy_tail", 0, "core", "natural 0.6% timeout tail", dict(median_ms=22, sigma=.6)),
+    # appended for round 10b, so every earlier agent keeps its spawned seed
+    ("attacker-pulse-16", "attacker_pulse", 1, "ext", "hangs 5% of tasks during one slice in every 16",
+     dict(median_ms=20, sigma=.5, p=0.05, period=16, slice_tasks=250)),
+]
+# Eleventh round: other duration shapes and headroom; pulse width and intensity.
+ROSTER_ROBUST = []
+for _shape in ("pareto", "bimodal"):
+    ROSTER_ROBUST += [
+        (f"{_shape}-runaway", "runaway", 1, "batch", f"{_shape} durations, 5% hang", dict(median_ms=20, sigma=.5, p=0.05, dist=_shape)),
+        (f"{_shape}-tail", "healthy_tail", 0, "core", f"{_shape} durations, natural tail", dict(median_ms=22, sigma=.6, dist=_shape)),
+        (f"{_shape}-regressed", "regressed", 0, "web", f"{_shape} durations, 3x from 4000", dict(median_ms=20, sigma=.5, at=4000, until=None, dist=_shape)),
+        (f"{_shape}-pulse-8", "attacker_pulse", 1, "ext", f"{_shape} durations, period-8 pulser", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, dist=_shape)),
+    ]
+ROSTER_ROBUST.append(("tight", "healthy_tail", 0, "core", "lognormal, median 50 ms under a 100 ms deadline: about a 5% natural tail, no hangs",
+                      dict(median_ms=50, sigma=.5)))
+ROSTER_PULSE2 = [(f"pulse-w{w}-p{int(p*100)}", "attacker_pulse", 1, "ext", f"period 8, {w} active slice(s), {int(p*100)}% hangs when active",
+                  dict(median_ms=20, sigma=.5, p=p, period=8, width=w, slice_tasks=250)) for w in (1, 2) for p in (0.02, 0.05, 0.10)]
+# Twelfth round: the same pulsers with their first pulse after the rate window has filled (slice 8 onward), plus
+# controls. A one-way limiter that only catches a pulser in its first 250 tasks has not caught a patient one.
+ROSTER_PHASE = [
+    ("pulse-8-ph0", "attacker_pulse", 1, "ext", "period 8, first pulse in slice 0 (as pulse_v1)", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, phase=0)),
+    ("pulse-8-ph3", "attacker_pulse", 1, "ext", "period 8, first pulse in slice 3", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, phase=3)),
+    ("pulse-8-ph7", "attacker_pulse", 1, "ext", "period 8, first pulse in slice 7", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, phase=7)),
+    ("pulse-8-ph11", "attacker_pulse", 1, "ext", "period 8, first pulse in slice 11 (window full)", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, phase=11)),
+    ("pulse-16-ph15", "attacker_pulse", 1, "ext", "period 16, first pulse in slice 15", dict(median_ms=20, sigma=.5, p=0.05, period=16, slice_tasks=250, phase=15)),
+    ("pulse-4-ph3", "attacker_pulse", 1, "ext", "period 4, first pulse in slice 3 (1.25% steady, above the rule)", dict(median_ms=20, sigma=.5, p=0.05, period=4, slice_tasks=250, phase=3)),
+    ("pulse-8-ph7-w2", "attacker_pulse", 1, "ext", "period 8, width 2, first pulse in slice 7", dict(median_ms=20, sigma=.5, p=0.05, period=8, width=2, slice_tasks=250, phase=7)),
+    ("runaway-steady", "runaway", 1, "batch", "5% of tasks hang for the whole run", dict(median_ms=20, sigma=.5, p=0.05)),
+    ("regressed-0", "regressed", 0, "web", "3x slower from 4000 on", dict(median_ms=20, sigma=.5, at=4000, until=None)),
+    ("healthy-0", "healthy", 0, "core", "steady", dict(median_ms=20, sigma=.5)),
+    ("healthy-tail", "healthy_tail", 0, "core", "natural tail", dict(median_ms=22, sigma=.6)),
+]
+ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY,
+           "pulse_v1": ROSTER_PULSE, "robust_v1": ROSTER_ROBUST, "pulse2_v1": ROSTER_PULSE2, "phase_v1": ROSTER_PHASE,
+           # the v1 agents under a deadline with less headroom (the generator's durations are unchanged):
+           "headroom75_v1": ROSTER, "headroom60_v1": ROSTER}
+# Per-roster deadline override, in ns. v1's 100 ms deadline sits 4 to 17x above every honest median; the red team
+# showed the honest-agent results depend on that headroom (docs/RED_TEAM.md T1).
+ROSTER_DEADLINE_NS = {"headroom75_v1": 75_000_000, "headroom60_v1": 60_000_000}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
@@ -108,7 +155,14 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         f = np.clip((seq - prm["start"]) / 4000.0, 0, 1); med *= 1 + prm.get("gain", 1.5) * f; regime[f > 0.05] = "drifting"
     elif profile == "slow_from_start":
         regime[:] = "normal"
-    dur = rng.lognormal(math.log(1.0), prm["sigma"], n) * med * diurnal * MS
+    shape = prm.get("dist", "lognormal")
+    if shape == "pareto":           # heavy tail, scaled to the same median
+        a = 2.5; base = (rng.pareto(a, n) + 1.0) / (2.0 ** (1.0 / a))
+    elif shape == "bimodal":        # 80% at the median, 20% three times slower, each with a narrow spread
+        base = np.where(rng.random(n) < 0.8, 1.0, 3.0) * rng.lognormal(0.0, 0.15, n)
+    else:
+        base = rng.lognormal(math.log(1.0), prm["sigma"], n)
+    dur = base * med * diurnal * MS
     tok = rng.lognormal(math.log(800), 0.4, n)
     mem = rng.lognormal(math.log(120 * 2**20), 0.3, n)
     if profile in ("runaway", "runaway_episode", "attacker_inflate", "attacker_lowslow"):
@@ -119,6 +173,13 @@ def gen_agent(name, profile, prm, n, rng, agent_idx, team):
         hang = rng.random(n) < p
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
         bad[hang] = 1; regime[hang] = {"attacker_inflate": "inflated", "attacker_lowslow": "lowslow"}.get(profile, "runaway")
+    if profile == "attacker_pulse":
+        # phase: the first active slice. The committed pulsers all start in slice 0, where the rate rule's window is
+        # still filling and 5 traps suffice; the red team showed that is what caught them (docs/RED_TEAM.md B1).
+        active = (((seq // prm["slice_tasks"]) - prm.get("phase", 0)) % prm["period"]) < prm.get("width", 1)
+        hang = (rng.random(n) < prm["p"]) & active
+        dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
+        bad[hang] = 1; regime[hang] = "pulse"
     if profile == "attacker_canary":
         hang = (rng.random(n) < prm["p"]) & (seq % prm["every"] != 0)
         dur[hang] = rng.uniform(300, 900, hang.sum()) * MS
