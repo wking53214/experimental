@@ -718,7 +718,7 @@ The "slice 11" agent is mis-specified: with period 8, a phase of 11 wraps to 3 (
 
 | deadline | ratchet | capped + drift | two-way, hysteresis |
 |---|---|---|---|
-| 100 ms (12c) | 2.00 / 0.08; 47 of 320; -2.8% | 1.99 / 0.15; 49; -2.8% | 2.07 / 0.17; 46; -2.9% |
+| 100 ms (12c) | 2.00 / 0.08; 67 of 320; -2.8% | 1.99 / 0.15; 111; -2.8% | 2.07 / 0.17; 71; -2.9% |
 | 75 ms | 3.36 / 0.76; 109 of 320; -3.6% | 5.55 / 3.36; 231; -5.6% | 5.95 / 3.72; 232; -5.9% |
 | 60 ms | 8.24 / 6.15; 220 of 320; -6.2% | 8.32 / 6.35; 221; -6.4% | 8.40 / 6.34; 221; -6.4% |
 
@@ -799,3 +799,9 @@ With the interpretation layer held fixed, the three directions are **identical o
 **Why they are identical.** The two-way bridge raises a limit only after K consecutive calm slices, and on these traces the agents that get tightened are the ones that keep trapping: the slow-from-start agents, the tail agents at 75 ms, the inflate attackers, the sustained runaways. The drift hold already keeps the transient ones (regressions, drifts) from being tightened. So the recovery rule almost never fires, and when it does (the period-16 pulser, with 15 calm slices between pulses; a regression that was tightened before its hold engaged) it changes one number by 3 points or 0.15 points. Within a 32-slice run, the direction is nearly moot. The breaker's three steps and the floor at 72.9% are the same depth, so the cap does not separate them either.
 
 **What rounds 12 and 13 settle together.** Everything the ratchet's bridge does that protects an honest agent or catches an attacker is cap and interpretation, and a two-way limiter carrying the same rules reproduces it exactly with no human in the loop. The one-way direction's measured value on these traces is 3 points of saving on one patient pulser against a limiter with 8 slices of hysteresis, and nothing against one with 16. What the direction still buys is not in these replays: every change attributable to a signal or a named person, no path by which a workload moves a limit up, and a held tightening that waits for a person rather than decaying on its own. Those are properties of the audit and the authority model, and the paper should claim them as such, not as measured protection.
+
+### Note on the pre-registration record (2026-10-15)
+
+The branch carrying rounds 10 to 13 was rebased onto main before it was merged (PR #7), which rewrote the committer timestamps of every commit on it to the rebase time. The ordering evidence for rounds 12 and 13 (predictions commit, then results commit, separated by more than a run's duration) therefore lives in the original commits, which are preserved as tags: `prereg/round12-predictions` (1e247c7, 19:09:23 UTC), `prereg/round12-results` (58ea258, 19:14:19 UTC), `prereg/round13-predictions` (ffb7cb1, 23:44:51 UTC), `prereg/round13-results` (08f6fe2, 23:48:38 UTC). The rebased copies on main carry the same author dates and content. From round 14 on, pre-registration commits are tagged at creation and the branch is merged without rebasing.
+
+Correction, same date: the round 12 headroom table's should-not agent-seeds tightened at 100 ms read 47 / 49 / 46; the JSON gives 67 / 111 / 71 (the paper's `data/numbers.json` reproduces the latter). Corrected above.
