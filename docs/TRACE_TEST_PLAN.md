@@ -820,3 +820,22 @@ Correction, same date: the round 12 headroom table's should-not agent-seeds tigh
 | Y3 | Its pooled should-not cost on v1 is within 0.3 of `twoway_h16`'s 2.07, and its operator decisions on v1 exceed the ratchet's 216 (more tightenings, more holds). | both |
 
 If Y1 holds, the catch is the trigger and the direction is cleared of the last cell where it appeared to matter. If Y1 fails, the direction contributes to the catch and section 5.2 of the paper must say so.
+
+### Round 14, results (2026-10-15; `..._round14a.json`, `..._round14b.json`; predictions committed at 13:56:11 UTC in f8e7392, runs launched after, branch merged without rebasing)
+
+| cell | ratchet | ratchet with per-slice trigger | two-way, cap + drift + 16-slice hysteresis |
+|---|---|---|---|
+| pulse-8, first pulse slice 7: saved / seeds tightened | 2.5% / 6 of 20 | **19.8% / 20 of 20** | 18.7% / 20 of 20 |
+| pulse-8, first pulse slice 0 | 17.0% | 19.7% | 18.5% |
+| pulse-16, first pulse slice 15 | 0.0% / 0 of 20 | **13.8%** / 20 of 20 | 10.8% / 20 of 20 |
+| healthy-tail (v1): cost / seeds tightened | 0.28 / 7 of 20 | 1.33 / 20 of 20 | 1.33 / 20 of 20 |
+| v1 pooled should-not cost | 2.00 | 2.12 | 2.07 |
+| v1 operator decisions | 216 | 254 | 0 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| Y1 | at least 14%, at least 18 of 20 seeds, within 5 points of the two-way | 19.8%, 20 of 20, 1.1 points | Yes |
+| Y2 | healthy-tail at least 18 of 20 and at least 1.0 point | 20 of 20, 1.33 | Yes |
+| Y3 | pooled cost within 0.3 of 2.07; decisions above 216 | 2.12; 254 | Yes |
+
+**What it settles.** The phase-7 catch of round 12 was the trigger, not the direction: give the one-way limiter the two-way baseline's per-slice trigger and it catches the patient pulser at the same rate and pays the same tail-program price. The direction is cleared of the last cell where it appeared to matter in round 12. One residue stays, and it is the same one round 13 found: on the period-16 pulser the one-way limiter keeps 3 points more saving (13.8% against 10.8%) because the two-way gives part of the cut back between pulses. That is the direction's measured value on these traces, stated as a number: about 3 points of hung time on a pulser with 15 calm slices between pulses, bought with 254 operator decisions per 500 program-runs instead of none.
