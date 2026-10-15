@@ -805,3 +805,18 @@ With the interpretation layer held fixed, the three directions are **identical o
 The branch carrying rounds 10 to 13 was rebased onto main before it was merged (PR #7), which rewrote the committer timestamps of every commit on it to the rebase time. The ordering evidence for rounds 12 and 13 (predictions commit, then results commit, separated by more than a run's duration) therefore lives in the original commits, which are preserved on the remote as the branch `prereg-record` (head 08f6fe2, whose ancestry holds 1e247c7 at 19:09:23 UTC, 58ea258 at 19:14:19 UTC, ffb7cb1 at 23:44:51 UTC and 08f6fe2 at 23:48:38 UTC, committer dates). Tags with the same names exist locally but could not be pushed through this session's proxy. The rebased copies on main carry the same author dates and content. From round 14 on, the branch carrying a pre-registration is merged without rebasing.
 
 Correction, same date: the round 12 headroom table's should-not agent-seeds tightened at 100 ms read 47 / 49 / 46; the JSON gives 67 / 111 / 71 (the paper's `data/numbers.json` reproduces the latter). Corrected above.
+
+
+### Round 14, pre-registered before any run (2026-10-15): the one-way limiter with the per-slice trigger
+
+**Question.** The paper's red team showed that the phase-7 pulser catch in round 12 (18.7% under the hysteresis two-way, 2.5% under the ratchet) belongs to the two-way baseline's per-slice decrease trigger (3 traps in a 250-task slice), not to hysteresis, and noted that the control isolating the trigger from the direction was never run. This round runs it: `recommended_slice` is the ratchet's own bridge, governor, cap and human gate with the rate rule's window shortened to 250 tasks and its minimum to 3 traps. Everything else is `recommended`.
+
+**Runs** (launched after this commit): rosters `phase_v1` (seeds 12001 to 12020) and `v1` (seeds 8001 to 8020); policies `recommended`, `recommended_slice`, `twoway_h16`.
+
+| # | Prediction | Threshold |
+|---|---|---|
+| Y1 | The one-way limiter with the per-slice trigger catches the phase-7 period-8 pulser: saving at least 14%, tightened in at least 18 of 20 seeds, within 5 points of `twoway_h16`'s 18.7%. | all three |
+| Y2 | It pays the trigger's price on the natural-tail program: `healthy-tail` tightened in at least 18 of 20 seeds on v1 and costing at least 1.0 point (the ratchet: 7 of 20 and 0.28; `twoway_h16`: 20 of 20 and 1.33). | both |
+| Y3 | Its pooled should-not cost on v1 is within 0.3 of `twoway_h16`'s 2.07, and its operator decisions on v1 exceed the ratchet's 216 (more tightenings, more holds). | both |
+
+If Y1 holds, the catch is the trigger and the direction is cleared of the last cell where it appeared to matter. If Y1 fails, the direction contributes to the catch and section 5.2 of the paper must say so.
