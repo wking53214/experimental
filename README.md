@@ -86,6 +86,14 @@ python scripts/adjudication_server.py   # http://127.0.0.1:8765
 | 11 | Paper outline, CI, stochastic seeds, HTTP demo |
 | 12 | Draft prose, OpenAPI, figures, README polish |
 
+## Optional CNS connection
+
+This repository does not need CNS. It has no runtime dependency, nothing in it imports CNS when it loads, and `tests/test_cns_independence.py` checks this with CNS blocked. `src/governance/cns_connector.py` is the one place that knows CNS exists. Install it with `pip install -r requirements-cns.txt` (pins CNS v1.8.0); without CNS, asking for a digest raises `CnsNotInstalled` and nothing else changes.
+
+It makes three records **bindable** with `cns.gate`: a limit state (`BoundaryVersion`), a limit change (the limit before and after, the direction those imply, and who or what asked) and an `AuthorizationDecision` (who decided and how). A CNS verdict then carries a `subject_digest`, and `binds(result, record)` says whether that verdict was issued against exactly that record.
+
+**Binding records what a limit was. It grants nothing.** The thesis above is untouched: automation may only tighten, and only a named operator, through a grant from the `AuthorityModel`, may loosen. The connector only reads records; it never issues or consumes a grant and never changes a limit (a test scans it for exactly that), and a passing verdict bound to a record of a raise does not raise anything. `created_at` and the decision timestamp are left out of the bound content, because a restart rebuilds them from the audit log and a limit must keep its digest across a restart. Free-text reasons are bound as SHA-256 digests and never copied.
+
 ## License
 
 Research prototype, not production-ready.
