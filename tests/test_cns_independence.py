@@ -18,7 +18,7 @@ CONNECTOR = ROOT / "src" / "governance" / "cns_connector.py"
 BLOCK = "import sys; sys.modules['cns'] = None; sys.modules['cns.gate'] = None\n"
 ENV = {"PYTHONPATH": os.pathsep.join([str(ROOT)] + [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]),
        "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONDONTWRITEBYTECODE": "1"}
-PIN = "cns @ git+https://github.com/wking53214/CNS.git@v1.8.0"
+PIN = "cns @ git+https://github.com/wking53214/CNS.git@v1.9.0"
 # Everything that can issue or consume a grant, decide a proposal, or move a limit.
 AUTHORITY_NAMES = {
     "AuthorizationGrant", "_ISSUER_KEY", "AuthorityModel", "BoundaryStore", "ProposalStore", "Governor", "consume",
