@@ -1,2 +1,2 @@
 # Optional: the CNS gate contract for src/governance/cns_connector.py. Nothing in this repository imports CNS otherwise.
-cns @ git+https://github.com/wking53214/CNS.git@v1.9.0
+cns @ git+https://github.com/wking53214/CNS.git@v2.3.0
