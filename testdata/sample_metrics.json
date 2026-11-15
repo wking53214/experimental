@@ -1,0 +1,134 @@
+{
+  "metrics": [
+    {
+      "name": "cpu_usage_percent",
+      "type": "gauge",
+      "unit": "percent",
+      "points": [
+        {
+          "timestamp": 1699000000,
+          "value": 45.2,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1",
+            "region": "us-east"
+          }
+        },
+        {
+          "timestamp": 1699000060,
+          "value": 48.7,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1",
+            "region": "us-east"
+          }
+        },
+        {
+          "timestamp": 1699000120,
+          "value": 52.1,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1",
+            "region": "us-east"
+          }
+        }
+      ]
+    },
+    {
+      "name": "memory_usage_percent",
+      "type": "gauge",
+      "unit": "percent",
+      "points": [
+        {
+          "timestamp": 1699000000,
+          "value": 72.4,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1"
+          }
+        },
+        {
+          "timestamp": 1699000060,
+          "value": 75.1,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1"
+          }
+        },
+        {
+          "timestamp": 1699000120,
+          "value": 78.9,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "active_connections",
+      "type": "gauge",
+      "unit": "count",
+      "points": [
+        {
+          "timestamp": 1699000000,
+          "value": 324,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1",
+            "pool": "primary"
+          }
+        },
+        {
+          "timestamp": 1699000060,
+          "value": 341,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1",
+            "pool": "primary"
+          }
+        },
+        {
+          "timestamp": 1699000120,
+          "value": 356,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1",
+            "pool": "primary"
+          }
+        }
+      ]
+    },
+    {
+      "name": "query_latency_p95_ms",
+      "type": "gauge",
+      "unit": "milliseconds",
+      "points": [
+        {
+          "timestamp": 1699000000,
+          "value": 125.3,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1"
+          }
+        },
+        {
+          "timestamp": 1699000060,
+          "value": 142.7,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1"
+          }
+        },
+        {
+          "timestamp": 1699000120,
+          "value": 165.2,
+          "labels": {
+            "job": "database",
+            "instance": "prod-db-1"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# HELP cpu_usage_percent CPU usage in percentage
+# TYPE cpu_usage_percent gauge
+cpu_usage_percent{job="api-server",instance="prod-1",region="us-east"} 45.2 1699000000000
+cpu_usage_percent{job="api-server",instance="prod-2",region="us-east"} 52.1 1699000000000
+cpu_usage_percent{job="api-server",instance="prod-3",region="us-west"} 38.9 1699000000000
+
+# HELP memory_usage_percent Memory usage in percentage
+# TYPE memory_usage_percent gauge
+memory_usage_percent{job="api-server",instance="prod-1"} 72.4 1699000000000
+memory_usage_percent{job="api-server",instance="prod-2"} 81.2 1699000000000
+memory_usage_percent{job="api-server",instance="prod-3"} 68.5 1699000000000
+
+# HELP disk_usage_percent Disk usage in percentage
+# TYPE disk_usage_percent gauge
+disk_usage_percent{job="api-server",instance="prod-1"} 65.8 1699000000000
+
+# HELP requests_per_second Request throughput
+# TYPE requests_per_second gauge
+requests_per_second{job="api-server",instance="prod-1"} 1250.5 1699000000000
+requests_per_second{job="api-server",instance="prod-2"} 1180.3 1699000000000
+
+# HELP p99_latency_ms 99th percentile latency
+# TYPE p99_latency_ms gauge
+p99_latency_ms{job="api-server",instance="prod-1"} 145.2 1699000000000
+p99_latency_ms{job="api-server",instance="prod-2"} 167.8 1699000000000
+
+# HELP error_rate_percent Error rate in percentage
+# TYPE error_rate_percent gauge
+error_rate_percent{job="api-server",instance="prod-1"} 0.12 1699000000000
+error_rate_percent{job="api-server",instance="prod-2"} 0.45 1699000000000
