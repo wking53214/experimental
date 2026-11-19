@@ -1319,3 +1319,21 @@ Written before the parity run. The bridge code and 11 unit tests (tests/test_cla
 - M6: refresh averages 0.41 ms per agent per slice.
 
 **Reading.** The governed version behaves like the prototype, so round 21 and 22 results carry over to the bridge. What the bridge adds is the audit trail and a loosening path that waits for a named operator. Still true: class deadlines do not solve the wall (round 22), and every run is simulation on one public trace.
+
+## Round 24 pre-registration: a second signal (declared expectation)
+
+Written before any run. No smoke run.
+
+**Idea.** An agent (or its tool wrapper) may declare, at the start of a call, how long it expects the call to take. The kernel enforces min(class deadline, 3 x declared), never below the same 0.25 D floor. A declaration can only tighten a deadline, so the asymmetric rule holds: lying upward gains nothing (the class deadline applies anyway), lying downward only hurts the liar. The certificate is unchanged because the floor is unchanged (honest cost at most the share of calls in (0.25 D, D]; saving at most 75%).
+
+**Honest limit of this test.** The public trace has no declared expectations. They are simulated as the call's intended duration times lognormal noise with sigma 0.5, 1.0 or 1.5 (an assumption about forecast quality, not data). A runaway's intended duration is its latency before inflation. Two runaway types: non-strategic (a bug: it declares its intended duration) and strategic (declares the inflated duration it will actually take). Results are conditional on that assumption.
+
+**Protocol.** Round 22 data and runaway injection (3% of a runaway's calls inflated 2 to 4 times, capped at 0.95 D, from slice 4), wide and long, D = 10, 60, 180 s, 10 seeds from 24000. Regimes: class_oneway (baseline), decl_nonstrategic, decl_strategic, at each sigma. Honest agents' good calls always get a noisy honest declaration.
+
+**Predictions.**
+- N1: certificates hold (honest cost at most the bound; no class or declared deadline below 0.25 D).
+- N2: at D=60 s, sigma 0.5, decl_nonstrategic saves at least 1.5 times the mild-runaway time class_oneway saves (averaged over both populations).
+- N3: decl_strategic saves within 0.5 points of class_oneway at every sigma and deadline, and never less.
+- N4: honest cost at sigma 0.5 is at most 0.5 points above class_oneway's.
+- N5: honest cost at sigma 1.5 is more than 2 points above class_oneway's (poor forecasts hurt honest agents).
+- N6: on the long population at 60 s, sigma 0.5, decl_nonstrategic saves at least 35% of mild-runaway time.
