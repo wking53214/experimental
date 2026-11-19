@@ -34,6 +34,14 @@ def _stock_has_defects():
 STOCK_HAS_DEFECTS = _stock_has_defects()
 
 
+def assert_refused_as_invalid_telemetry(r):
+    """The fixed DGK refuses bad telemetry. The result carries `refusal_cause` only from DGK 17ad01b on, and the
+    fix commit 4a0ecd2 (which CI pins) returns the rejection without it, so the cause is checked where it exists."""
+    assert r["transaction_status"] == "REJECTED"
+    if "refusal_cause" in r:
+        assert r["refusal_cause"] == "TELEMETRY_INVALID"
+
+
 def kernel(tmp_path, name="k"):
     k = dgk.Kernel(log_path=str(tmp_path / f"{name}.log"))
     tok = secrets.token_urlsafe(32)
@@ -122,7 +130,7 @@ class TestFailClosedTelemetry:
         if STOCK_HAS_DEFECTS:
             assert r["transaction_status"] == "COMMITTED"
         else:
-            assert r["transaction_status"] == "REJECTED" and r["refusal_cause"] == "TELEMETRY_INVALID"
+            assert_refused_as_invalid_telemetry(r)
         for i, bad in enumerate((-1e9, float("inf"))):
             fresh, t2 = kernel(tmp_path, f"bad{i}")
             if STOCK_HAS_DEFECTS:
@@ -130,7 +138,7 @@ class TestFailClosedTelemetry:
                     fresh.process_transaction("p1", {**CALM, "latency": bad}, "hi", "ops", t2)
             else:
                 r = fresh.process_transaction("p1", {**CALM, "latency": bad}, "hi", "ops", t2)
-                assert r["transaction_status"] == "REJECTED" and r["refusal_cause"] == "TELEMETRY_INVALID"
+                assert_refused_as_invalid_telemetry(r)
 
     def test_stock_dgk_commits_small_negative_readings_as_if_valid(self, tmp_path):
         stock, tok = kernel(tmp_path, "neg")
@@ -138,7 +146,7 @@ class TestFailClosedTelemetry:
         if STOCK_HAS_DEFECTS:
             assert r["transaction_status"] == "COMMITTED"      # a latency of minus 600 passes a "> 500" limit
         else:
-            assert r["transaction_status"] == "REJECTED" and r["refusal_cause"] == "TELEMETRY_INVALID"
+            assert_refused_as_invalid_telemetry(r)
 
     def test_one_nan_permanently_corrupts_stock_dgks_statistics(self, tmp_path):
         stock, tok = kernel(tmp_path, "poisoned")
