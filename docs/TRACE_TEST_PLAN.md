@@ -1279,3 +1279,16 @@ Written and pushed before the full run. Smoke run (1 seed) was deleted unread.
 - L6: the wall is not breached: class_oneway saves less than 25% of mild-runaway time at every deadline.
 
 Misses will be recorded as misses.
+
+### Round 22 results
+
+4,800 rows, 10 seeds, scorer: experiments/score_round22.py (table in experiments/score_round22.txt).
+
+- **L1 held.** No honest agent exceeded its bound. Cap regimes never saved more than 27.1%.
+- **L2 missed.** At 60 s class_oneway killed 6.1% of mild-runaway calls (predicted at least 10%). The cap policies killed up to 6.7%, not under 3%, so the contrast I predicted does not exist at 60 s.
+- **L3 missed.** class_oneway saved 20.8% of mild-runaway time against 7.8% for recommended_budget_prov: 2.7 times, not 3 times.
+- **L4 held.** Honest cost 1.07 points at 60 s.
+- **L5 held.** Poisoning matters: on the long population at 60 s one-way saved 29.4% against 24.5% for two-way.
+- **L6 missed.** The wall was breached on the long-tailed population: class_oneway saved 29.4% at 60 s and 37.4% at 180 s. On the wide population it stayed at 8% to 16%.
+
+**Reading.** Class deadlines help against mild runaways only where an agent's normal calls are far shorter than D, so a 2 to 4 times slowdown is still far below the cap. Where the class's own normal tail is long, they save little. Honest cost stays near 1 point. This is a partial win, not a solution to the wall: a slow-but-legitimate class and a mild runaway still cannot be told apart by timing alone.
