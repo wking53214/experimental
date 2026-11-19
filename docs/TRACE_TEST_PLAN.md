@@ -1436,3 +1436,13 @@ Raw output: experiments/class_kernel_replay_round23.json, experiments/score_roun
 | S10 | Adversarial program finds an unpredicted defect | HELD: (1) Rust did not reserve the h- id prefix as Python does, (2) breaker holds were not audited per request, (3) ensure_boundary log noise. All fixed. Also noted: my first tamper test did nothing, because the governor already verifies its hash chain at startup. | observed |
 
 Not shown: live process feeding TrapBridge, class label source, persisted kernel cache, any trace beyond the UW TraceLab public trace.
+
+## Round 23 comparative test (three arms), pre-registration
+
+Note on method: no new simulation. Arms come from runs on the same 960 agent-runs (same seeds from 22000, same injected runaways): static deadline (baseline, saves 0 by definition), existing whole-agent adaptive policy (`recommended`) and existing adaptive budget policy (`recommended_budget_prov`) from round 22, and the class-conditioned kernel path from the round 23 replay. This is a re-analysis, so it can show a relation, not a new effect. Predictions are written before the comparison script is run.
+
+- C1: at 60 s and 180 s in both populations, the kernel path saves more runaway time than the adaptive budget arm.
+- C2: kernel path honest cost is higher than the budget arm's at 60 s (it pays for the saving) and at most 1.5 points on average.
+- C3: paired by seed at 60 s, the kernel path saves more than `recommended` in at least 70% of seeds.
+- C4: no arm violates the certificate (honest cost above the bound).
+- C5: at 10 s the kernel path does not beat all adaptive arms on saving (I expect it to be mixed).
