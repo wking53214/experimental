@@ -47,4 +47,6 @@ own deadline high by completing slowly, which leaves it exactly where the static
   history every slice and takes the larger of its long-run and recent estimates, so a slowdown raises the floor within a few slices
   and a recovery lowers it slowly. A step change inside one slice is not covered.
 - It covers the deadline limit. Token and memory limits have the same shape, but this round measured only the deadline.
+- The certificate is per agent identity. An attacker that changes identity restarts at the default limits; an identity change every 6 slices cut the saving from about 24% to 11.4% (round 18). The honest-cost bound is unaffected.
+- An attacker that completes slowly keeps its own deadline near the old one under the cost budget and gives up the saving (24.3% to 1.0%, round 18); it is then no worse off than the static deadline.
 - Everything measured is simulation or replay. There is no live traffic and no runaway label in the real data.
