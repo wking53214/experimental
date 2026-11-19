@@ -1419,3 +1419,20 @@ Clarification of the floor rule: a governed deadline above the default is treate
 - S10: the adversarial program finds at least one defect in the new code that I did not predict. (A suite that finds nothing is more likely weak than the code perfect.)
 
 Failed predictions will be recorded as failed.
+
+## Round 23 kernel integration: results (recorded after the runs)
+
+Raw output: experiments/class_kernel_replay_round23.json, experiments/score_round23_kernel.txt, tests/test_round23_adversarial.py, STACK-Kernel PR #95 (tests/class_deadlines.rs).
+
+| ID | Prediction | Result | Evidence type |
+|----|-----------|--------|---------------|
+| S1 | Python bridge and Rust kernel decide the same | HELD: 3,540,000 calls, 0 mismatches, kernel clamp never fired | simulated on a public trace, real Rust code |
+| S2, S3, S4 | Kernel never loosens, falls back to default on error, keeps last good value | HELD (Rust tests) | observed in tests |
+| S5 | Mismatch share at most 0.1%, saving gap at most 0.1 | HELD: 0.0000%, gap 0.000 | simulated |
+| S6 | Honest cost at 60 s about 1 point | HELD: 0.76 and 1.36, mean 1.06 | simulated |
+| S7 | Every class decision audited | MISSED on first run: 98.1% (123,405 of 125,742). Cause: the governor logs a breaker hold once per episode, and ensure_boundary added noise. Fixed in the bridge (class_tighten_not_applied entries). Re-run: 100% (125,742 of 125,742). | simulated |
+| S8 | At least 200 loosening attempts, 0 succeed | HELD: the attempt counter and 12 tests pass (no grant, wrong or missing credentials, machine source approving itself, replayed grant, policy self-edit, direct store writes, boundary re-creation, tampered log) | observed in tests |
+| S9 | Restart with service down and no snapshot returns the default | HELD, asserted by Rust test; documented limit F3, not fixed | observed in test |
+| S10 | Adversarial program finds an unpredicted defect | HELD: (1) Rust did not reserve the h- id prefix as Python does, (2) breaker holds were not audited per request, (3) ensure_boundary log noise. All fixed. Also noted: my first tamper test did nothing, because the governor already verifies its hash chain at startup. | observed |
+
+Not shown: live process feeding TrapBridge, class label source, persisted kernel cache, any trace beyond the UW TraceLab public trace.
