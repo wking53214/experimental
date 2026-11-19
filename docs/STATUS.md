@@ -1,4 +1,4 @@
-# Where the project stands (2026-10-14, updated after the multi-seed replays)
+# Where the project stands (2026-10-14, updated after the multi-seed replays; rounds 22 to 26 and kernel integration added 2026-11-19)
 
 One page. Evidence is in the linked documents; nothing here is new measurement.
 
@@ -62,12 +62,31 @@ An agent that is slow from its first task has no earlier baseline, so it is trea
 
 **Thirteenth round, the same bridge in three directions.** The ratchet's own TrapBridge, driving a limit book instead of the governor, with a floor instead of the breaker and automatic recovery after 8 or 16 calm slices, is identical to the ratchet on every cell of five rosters except two: the period-16 pulser (3 points less saving under K = 8, none under K = 16) and one regression that recovers (0.23 against 0.38 points). Zero human decisions against the ratchet's 216 and 269. The cells the plain two-way lost in round 12 (inflate-first attackers, 75 ms regressions) close exactly: they were the excess release and the slowdown fit. The decomposition is complete: cap and interpretation do everything measurable; the direction's value is the audit trail and the absence of any path by which a workload moves a limit up, which no replay measures.
 
+## Rounds 22 to 26 and kernel integration (added 2026-11-19)
+
+Taken from the record in `docs/TRACE_TEST_PLAN.md`, which also holds the pre-registered predictions and the misses. None of these rounds changes the claim above: the round 24 and round 26 readings both say the wall is not broken by the new signals.
+
+- **Round 23, the bridge (class deadlines inside TrapBridge):** all six predictions held on 960 agent-runs. Largest saving gap to the prototype 0.88 points, largest honest-cost gap 0.02 points, 0 deadline rises, every tightening audited.
+- **Round 24, declared expectation (simulated declarations):** N1 and N4 held; N2, N3, N5 (at 60 s) and N6 missed. At 60 s, sigma 0.5 it saved 28.0% of mild-runaway time against 25.0% for the class deadline alone.
+- **Round 25, an honest agent that slows down:** P1, P4 and P5 held; P2 and P3 missed. One operator reset at slice 12 brought one-way within 0.5 points of two-way (0.69 against 1.10).
+- **Round 26, a simulated progress heartbeat:** Q1 and Q5 held; Q2, Q3 and Q4 missed. At 60 s it saved 39.4% against 23.9%, resting on two assumed numbers (the share of runaways that stall, and of honest long calls that falsely stall).
+- **Kernel integration (STACK-Kernel PR #95, merged):** the Python bridge and the Rust kernel made the same decision on 3,540,000 simulated calls, 0 mismatches. S7 (every decision audited) missed on the first run at 98.1%, was fixed, and held at 100% on the re-run. The adversarial program found three defects nobody predicted, all fixed. The opt-in restart snapshot (F3) was built with 8 Rust tests and no pre-registered predictions.
+- **Three-arm comparison (a re-analysis of the same data):** the class kernel path wins clearly only on the long population at 60 s and above (28.9 and 37.4 saved); it ties the whole-agent policy on the wide population at 60 s (12.1 against 12.7); at 10 s the older policies save as much at lower cost; it kills more honest calls everywhere.
+- **Re-checked 2026-11-19 on STACK-Kernel `main` (9b814eb):** `cargo test -p stack-p3-2` passed (36 unit, 20 class-deadline tests), and the ignored live test passed against this repository's adjudication server (the kernel read 729 and 81).
+
+**What stands between the tested interface and a live loop** (from the "Not shown" line of the round 23 record and `crates/stack-p3-2/GOVERNED_LIMITS.md`):
+- No live process feeds TrapBridge from real kernel events. Every closed-loop number is simulated durations, or a replay of one public trace (UW TraceLab).
+- The class label must come from the kernel's own tool wrapper, never from the agent. That source is not shown working.
+- The restart snapshot is opt-in and has only been exercised by Rust tests, not a running loop.
+- The declared-expectation and heartbeat signals rest on assumed behaviour; there is no real data for either.
+- The library enforces only the deadline; token and memory limits are not enforced by it, and the C++ headers read nothing.
+
 ## Known open issues, in the order I would worry about them
 
 1. **Nothing has run on real traffic.** Every closed-loop number comes from simulated durations. The 1.5x drift factor is not on an edge in the sweep; the 1% rate threshold is a workload parameter (agents the labels put on both sides of it), and nothing in the trap stream can set it.
 2. **The benefit is small and capped, and validation eats into it.** The design buys at most 27% on a runaway, 22% with a 10% canary, 16% with a 30% canary; it needs a human for everything else. The canary share is the one lever that trades saving for confirmation speed, and it is priced in `docs/TRACE_TEST_PLAN.md` (round 6) for an operator to choose; `docs/DEPLOYMENT_CHECKLIST.md` lists the rest.
 3. **Baselines can be poisoned** (T2), and the drift rule can be defeated by an attacker who inflates completions first (T15, demonstrated). Opt-in mitigation only.
-4. **Kernel coverage is thin.** Deadline only; C++ untouched; STACK-Kernel CI covers one crate. The kernel example now runs the validation canary and floors fractional limits (PR #9); token and memory caps are still enforced by the example, not the kernel.
+4. **Kernel coverage is thin.** Deadline only; C++ untouched; STACK-Kernel CI covers one crate. The kernel example now runs the validation canary and floors fractional limits (PR #9); token and memory caps are still enforced by the example, not the kernel. Update 2026-11-19: the kernel also reads class deadlines with a kernel-side floor and has an opt-in restart snapshot (STACK-Kernel PR #95); the library still enforces only the deadline, and the C++ headers read nothing.
 5. **Audit anchoring is now a hook, not a decision** (`anchor_store`: the head is published after every append and checked at startup; a rewrite, truncation or deletion of the log is refused). Where the anchor file lives is still the operator's call, and on the same host under the same user it buys nothing. DGK has the same gap. Seven separate hash-chained ledgers exist in the library.
 6. **No TLS** on the adjudication server or the kernel's HTTP read (T10).
 
