@@ -1337,3 +1337,16 @@ Written before any run. No smoke run.
 - N4: honest cost at sigma 0.5 is at most 0.5 points above class_oneway's.
 - N5: honest cost at sigma 1.5 is more than 2 points above class_oneway's (poor forecasts hurt honest agents).
 - N6: on the long population at 60 s, sigma 0.5, decl_nonstrategic saves at least 35% of mild-runaway time.
+
+### Round 24 results
+
+6,720 rows, 10 seeds from 24000; scorer experiments/score_round24.py, table in experiments/score_round24.txt. Declarations are simulated (assumption), not measured.
+
+- **N1 held.** 0 bound violations; no deadline went below 0.25 D.
+- **N2 missed.** At 60 s, sigma 0.5 the declared expectation saved 28.0% of mild-runaway time against 25.0% for class_oneway: 1.12 times, not 1.5 times.
+- **N3 missed on size.** A strategic runaway (declares its true inflated time) was never worse than the baseline, but it saved up to 1.78 points more, not within 0.5. Cause (not isolated by a test): honest agents' noisy declarations kill some honest calls, which lowers the learned class deadlines, which then catch more runaway calls. That is a side effect of honest cost, not catching strategic behavior.
+- **N4 held.** Honest cost at sigma 0.5 was 0.04 points above baseline at 60 s.
+- **N5 missed at 60 s** (0.69 points above baseline, predicted over 2). It held at 10 s (3.26 against 1.11 at sigma 1.5): poor forecasts cost more when the deadline is short.
+- **N6 missed.** Long population, 60 s, sigma 0.5: 33.2% (predicted at least 35%).
+
+**Reading.** A tighten-only declaration is safe (certificate intact, cannot be used to loosen) and cheap when forecasts are decent, but it adds only a few points against non-strategic runaways and nothing meaningful against a runaway that declares honestly about its own slowness. The wall is not broken by this signal. Anything that separates a slow honest agent from a mild runaway needs information the agent cannot cheaply fake, which timing and self-declaration do not supply.
