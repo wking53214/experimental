@@ -62,4 +62,4 @@ Deliberately not claimed by this criterion: that the policy's thresholds transfe
 
 ## Round 23 acceptance criteria (mission of 2026-11-19) and results
 
-Twelve criteria, each with its result, are in `docs/ROUND23_FINAL_REPORT_v1.md` (section "Acceptance criteria"). Summary: met 8 (criteria 2, 3, 4, 5, 7 in replay, 9, 10, 12), partly met 3 (1, 6, 11), not met 1 (criterion 8 for the class split on real stuck calls; met for a per-user one-way deadline). Predictions and misses: `docs/TRACE_TEST_PLAN.md`.
+Twelve criteria, each with its result, are in `docs/ROUND23_FINAL_REPORT_v2.md` (section "Acceptance criteria"). Summary: met 8 (criteria 2, 3, 4, 5, 7 in replay, 9, 10, 12), partly met 3 (1, 6, 11), not met 1 (criterion 8 for the class split on real stuck calls; met for a per-user one-way deadline). Predictions and misses: `docs/TRACE_TEST_PLAN.md`.

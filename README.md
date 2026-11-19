@@ -61,7 +61,7 @@ python scripts/adjudication_server.py   # http://127.0.0.1:8765
 
 ## Documentation
 
-- Round 23 (class deadlines through the Rust kernel path, real-timeout test, red and blue team): `docs/ROUND23_FINAL_REPORT_v1.md`. Recommendation: remain experimental.
+- Round 23 (class deadlines through the Rust kernel path, real-timeout test, red and blue team): `docs/ROUND23_FINAL_REPORT_v2.md`. Recommendation: remain experimental.
 - Shadow test setup (progress signal on real sessions): `docs/SHADOW_TEST_SETUP_v1.md`.
 
 | Doc | Description |

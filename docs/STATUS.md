@@ -98,7 +98,7 @@ The distinctive, working piece is the **one-way ratchet enforced by the store**:
 
 ## Round 23 (2026-11-19): governed class deadlines through the real kernel path
 
-Full report: `docs/ROUND23_FINAL_REPORT_v1.md`. Recommendation: **remain experimental**.
+Full report: `docs/ROUND23_FINAL_REPORT_v2.md`. Recommendation: **remain experimental**.
 - Established (tests of real code): the Rust kernel enforces class deadlines with its own floor and ceiling and falls back to the whole-agent value; 200+ attempts to loosen without a grant all failed; every class decision is audited in replay; 800 Python and 56 Rust tests pass.
 - Established (simulation on two public traces): cross-language decisions match over about 20 million calls; the certificate holds in every arm.
 - Failed or weak: the per-tool-name class split did not beat one adaptive deadline per user on 1,482 real timeout calls (10% vs 17% of timeout time at 60 s); earlier class gains were measured against injected runaways only; duration alone saves about 8 to 11 points per point of honest cost, whatever the setting.
