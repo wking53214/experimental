@@ -31,18 +31,21 @@ jobs:
         run: python scripts/run_multiseed.py --seeds 3 --out results/multiseed_ci.json
 
   lint:
-    # Pyflakes only (unused imports and variables, undefined names), selected in pyproject.toml. ruff is pinned
-    # because a release can change what the default rules are; bump it on purpose.
+    # Pyflakes only (unused imports and variables, undefined names), selected in pyproject.toml, and bandit at medium
+    # severity and above. Both are pinned because a release can change what they flag; bump them on purpose.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install ruff
-        run: pip install ruff==0.16.9
+      - name: Install ruff and bandit
+        run: pip install ruff==0.16.9 bandit==1.9.4
       - name: ruff check
         run: ruff check .
+      - name: bandit (medium severity and above)
+        # A finding that is understood is marked `# nosec <id> - <reason>` on its line. Tests are not scanned.
+        run: bandit -q -r src integrations scripts tools -ll
 
   cns:
     # The optional CNS connector (src/governance/cns_connector.py), with requirements-cns.txt installed.

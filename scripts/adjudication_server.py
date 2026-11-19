@@ -22,7 +22,7 @@ from src.governance.proposal import AdaptationDirection
 # Without ADJUDICATION_OPERATOR_TOKENS the server has no way to authenticate a person, so operator
 # decisions are bare claims (identity_verified=false in the audit log). The governor refuses such
 # claims by default; the server opts in explicitly so the demo still works (docs/RED_TEAM.md S2).
-GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True,
+GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True,  # nosec B108 - demo server, event store only; durable state is ADJUDICATION_AUDIT_LOG
                audit_path=os.environ.get("ADJUDICATION_AUDIT_LOG") or None,
                unverified_operators=not os.environ.get("ADJUDICATION_OPERATOR_TOKENS", "").strip())
 ADJUDICATION_TOKEN = os.environ.get("ADJUDICATION_TOKEN", "").strip()
@@ -362,7 +362,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     host = os.environ.get("ADJUDICATION_HOST", "127.0.0.1")
     port = int(os.environ.get("ADJUDICATION_PORT", sys.argv[1] if len(sys.argv) > 1 else "8765"))
-    public = host in ("0.0.0.0", "::", "[::]")
+    public = host in ("0.0.0.0", "::", "[::]")  # nosec B104 - this only detects a public bind in order to refuse it; the server binds to host
     if public and os.environ.get("ALLOW_PUBLIC_BIND", "") != "1":
         print("REFUSING public bind to %s. Use 127.0.0.1 or ALLOW_PUBLIC_BIND=1." % host, file=sys.stderr)
         sys.exit(2)
