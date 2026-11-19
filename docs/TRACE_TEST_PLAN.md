@@ -1066,3 +1066,32 @@ Saved share is pooled over an attacker's identities.
 
 **Stated limits.** The harness lets the attacker take a new identity for free; a deployed system may charge for identities. The attacker here
 is not trying to defeat the limiter any other way. The honest-cost bound does not depend on identity and is not tested again here.
+
+## Round 19, results: a fresh identity has no history
+
+Run once (`python experiments/red_team_round19.py`, then `python experiments/score_round19.py`): 1440 rows, raw in `experiments/red_team_round19.json`.
+Saved share of hung time, pooled over an attacker's identities:
+
+| Attacker | `recommended` | `recommended_budget` | `recommended_slice` | `recommended_slice_budget` |
+|---|---|---|---|---|
+| persistent (one identity) | 26.1% | 22.3% | 26.2% | 23.0% |
+| new identity every 6 slices | 20.5% | **2.1%** | 22.0% | **3.9%** |
+| new identity every 3 slices | 15.0% | **0.0%** | 17.4% | **0.0%** |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| H1 | no identity above 27.1% | 0 of 1440 rows; highest 26.46% | Yes |
+| H2 | persistent: at least 20% (`recommended`), at least 15% (budget) | 26.1%; 22.3% | Yes |
+| H3 | `sybil6`, `recommended`: 10% to 25% | 20.5% | Yes |
+| H4 | `sybil6`, both budget policies at most 3% | 2.1%; **3.9%** (slice variant) | Half (the slice variant missed by 0.9) |
+| H5 | `sybil3`: `recommended` 5% to 20%; budgets at most 1% | 15.0%; 0.0% and 0.0% | Yes |
+| H6 | binding identity worth at least 15 points under the budget | 20.2 points | Yes |
+
+**What round 19 says.**
+- The cost budget trades away resistance to identity changes. Without it, an attacker that takes a new identity every 6 slices keeps the limiter's saving at 20.5% (down from 26.1%). With it, the saving is 2.1%: a fresh identity has no history, so nothing tightens for its first five slices, and an attacker that rotates faster than that is never tightened. The same budget that cut honest cost by 55% to 74% is what makes the rotation pay.
+- The certificate itself is untouched (H1). The honest-cost bound does not depend on identity.
+- Round 18's 8.5% for the budget policy was the idle-history confound, as suspected: the fair figure is 2.1%.
+
+**Consequence.** The cost budget should be deployed with identity binding (an identity that costs something to create, or one that inherits a starting history from its operator, team or tooling class), or a new identity should start at a conservative deadline until its history is known. Neither is built or tested. The budget stays off by default.
+
+**Limits.** The harness gives the attacker free identities, which is the worst case. The attacker's behavior is fixed and fast; a real one would also pump its floor.
