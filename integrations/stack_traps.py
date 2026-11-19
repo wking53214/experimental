@@ -133,8 +133,23 @@ class TrapPolicy:
     class_min_completions: int = 30
     class_history: int = 5000          # completed durations kept per class (oldest dropped)
     class_max_per_agent: int = 64      # classes tracked per agent (a flood of invented class names is ignored past this)
+    # EXPERIMENTAL: the class deadlines above did not beat one deadline per agent on real timeout calls (docs/ROUND23_FINAL_REPORT_v1.md).
+    # The supported per-agent deadline is below.
+    #
+    # One adaptive, one-way deadline per agent (round 23 purple team; supported design). The boundary is the agent's own
+    # stack.agent.<agent>.deadline_ns, which the kernel already reads. Target = user_margin x the 99th percentile of the agent's
+    # last user_window completed durations, clamped to [user_floor x D, D]; moves only down; a person raises it. The window
+    # (default 1000) means a burst of slow calls at the start (poisoning) ages out instead of blocking tightening for good.
+    user_deadline: bool = False
+    user_margin: float = 1.5
+    user_floor: float = 0.25
+    user_min_completions: int = 30
+    user_window: int = 1000
 
     def __post_init__(self):
+        if self.user_deadline and not (0.0 < self.user_floor <= 1.0 and self.user_margin >= 1.0
+                                       and self.user_min_completions >= 1 and self.user_window >= self.user_min_completions):
+            raise ValueError("user_deadline needs 0 < user_floor <= 1, user_margin >= 1, 1 <= user_min_completions <= user_window")
         if self.class_deadlines and not (0.0 < self.class_floor <= 1.0 and self.class_margin >= 1.0
                                          and self.class_min_completions >= 1):
             raise ValueError("class_deadlines needs 0 < class_floor <= 1, class_margin >= 1, class_min_completions >= 1")
@@ -199,6 +214,8 @@ class TrapBridge:
         self._agents: set = set()
         self._class_ready: set = set()               # class boundaries already ensured
         self._class_obs: Dict[tuple, Deque[float]] = {}   # (agent key, class key) -> completed durations (ns)
+        self._user_obs: Dict[str, Deque[float]] = {}      # agent key -> last user_window completed durations (ns)
+        self._user_ready: set = set()
         self._tightened_boundaries: set = set()   # boundaries this bridge has tightened: never evicted
         self._last_seen: Dict[str, int] = {}      # agent -> ingest sequence of its last event or report
         self._seen_seq = 0
@@ -495,6 +512,90 @@ class TrapBridge:
         self.gov.ensure_boundary(bid, "agent_limit", float(self.defaults["deadline_ns"]))
         return self.gov.request_loosening(bid, requested_by=self.source, credential=self.credential,
                                           new_limit=float(new_limit_ns), reason=reason or "class deadline too tight")
+
+    # ---------- one deadline per agent (round 23 purple team; the supported design) ----------
+
+    def observe_user_durations(self, agent_id: str, completed_ns: Iterable[float]) -> int:
+        """Record durations of this agent's calls that COMPLETED. Returns how many were kept. Changes no limit."""
+        if not self.policy.user_deadline:
+            return 0
+        agent = _agent_key(agent_id)
+        if agent is None:
+            self.counts["user_malformed"] += 1
+            return 0
+        if agent not in self._user_obs:
+            if agent not in self._agents and len(self._agents) >= self.max_agents and not self._evict_idle_agent():
+                self.counts["agent_cap"] += 1
+                return 0
+            self._user_obs[agent] = deque(maxlen=self.policy.user_window)
+        kept = 0
+        for x in completed_ns:
+            if isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x > 0:
+                self._user_obs[agent].append(float(x)); kept += 1
+        return kept
+
+    def user_deadline(self, agent_id: str) -> float:
+        """What the kernel should enforce for this agent: the governed deadline, or the configured deadline_ns."""
+        agent = _agent_key(agent_id)
+        if agent is not None and agent in self._user_obs:
+            try:
+                return float(self.gov.boundaries.get_boundary(self.boundary_id(agent, "deadline_ns")).current_limit)
+            except (KeyError, ValueError):
+                pass
+        return float(self.defaults["deadline_ns"])
+
+    def refresh_user_deadline(self, agent_id: str) -> Optional[float]:
+        """Call at the start of each reporting slice. Tightens the agent's deadline if the target is below the current one and
+        returns the new value; returns None if nothing changed. Never loosens. Every decision is audited."""
+        if not self.policy.user_deadline:
+            return None
+        agent = _agent_key(agent_id)
+        obs = self._user_obs.get(agent) if agent is not None else None
+        if obs is None:
+            return None
+        D, p = float(self.defaults["deadline_ns"]), self.policy
+        bid = self.boundary_id(agent, "deadline_ns")
+        self.counts["user_decisions"] += 1
+        if len(obs) < p.user_min_completions:
+            self._class_audit("user_deadline_unknown", bid, {"completed": len(obs), "needed": p.user_min_completions})
+            return None
+        target = min(D, max(p.user_floor * D, p.user_margin * _quantile(obs, 0.99)))
+        if bid not in self._user_ready:
+            self.gov.ensure_boundary(bid, "agent_limit", D)
+            self._user_ready.add(bid)
+        current = float(self.gov.boundaries.get_boundary(bid).current_limit)
+        if not target < current:
+            self._class_audit("user_deadline_held", bid, {"completed": len(obs), "target_ns": target, "current_ns": current})
+            return None
+        self._agents.add(agent); self._touch(agent)
+        try:
+            reply = self.gov.propose_tightening(
+                bid, source=self.source, credential=self.credential, new_limit=target,
+                reason=f"user deadline {p.user_margin} x p99 of the last {len(obs)} completed calls",
+                evidence={"agent": agent, "completed": len(obs), "target_ns": target},
+                idempotency_key=f"user-{bid}-{int(target)}")
+        except (ValueError, KeyError):
+            self.counts["rejected_input"] += 1
+            return None
+        self.counts["user_reply_" + str(reply.get("status"))] += 1
+        if reply.get("status") in ("applied", "applied_clamped"):
+            self._tightened_boundaries.add(bid)
+            self.counts["user_tightened"] += 1
+            self.counts["class_audited"] += 1
+            return float(reply.get("limit_after", target))
+        self._class_audit("user_tighten_not_applied", bid, {"status": reply.get("status"), "reason": reply.get("reason"),
+                                                            "target_ns": target, "current_ns": current})
+        return None
+
+    def request_user_loosening(self, agent_id: str, new_limit_ns: float, reason: str = "") -> dict:
+        """Ask a named operator to raise this agent's deadline. Nothing changes until an operator approves it."""
+        agent = _agent_key(agent_id)
+        if agent is None or agent not in self._user_obs:
+            return {"status": "rejected", "reason": "unknown agent"}
+        bid = self.boundary_id(agent, "deadline_ns")
+        self.gov.ensure_boundary(bid, "agent_limit", float(self.defaults["deadline_ns"]))
+        return self.gov.request_loosening(bid, requested_by=self.source, credential=self.credential,
+                                          new_limit=float(new_limit_ns), reason=reason or "deadline too tight")
 
     def _min_rate_for(self, agent_id: Any) -> float:
         by_class = self.policy.min_rate_by_class

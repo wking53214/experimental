@@ -1612,3 +1612,10 @@ The window gives 3 to 5 more points of saving for 0.4 to 0.5 more points of hone
 - Attack results: evasion is bounded per call but not cheap for the defender; a 30-call poisoning blocks tightening for thousands of calls (a window of 1,000 limits that); starvation is harmless inside the certificate bound.
 - Nothing tried beat the single exchange rate of about 8 to 11 points of saving per point of honest cost. A different kind of signal (progress, not duration) is the remaining untested lever, and it needs real sessions (the shadow test).
 - Predictions this stage: 12 made, 5 held, 7 missed. Misses are listed above.
+
+## Supported design implemented: one deadline per agent (bridge `user_deadline`). Fidelity check, pre-registration (before the run)
+The bridge now has the purple team's pick (`observe_user_durations`, `refresh_user_deadline`, `request_user_loosening`; window 1,000, margin 1.5, floor 0.25 D, 30 completions). The class path stays but is marked experimental in the code and docs. Check that the real implementation (with the governor's breaker and 20% floor) behaves like the reference simulation (`experiments/purple4_patch.py`, windowed G) on the same real FreeInference streams (users with 2,000 or more calls, D = 60 s and 180 s):
+- V1: timeout time saved by the bridge version is within 3 points of the reference (22.0% at 60 s, 29.4% at 180 s).
+- V2: the bridge's honest cost is within 0.3 points of the reference (1.60 and 1.66).
+- V3: no certificate violation, and every decision is in the governor's audit log (decisions counted equal log entries).
+Any gap I expect comes from the governor's breaker (3 automatic tightenings per boundary), which the reference does not have. Failed predictions will be recorded as failed. Status: not run.
