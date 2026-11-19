@@ -867,3 +867,71 @@ If Y1 holds, the catch is the trigger and the direction is cleared of the last c
 | B5 | The mixing formula is right. At 25%, 50% and 75% the direct mixed rosters' mean net time (burn) as a share of static time is within 1 point of the formula's value, for each policy. | one |
 
 **Reading rules.** A prediction that misses is reported as missed. Any rule, metric or roster changed after a result is labelled as such, with the result that prompted it, as in rounds 4 to 11. The run uses fresh seeds (13001 to 13020) and rosters appended at the end of the generator, which leaves every earlier agent's seed unchanged.
+
+
+### Round 15, results (2026-11-18; `experiments/stack_trace_round15a.json`, `..._round15b.json`, scored by `experiments/score_round15.py`; predictions committed in d1d9d27 at 21:20:38 local time, runs launched after, branch merged without rebasing)
+
+**15a, run length x calm share** (saved share of hung time, % / seeds tightened of 20, at 32, 64 and 128 slices).
+
+| calm share | `recommended_slice` | `twoway_h16` | `recommended` |
+|---|---|---|---|
+| 0% | 26.2 / 26.7 / 26.9 | 26.0 / 26.6 / 26.8 | 26.0 / 26.6 / 26.8 |
+| 50% | 25.3 / 26.3 / 26.7 | 25.0 / 26.0 / 26.6 | 24.7 / 26.0 / 26.5 |
+| 75% | 23.8 / 25.3 / 26.2 | 23.0 / 25.1 / 26.0 | 18.5 / 22.9 / 24.8 |
+| 87.5% | 19.7 / 23.5 / 25.4 | 18.5 / 22.8 / 25.0 | 1.2 / 3.6 / 10.8 (4, 7, 16 of 20 tightened) |
+| 93.75% | 12.2 / 20.3 / 23.8 | 11.1 / 18.6 / 23.1 | 0.9 / 0.6 / 4.0 (5, 5, 11 of 20) |
+| 96.9% | 0.8 / 14.1 / 21.1 | 0.0 / 10.8 / 19.9 | 0.0 / 0.7 / 3.2 (2, 4, 11 of 20) |
+
+Honest programs, cost in points / seeds tightened:
+
+| program | `recommended` | `recommended_slice` | `twoway_h16` |
+|---|---|---|---|
+| honest-tail | 0.31/7, 0.84/15, 0.80/16 | 1.37/20, 1.60/20, 1.65/20 | 1.37/20, 1.59/20, 1.65/20 |
+| honest-regressed (3x from task 4000, for good) | 0.09/3, 1.01/7, 2.25/11 | 0.09/3, 1.01/7, 2.98/11 | 0.00/0, 0.00/0, 0.23/1 |
+
+Operator decisions summed over the roster and 20 seeds (32, 64, 128 slices): `recommended_slice` 156, 170, 177; `recommended` 88, 108, 126; `twoway_h16` none.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| A1 | steady runaway within 3 points of its 32-slice value and at least 24% | 26.2% to 26.9% | Yes |
+| A2 | every pulser tightened in at least 18 of 20 at every length; saving rises with length; at least 20% to calm 87.5% at 128 slices | 20 of 20 everywhere; every pulser rises; 25.4% at 87.5% | Yes |
+| A3 | gap (slice minus twoway) at most 5 points up to period 16 and at least 6 points at period 32 | gaps at 128 slices 0.1, 0.1, 0.2, 0.3, 0.7, 1.2 (period 32: **1.2**, not 6); the largest gap in any cell is 3.3 (period 32 at 64 slices) | **No** (first half held) |
+| A4 | honest-tail tightened at least 19 of 20 at 64 and 128 slices, cost at 128 at least 1.2 and within 0.4 of 64; `recommended` at least 14 of 20 at 128 | 20 and 20; 1.65 against 1.60; 16 of 20 | Yes |
+| A5 | honest-regressed cost at 128 slices at most 1.5 points above its 32-slice cost | **+2.89** under `recommended_slice` (0.09 to 2.98); +2.16 under `recommended`; the two-way: +0.23 | **No** |
+| A6 | decisions at 128 slices at most 2.5 times those at 32 slices | 177 against 156: ratio 1.13 | Yes |
+
+**What 15a says.**
+1. Run length does not dilute the saving: it rises toward the cap's arithmetic (26.9% against 27.1%) as the first pulses stop being a large share of the run, and patient pulsers are caught at every length by the per-slice trigger. A longer run helps the one-way limiter; the plain rate rule (`recommended`) still misses the sparse pulsers (4% saved at calm 93.75% even at 128 slices).
+2. The direction is worth little at any length. The widest gap between the one-way and two-way limiters anywhere in the sweep is 3.3 points of hung time (period 32, 64 slices), shrinking to 1.2 at 128 slices as the two-way limiter's recovery gets re-spent on each pulse. A3's second half was wrong because the two-way limiter that recovers fully between pulses is re-tightened by the next pulse's traps within a slice or two and loses little; the formula of round 10b (`(period - 1) x increase >= 0.10`) predicts that the budget comes back, not that the loss is large.
+3. **The one-way limiter's honest-agent cost grows with run length, and the two-way limiter's does not.** `honest-regressed`, an honest 3x slowdown that never recovers, costs the ratchet 0.09 points at 32 slices, 1.01 at 64 and 2.98 at 128 (11 of 20 seeds tightened by 128), because the excess-rate release fires occasionally on the slow period's traps and the tightening is then permanent until a person restores it. The two-way limiter with the same cap and drift hold pays 0.23 (1 of 20). This is the first measured case where the one-way property costs honest agents more than it buys, and it grows with run length: on 32-slice replays it was invisible. It is the drift hold's erosion, not the direction itself, that creates the false tightenings; the direction is what makes each one stick. Decisions stay almost flat with length (156 to 177), so the human is not the one who fixes it in these runs: a person is asked once per tightened agent and the count saturates.
+
+**15b, net time against the misbehaving share** (net time with burn, as a percentage of static time, from the pools at 100, 75 and 60 ms).
+
+| deadline, policy | 0% | 25% | 50% | 75% | 100% |
+|---|---|---|---|---|---|
+| 100 ms `recommended` | -4.76 | -4.08 | -3.32 | -2.46 | -1.50 |
+| 100 ms `recommended_slice` | -5.26 | -4.48 | -3.62 | -2.66 | -1.57 |
+| 100 ms `twoway_h16` | -5.16 | -4.40 | -3.56 | -2.62 | -1.57 |
+| 75 ms `recommended` | -5.21 | -4.95 | -4.67 | -4.35 | -4.00 |
+| 75 ms `recommended_slice` | -7.95 | -7.15 | -6.27 | -5.30 | -4.21 |
+| 60 ms `recommended` | -5.81 | -5.97 | -6.14 | -6.33 | -6.53 |
+| 60 ms `recommended_slice` | -6.04 | -6.18 | -6.32 | -6.49 | -6.66 |
+
+(`twoway_h16` at 75 and 60 ms is within 0.15 points of `recommended_slice` at every share.) Net time per agent-run at 100 ms under `recommended_slice`, in milliseconds, by program: healthy 0, healthy-tail -7,028 (20 of 20 seeds negative), regressed -395, drifting -3,538, slow-from-start -76,106 (20 of 20), batch 0; steady runaway +8,405 (0 of 20 negative), mild runaway +2,975, episode +1,121, low-and-slow -560 (19 of 20), inflate-first attacker -31,520 (20 of 20), period-8 pulser -1,125 (20 of 20). The honest pool averages -14.5 s, the misbehaving pool -3.5 s.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| B1 | at 100 ms under `recommended`, net negative at 0% and positive at 100%, breakeven between 5% and 40% | negative at both ends (-4.76% and -1.50%); **no breakeven** | **No** |
+| B2 | breakeven at 75 ms at least 15 points above that at 100 ms; negative everywhere at 60 ms | no breakeven at either deadline; 60 ms negative at every share | Half (the 60 ms half) |
+| B3 | `recommended_slice` lower net than `recommended` at 0%; its breakeven within 10 points of `recommended`'s | lower at 0% (-5.26 against -4.76); no breakeven to compare | No (the second half is undefined) |
+| B4 | `recommended_slice` and `twoway_h16` curves within 1 point of static time at every share | largest difference 0.10 points | Yes |
+| B5 | direct mixed rosters within 1 point of the formula at 25%, 50%, 75% for each policy | largest difference 0.02 points (nine cells) | Yes |
+
+**What 15b says.** The sign of net time is set by the program mix, not by the misbehaving share, and on this pool it is negative at every share, including a roster made only of misbehaving agents (-1.5% to -6.7% of static time). Three of the six misbehaving programs (the inflate-first attacker, low-and-slow, the patient pulser) are net negative in 19 or 20 of 20 seeds, and the inflate-first attacker alone (-31.5 s) outweighs all three sustained runaways together (+12.5 s): hung time saved is tiny against the legitimate tasks the tightened deadline kills. Honest agents cost more still, driven by one program: the legitimately slow agent costs -76 s per run, 5 times the whole honest pool's mean. I predicted a breakeven at 5% to 40%; that came from reading round 12's single-roster table as if the runaways dominated the misbehaving side. They do not. The mixing formula itself is exact (B5, to 0.02 points), so any roster's net time can be read off the per-program table above, and the direction is invisible in net time (B4).
+
+**Post-hoc readings, labelled as such (not predictions; the pools were chosen after seeing the table above).** The sign flips only when the misbehaving pool is the three sustained hangers and honest slow agents are rare: with the misbehaving pool = {steady runaway, mild runaway, episode} and the honest pool minus slow-from-start, breakeven is at 12% misbehaving under `recommended` and 31% to 35% under the per-slice trigger and the two-way limiter; with the slow-from-start agent included it is 77% to 78% under all three. With all six misbehaving programs there is no breakeven under any honest pool tried. The number the paper should quote is therefore not a share but a per-program table, and the claim it supports is narrow: the governor earns net time against sustained hangs, and loses it to every other program in the book.
+
+**Consequences for the paper (section 7).**
+- The first referee experiment (longer runs, calm-share sweep) strengthens the saving and the decomposition (the direction is worth at most 3.3 points anywhere) and weakens the honest-agent claim: the drift hold's protection erodes with run length, 0.09 to 2.98 points on an honest regression, and only the two-way limiter recovers from it. Section 6 should not say honest regressions are held; it should say they are held for about 32 slices.
+- The second (net time against share) removes the idea of a breakeven share on this book: net time is negative at every share. State the per-program table instead, and state that the mix formula was checked against direct rosters to 0.02 points.
+- Limits of both: all durations are simulated; the honest pool contains one agent (slow-from-start) that dominates it; run length changed but not the positions of events inside the trace (the regression stays at task 4000); 20 seeds per cell, no intervals computed (the per-seed values are in the JSON files).
