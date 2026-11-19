@@ -1496,3 +1496,10 @@ Honest reading of what changed against the UW trace:
 - At 10 s the class path is the weakest arm on saving (wide 5.4% vs 14.7% for the whole-agent policy; long 6.4% vs 13.8%), and in the long population it costs 1.97 points. The older policies also cost much more at 10 s (3.8 and 3.25), so the safer choice at short deadlines is unclear from this data.
 - Round 22's own predictions L2 and L3 (class kill rate and a 3x saving over the budget arm) would not have held on this data (L3: 11.7 vs 6.8; L2 false). They were not re-registered here and are reported only for completeness.
 - Caveats: parallel calls share one latency value, which makes some latencies step-level; user ordering uses request start times; runaways are still injected, not observed; the kernel replay is simulation on recorded data, not a live system.
+
+## Round 23 diagnosis: where the saving goes (exploratory, not pre-registered)
+
+Script experiments/diagnose_round23.py, output experiments/diagnose_round23.txt; 3 seeds per population at 60 s, mild runaways as in round 22. Settings were looked at on TraceLab and shown once on FreeInference; with 3 seeds the small differences are noise.
+- Breakdown of runaway time at 60 s (TraceLab / FreeInference): saved 24.9 / 13.2; calls in classes that never warmed up 8.1 / 7.2; calls in warm classes that were too short to catch 42.6 / 61.1; the rest ran below the 0.25 D floor and cannot be caught by design. A hypothetical kill at the floor would save 51 / 43, so the ceiling for this method is roughly twice the result on TraceLab and 3x on FreeInference.
+- Settings sweep: every tighter setting buys saving at a roughly constant price in honest calls (about 8 to 11 points of saving per point of honest cost on FreeInference). Margin 1.2 gave 18.4 saved at 1.45 cost; quantile 0.95 gave 25.7 at 2.49. No setting gave a clearly better trade than the shipped one; they move along one curve.
+- Faster warm-up (30 to 15 completions) added 1 to 1.5 points for 0.1 to 0.3 more cost; a 50-call slice added 4 points for 0.6 more cost on FreeInference. Both are cheap, small gains.

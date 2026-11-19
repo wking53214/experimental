@@ -1,0 +1,16 @@
+== breakdown of runaway burn at 60 s with the shipped settings (share of the burn, %)
+tracelab  saved  24.9  never-warm   8.1  warm-but-uncaught  42.6  floor ceiling  51.3  honest cost 1.55
+fi        saved  13.2  never-warm   7.2  warm-but-uncaught  61.1  floor ceiling  43.3  honest cost 0.98
+
+== settings sweep at 60 s (saved %, honest cost points); chosen on tracelab, fi shown for confirmation
+shipped                        tracelab  24.9 / 1.55   fi  13.2 / 0.98
+margin 1.2                     tracelab  29.2 / 1.68   fi  18.4 / 1.45
+margin 1.0                     tracelab  34.2 / 1.87   fi  25.4 / 2.22
+q 0.95                         tracelab  31.1 / 1.95   fi  25.7 / 2.49
+q 0.90                         tracelab  35.1 / 2.36   fi  31.7 / 3.61
+nmin 15                        tracelab  25.9 / 1.63   fi  14.7 / 1.25
+nmin 10                        tracelab  25.9 / 1.63   fi  15.2 / 1.31
+floor 0.15                     tracelab  28.3 / 2.21   fi  14.7 / 1.27
+slice 50                       tracelab  27.2 / 1.66   fi  17.6 / 1.57
+margin 1.2 + nmin 15           tracelab  30.5 / 1.78   fi  19.8 / 1.74
+margin 1.2 + q .95 + nmin 15   tracelab  35.7 / 2.21   fi  30.8 / 3.43
