@@ -5,7 +5,6 @@ These tests verify that defenses address the vulnerabilities identified
 in the deception attacks, even though the full attacks still succeed in
 principle (defender's incomplete information).
 """
-import pytest
 import time
 from src.governance.governor import Governor
 from src.governance.metrics import EffectivenessOutcome
@@ -258,7 +257,7 @@ class TestSemanticPoisoningResistance:
 
         # If governor detects pattern despite "expected" marking,
         # it indicates the semantic layer is working
-        proposal = governor.detect_and_propose_adaptation("cpu")
+        governor.detect_and_propose_adaptation("cpu")
 
         # With semantic layer: pattern may be detected if anomalies outweigh expected
         # OR semantic layer filters enough that pattern isn't detected

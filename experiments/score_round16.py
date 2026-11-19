@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Prints the round 16 tables and prediction verdicts from experiments/real_trace_round16.json."""
-import json, sys
+import json
 from pathlib import Path
 import numpy as np
 rows = json.load(open(Path(__file__).resolve().parent / "real_trace_round16.json"))["rows"]

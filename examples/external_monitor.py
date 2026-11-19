@@ -18,7 +18,6 @@ import statistics
 import sys
 import urllib.error
 import urllib.request
-import uuid
 from collections import deque
 
 

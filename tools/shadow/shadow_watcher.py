@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local watcher: once a second, for each tool call that has started and not ended, record the total CPU ticks used by the
 descendants of its Claude process (Linux /proc). Metadata only. Run it in the background: python3 shadow_watcher.py"""
-import json, os, sys, time
+import json, os, time
 LOG = os.environ.get("STACK_SHADOW_LOG", os.path.expanduser("~/.stack_shadow/calls.jsonl"))
 SAMPLES = os.environ.get("STACK_SHADOW_SAMPLES", os.path.expanduser("~/.stack_shadow/samples.jsonl"))
 

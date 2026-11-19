@@ -60,7 +60,7 @@ def demo():
         resource_or_action="cpu_percent",
         initial_limit=80,
     )
-    print(f"Created boundary: cpu_usage")
+    print("Created boundary: cpu_usage")
     print(f"  Initial limit: {cpu_limit.current_limit}%")
     print(f"  Version: {cpu_limit.version}")
 
@@ -117,7 +117,7 @@ def demo():
 
     if detected_pattern:
         print(f"✓ Pattern detected: {len(violations)} violations in window")
-        print(f"  → Automatic adaptation proposal will be generated")
+        print("  → Automatic adaptation proposal will be generated")
     else:
         print("✗ Pattern not detected")
 
@@ -152,7 +152,7 @@ def demo():
 
     if proposal and approved_proposal.status.value == "approved":
         new_boundary = governor.apply_approved_proposal(approved_proposal)
-        print(f"✓ Adaptation applied")
+        print("✓ Adaptation applied")
         print(f"  New version: {new_boundary.version}")
         print(f"  New limit: {new_boundary.current_limit:.1f}%")
         print(f"  Parent version: {new_boundary.parent_version}")

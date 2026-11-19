@@ -5,7 +5,6 @@ Run:  PYTHONPATH=. python -m experiments.scorecard
 import json
 import os
 
-import numpy as np
 
 R = "experiments"
 

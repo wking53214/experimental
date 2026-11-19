@@ -9,7 +9,7 @@ Provides:
 """
 
 from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 import json
 
 

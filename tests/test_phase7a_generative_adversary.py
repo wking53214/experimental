@@ -240,7 +240,7 @@ class TestPhase7aGenerativeAdversary:
             outcomes_by_gen[generation] = gen_outcomes
 
         # Analysis
-        print(f"\n=== Evolutionary Search Results ===")
+        print("\n=== Evolutionary Search Results ===")
         early_gen_success = sum(
             outcomes_by_gen[i]["succeeded"]
             for i in range(3)
@@ -265,7 +265,7 @@ class TestPhase7aGenerativeAdversary:
         assert late_gen_success < early_gen_success, "Evolutionary search not contained"
         assert late_gen_success < 0.3, "Late generation success too high"
 
-        print(f"\n✓ Evolutionary adversary contained despite novel parameterizations")
+        print("\n✓ Evolutionary adversary contained despite novel parameterizations")
 
     def test_attack_composition_multipart(self, generative_setup):
         """Test multi-step attack sequences (attack composition)."""
@@ -298,7 +298,6 @@ class TestPhase7aGenerativeAdversary:
             ),
         ]
 
-        iteration = 0
         succeeded_count = 0
         detected_count = 0
 
@@ -325,7 +324,7 @@ class TestPhase7aGenerativeAdversary:
                     else:
                         succeeded_count += 1
 
-        print(f"Multi-step attack results:")
+        print("Multi-step attack results:")
         print(f"  Succeeded: {succeeded_count}")
         print(f"  Detected: {detected_count}")
 

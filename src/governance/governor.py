@@ -20,7 +20,7 @@ from .grant import is_loosening
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector
-from .metrics import MetricsTracker, DetectorPipeline
+from .metrics import MetricsTracker
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
 from .phase9_integration import HybridDetectorPipeline, GenerativePipeline
@@ -32,7 +32,7 @@ class Governor:
     # human decision, and violations are interpreted before they can tighten anything.
     DEFAULT_MAX_AUTO_TIGHTENINGS = 3
 
-    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True,
+    def __init__(self, store_path: str = "/tmp/governance_events", use_semantic: bool = True,  # nosec B108 - demo and test default only; a real deployment passes store_path, and limits survive restarts through audit_path, not this store
                  require_fresh_evidence: bool = False, tighten_cooldown_s: float = 0.0,
                  max_auto_tightenings: Optional[int] = DEFAULT_MAX_AUTO_TIGHTENINGS, clock=time.time,
                  detection: str = "generative", operators: Optional[OperatorRegistry] = None,

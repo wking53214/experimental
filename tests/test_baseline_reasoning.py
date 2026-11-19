@@ -7,9 +7,8 @@ against historical baselines.
 Test: Adversary claims "database migration" context, but violation pattern
 deviates from historical database migrations. System detects poisoning.
 """
-import pytest
 import time
-from src.governance.baseline import BaselineComparator, BaselineAnomaly
+from src.governance.baseline import BaselineComparator
 from src.governance.governor import Governor
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Score the round 15 predictions (docs/TRACE_TEST_PLAN.md) from experiments/stack_trace_round15{a,b}.json."""
-import json, sys
+import json
 from pathlib import Path
 import numpy as np
 

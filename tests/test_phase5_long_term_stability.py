@@ -1,10 +1,7 @@
 """Phase 5: Long-Term Stability (hardened: floor-aware DETECTED outcomes)"""
 import pytest
-import time
-from collections import defaultdict
 from src.governance.governor import Governor
 from src.governance.adversary import AttackType, AttackOutcome
-from src.governance.authority import AuthorizationResult
 
 
 class EnduranceExecutor:

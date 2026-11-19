@@ -20,7 +20,6 @@ import math
 import random
 from collections import defaultdict
 from src.governance.governor import Governor
-from src.governance.adversary import AttackType, AttackOutcome
 
 
 class RealisticWorkloadGenerator:
@@ -160,7 +159,7 @@ class TestPhase7bRealisticWorkloads:
         total_executions = 200 * 5 - missing_metrics
         false_positive_rate = false_positives / total_executions if total_executions > 0 else 0
 
-        print(f"Legitimate workload results (200 iterations):")
+        print("Legitimate workload results (200 iterations):")
         print(f"  Total executions: {total_executions}")
         print(f"  Missing metrics: {missing_metrics}")
         print(f"  Violations detected: {violations_detected}")
@@ -170,7 +169,7 @@ class TestPhase7bRealisticWorkloads:
         # False-positive rate should be low (<5%)
         assert false_positive_rate < 0.05, f"False-positive rate too high: {false_positive_rate:.1%}"
 
-        print(f"\n✓ Low false-positive rate on legitimate workload")
+        print("\n✓ Low false-positive rate on legitimate workload")
 
     def test_attacks_under_workload_noise(self, realistic_workload_setup):
         """Inject attacks into legitimate workload with noise. Measure detection rate."""
@@ -225,7 +224,7 @@ class TestPhase7bRealisticWorkloads:
         total_attacks = len(attack_iterations)
         detection_rate = attack_results["detected"] / total_attacks if total_attacks > 0 else 0
 
-        print(f"Attack detection under workload noise:")
+        print("Attack detection under workload noise:")
         print(f"  Total attacks injected: {total_attacks}")
         print(f"  Detected: {attack_results['detected']}")
         print(f"  Succeeded: {attack_results['succeeded']}")
@@ -235,10 +234,10 @@ class TestPhase7bRealisticWorkloads:
         # Finding: Attacks under realistic noise are challenging to detect
         # This reveals a trade-off: semantic layer's low false-positives come with detection challenges
         print(f"\nFinding: Attack detection under workload noise is challenging ({detection_rate:.0%}).")
-        print(f"This suggests need for stronger detection or automatic baseline learning.")
+        print("This suggests need for stronger detection or automatic baseline learning.")
 
         # Don't assert - this is a documented finding for Phase 7C/7D work
-        print(f"\n✓ Legitimate workload protected from false positives (test 1 passed)")
+        print("\n✓ Legitimate workload protected from false positives (test 1 passed)")
 
     def test_cascading_legitimate_spikes(self, realistic_workload_setup):
         """Test legitimate correlated spikes (multi-resource surge)."""
@@ -277,7 +276,7 @@ class TestPhase7bRealisticWorkloads:
                     if proposal:
                         proposals += 1
 
-        print(f"Legitimate batch job spike (30 iterations):")
+        print("Legitimate batch job spike (30 iterations):")
         print(f"  Violations detected: {sum(multi_resource_violations.values())}")
         print(f"  Proposals created: {proposals}")
 
@@ -290,7 +289,7 @@ class TestPhase7bRealisticWorkloads:
 
         # Legitimate spikes: low false-positive proposals
         # (Note: with low baseline load, spikes don't always trigger violations)
-        print(f"\n✓ Batch job spike processed (low false positives on legitimate load)")
+        print("\n✓ Batch job spike processed (low false positives on legitimate load)")
 
 
 if __name__ == "__main__":

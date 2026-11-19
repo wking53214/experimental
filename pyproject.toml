@@ -1,0 +1,12 @@
+# Tooling configuration only. This file defines no package and no build; pytest reads pytest.ini.
+
+[tool.ruff]
+# The gate CI runs (`ruff check .`). ruff is pinned in CI because a new release can change what the default rules
+# are; the rules below are named for the same reason.
+extend-exclude = ["build"]
+
+[tool.ruff.lint]
+# Pyflakes only: unused imports and variables, undefined names, redefinitions, f-strings with nothing in them.
+# Style rules (E70x semicolons, E401, E402, E731) are off on purpose: they would only change layout, and this
+# repository's experiment scripts are written compactly.
+select = ["F"]

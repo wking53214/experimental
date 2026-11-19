@@ -11,7 +11,6 @@ If this governance pattern is truly foundational, it must survive:
 Success = System remains bounded, monotonic, and useful despite adversarial input.
 """
 import time
-import pytest
 from src.governance.governor import Governor
 from src.governance.proposal import AdaptationDirection
 from src.governance.rollback import RollbackManager, RollbackReason
@@ -191,7 +190,6 @@ class TestAdversarialCascadePrevention:
         governor.boundaries.create_boundary("cpu", "cpu_percent", 80)
 
         # Register prevention rules
-        from src.governance.rollback import RollbackManager
         manager = RollbackManager()
         manager.register_prevention_rule(
             boundary_id="cpu",
@@ -275,7 +273,7 @@ class TestAdversarialMonotonicity:
         # Rollback creates v3 (not v1)
         from src.governance.rollback import RollbackExecutor
         executor = RollbackExecutor(governor)
-        decision = executor.execute_rollback("prop1", "metric", RollbackReason.DEGRADED_METRICS,
+        executor.execute_rollback("prop1", "metric", RollbackReason.DEGRADED_METRICS,
                                             operator_id="operator-1")
 
         v3 = governor.boundaries.get_boundary("metric")
@@ -351,7 +349,7 @@ class TestAdversarialUtility:
             time.sleep(0.05)
 
         # With semantic layer: real anomalies should trigger proposal
-        proposal = governor.detect_and_propose_adaptation("metric")
+        governor.detect_and_propose_adaptation("metric")
 
         # PROPERTY: Utility preserved (real patterns still detected)
         # Even if adversary also injected violations, the real pattern wins

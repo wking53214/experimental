@@ -263,7 +263,7 @@ class TestPhase4ScaleConcurrency:
             print(f"  Early (first 6):      {early_success:.0%}")
             print(f"  Late (last 6):        {late_success:.0%}")
 
-        print(f"\n=== System-Wide Metrics ===")
+        print("\n=== System-Wide Metrics ===")
         total_violations = sum(executor.violation_counts.values())
         total_proposals = sum(executor.proposal_counts.values())
         cascade_events = sum(1 for r in results if r.cascade_triggered)
@@ -283,7 +283,7 @@ class TestPhase4ScaleConcurrency:
             1 for r in results if r.outcome == AttackOutcome.DETECTED
         )
 
-        print(f"\n=== Outcome Distribution ===")
+        print("\n=== Outcome Distribution ===")
         print(f"SUCCEEDED: {total_succeeded}/{total_attacks} ({total_succeeded*100//total_attacks}%)")
         print(f"DETECTED:  {total_detected}/{total_attacks} ({total_detected*100//total_attacks}%)")
 
@@ -298,7 +298,7 @@ class TestPhase4ScaleConcurrency:
 
         assert avg_late_rate < 0.2, f"Late success rate too high: {avg_late_rate:.0%}"
         assert total_detected >= total_succeeded * 0.8, "Detection ratio too low"
-        print(f"\n✓ Scale test passed")
+        print("\n✓ Scale test passed")
 
     def test_cascade_isolation(self, scale_test_setup):
         """Verify cascade events don't cause runaway tightening."""
@@ -326,7 +326,7 @@ class TestPhase4ScaleConcurrency:
                 cascade_count += 1
 
         print(f"Cascade events: {cascade_count}/30")
-        print(f"Boundary tightening distribution:")
+        print("Boundary tightening distribution:")
 
         sorted_counts = sorted(
             executor.violation_counts.items(),
@@ -341,7 +341,7 @@ class TestPhase4ScaleConcurrency:
         print(f"\nMax violations on any boundary: {max_violations}")
 
         assert max_violations < 20, "Cascade runaway detected"
-        print(f"\n✓ Cascade isolation holding")
+        print("\n✓ Cascade isolation holding")
 
 
 if __name__ == "__main__":

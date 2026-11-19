@@ -17,7 +17,6 @@ import argparse
 import json
 import tempfile
 
-import numpy as np
 
 from src.governance.governor import Governor
 

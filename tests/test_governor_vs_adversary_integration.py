@@ -6,7 +6,7 @@ closed-loop horizon (≤20 iterations).
 """
 import pytest
 from src.governance.governor import Governor
-from src.governance.adversary import AdversaryOracle, AttackType, AttackOutcome
+from src.governance.adversary import AdversaryOracle, AttackOutcome
 
 
 class TestGovernorVsAdversaryIntegration:

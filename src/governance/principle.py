@@ -6,7 +6,6 @@ This is the non-negotiable foundation that the governor operates under.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 
 class PrincipleType(Enum):

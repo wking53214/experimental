@@ -7,7 +7,7 @@ signature and flags it before damage happens.
 """
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from collections import deque
 
 

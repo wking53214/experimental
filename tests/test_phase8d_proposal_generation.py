@@ -6,9 +6,8 @@ Test proposal generation from detector pipeline anomalies.
 Converts detection results → adaptation proposals for governance loop.
 """
 
-import time
 from src.governance.proposal import (
-    ProposalGenerator, AdaptationProposal, AdaptationDirection, ProposalStatus
+    ProposalGenerator, AdaptationDirection, ProposalStatus
 )
 from src.governance.metrics import DetectorPipeline
 

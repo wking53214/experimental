@@ -13,7 +13,7 @@ import json
 import numpy as np
 
 from experiments.phase9_end_to_end import (
-    EPISODE_STEPS, METRICS, SHIFT_SIGMA, EvolutionaryAdversary, clean_fpr, damage_of, run_episode, train,
+    METRICS, SHIFT_SIGMA, EvolutionaryAdversary, clean_fpr, damage_of, run_episode, train,
 )
 
 LAMBDAS = [0.05, 0.1, 0.2, 0.3, 0.5]

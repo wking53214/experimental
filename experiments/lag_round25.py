@@ -38,7 +38,6 @@ def job(args):
     D = D_s * 1000.0; rows = []
     for u in users:
         t0, cl = data[u][0][:use].copy(), data[u][1][:use]
-        n = len(t0)
         for f in (1.0,) + FS:
             lat = t0.copy()
             if f > 1 and u in shifters:

@@ -14,7 +14,6 @@ Four nasty attacks:
 3. Constraint migration (move attack across boundaries)
 4. Goodhart attack (violate less, but degrade more)
 """
-import pytest
 import time
 from src.governance.governor import Governor
 from src.governance.proposal import AdaptationDirection
@@ -294,7 +293,7 @@ class TestSemanticPoisoning:
         governor.boundaries.create_boundary("target", "metric", 80)
 
         attacker = AttackSemanticPoisoning()
-        violations = attacker.attack(governor, "target")
+        attacker.attack(governor, "target")
 
         # QUESTION: Did semantic layer let this through because it matched
         # the "expected maintenance" pattern?
@@ -311,7 +310,7 @@ class TestSemanticPoisoning:
         # Document: semantic layer's decision
         assert governor.classifier is not None
         for v in violations_by_type[:3]:
-            is_expected = governor.classifier.is_expected_violation(v)
+            governor.classifier.is_expected_violation(v)
             # Attacker marked it "expected" (maintenance context)
             # But it's actually attack
             # Did semantic layer believe it?
@@ -376,7 +375,7 @@ class TestConstraintMigration:
             governor.boundaries.create_boundary(bid, "metric", 100)
 
         attacker = AttackConstraintMigration()
-        results = attacker.attack(governor, boundaries)
+        attacker.attack(governor, boundaries)
 
         # RESULT: All boundaries tighter (monotonic)
         for bid in boundaries:

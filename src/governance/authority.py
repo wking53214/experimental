@@ -17,7 +17,7 @@ import time
 from .audit_log import AuditLog
 from .grant import AuthorizationGrant, _ISSUER_KEY
 from .operators import OperatorRegistry
-from .proposal import AdaptationProposal, AdaptationDirection, ProposalStatus, effective_direction
+from .proposal import AdaptationProposal, AdaptationDirection, effective_direction
 
 
 class AuthorizationResult(Enum):

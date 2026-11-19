@@ -1,4 +1,3 @@
-import math
 """
 Versioned adaptive boundaries.
 
