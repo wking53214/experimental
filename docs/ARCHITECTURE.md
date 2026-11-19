@@ -275,6 +275,10 @@ Authority is testable:
 - Try to auto-approve DISABLE → must fail
 - Try to modify principles → must fail
 
+## Adaptive deadline (round 23)
+
+The bridge watches completed call durations per agent and proposes tighter deadlines through the governor, so the one-way rule and breaker apply as for any automatic change. Supported: one windowed deadline per agent (`user_deadline`). Experimental: per-class deadlines. See INTEGRATION.md for settings and the test plan for evidence.
+
 ## Known Limitations
 
 See `LIMITATIONS.md` for complete analysis.

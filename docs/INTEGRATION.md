@@ -69,3 +69,15 @@ Not covered:
 - **A wrong monitor can still do harm within the breaker cap.** A buggy or compromised source can spend the whole automatic budget (by default 3 steps, about 27% of the limit) in seconds, which degrades service until a person acknowledges, reviews or loosens. That is the threat model's T14: bounded, not prevented. Give each source its own credential so you can see and revoke it.
 - The interface trusts the *content* of a signal: it cannot tell a real incident from a false alarm.
 - A pending loosening request is not an approval. Operators who rubber-stamp requests defeat the point.
+
+## Supported adaptive control: one deadline per agent
+
+`TrapBridge` can tighten each agent's time limit from that agent's own recent behavior. Turn it on with `TrapPolicy(user_deadline=True)`.
+
+- It waits for 30 completed calls, then sets the deadline to 1.5 times the 99th-percentile duration of the last 1,000 completed calls, never below 25% of the original and never above it.
+- It only tightens. Loosening needs a named person (pending review, then approval).
+- Every decision is written to the audit log, including "not enough data yet" and "held".
+- On the kernel side, enable `with_deadline_floor(0.25)` so a bad value cannot drop the agent deadline below the floor.
+- Real-data check (FreeInference, 60 s and 180 s limits): saves about 19% and 26% of timeout time at about 1.3 points of honest cost. The certificate bound held in every run.
+
+The per-tool-class deadline (`observe_class_durations` and related) is **experimental only**. On real timeouts it did not beat the per-agent deadline. Do not rely on it.
