@@ -1516,3 +1516,17 @@ Arms: A0 = class by name (as shipped). A1 = class by name|program, a sub-class t
 - P4: no certificate violation in any arm (honest cost never above the bound).
 - P5: at least 20% of agents get more than 64 distinct classes under A1 (the bridge currently stops at 64 per agent, so this would mean the cap has to be raised or the label coarsened).
 Cost of the idea that these tests do not measure: someone has to parse each command at issue time to get the program name, and the label comes from the request, so an attacker who controls the command text could choose a favorable label (for example call a slow job `sleep`). Failed predictions will be recorded as failed. Status: not run.
+
+### Round 23 class split by program: results (FreeInference, seeds 24000 to 24009)
+
+Raw: experiments/split_class_round23.json (12,870 rows), table experiments/split_class_round23.txt, scorer score_split_class_round23.py, loader `load_split`.
+
+| Pred | Result |
+|---|---|
+| P1 (A1 saves more than A0 at 60 s, cost at most +0.5) | MISSED: A1 saved less (wide 8.7 vs 10.7, long 12.1 vs 12.8). Splitting means each sub-class needs its own 30 completions, so more calls run at the full deadline. |
+| P2 (A2 saves at least as much as A1, cost at most +0.3) | MISSED on cost: A2 saved more (13.3 vs 8.7; 16.2 vs 12.1) but cost 0.44 and 0.39 points more than A1. |
+| P3 (warm-but-uncaught share under A1 below 55%) | HELD: 48.1% (A0 was 61 to 65%). But the time moved to cold sub-classes, not to saving. |
+| P4 (no certificate violation) | HELD in all arms |
+| P5 (at least 20% of agents above 64 classes under A1) | HELD: 63.7% (46% wide, 81% long). The bridge's 64-class cap would bind for most agents. |
+
+Reading: the useful arm is A2 (finer label with a fallback to the name-level deadline): +2.6 points (wide) and +3.4 points (long) of saving over A0 at 60 s, for +0.24 and +0.40 points of honest cost. That is about 8 to 11 points of saving per point of cost, the same exchange rate as the settings sweep, so the finer label does not beat the existing tradeoff curve; it just moves along it. The fallback to a parent class is the part that works. The label also adds a command-parsing step and gives a caller who writes the command a way to pick a label.

@@ -1,0 +1,25 @@
+pop     D arm   saved%   cost  warm-uncaught%  cost-bound max  agents>64cls%
+wide   10 A0       5.6   0.97            70.8           -0.35            0.0
+wide   10 A1       5.5   0.92            47.4           -0.30           46.0
+wide   10 A2       6.4   1.15            47.1           -0.30           46.0
+wide   60 A0      10.7   0.94            61.3            0.00            0.0
+wide   60 A1       8.7   0.74            45.2            0.00           46.0
+wide   60 A2      13.3   1.18            41.9            0.00           46.0
+wide  180 A0      18.1   0.73            52.9            0.00            0.0
+wide  180 A1       9.1   0.45            48.8            0.00           46.0
+wide  180 A2      19.7   0.84            39.7            0.00           46.0
+long   10 A0       7.0   1.79            73.5           -3.41            7.0
+long   10 A1       8.4   2.14            56.5           -3.40           81.4
+long   10 A2       9.5   2.46            55.5           -3.40           81.4
+long   60 A0      12.8   1.28            64.5           -0.11            7.0
+long   60 A1      12.1   1.29            50.9           -0.43           81.4
+long   60 A2      16.2   1.68            48.0           -0.36           81.4
+long  180 A0      19.2   0.99            52.7            0.00            7.0
+long  180 A1      15.4   0.82            47.7            0.00           81.4
+long  180 A2      21.3   1.18            43.7            0.00           81.4
+
+P1 False
+P2 False
+P3 True (warm-uncaught under A1 at 60 s: 48.1%)
+P4 True
+P5 True (agents with more than 64 classes under A1 at 60 s: 63.7%)
