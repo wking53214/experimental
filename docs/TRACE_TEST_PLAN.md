@@ -1165,3 +1165,35 @@ plus three honest newcomers (a fresh identity from slice 10, median 30 ms, natur
 honest identities what the budget was meant to save them). **Stated limit:** one provisional step bounds, not removes, the gain from
 rotation: at most 10% of hung time per identity-window. An attacker that rotates every slice would still be held near zero by the
 rate rule's need for a pattern.
+
+## Round 20, results: a provisional floor for a new identity
+
+Run once (`python experiments/red_team_round20.py`, then `python experiments/score_round20.py`): 2520 simulated rows and 162 real rows.
+
+Saved share of hung time (attackers) and honest cost in points:
+
+| | `recommended` | `recommended_budget` | `recommended_budget_prov` |
+|---|---|---|---|
+| persistent attacker, saved | 26.0% | 22.1% | 23.6% |
+| new identity every 6 slices, saved | 20.5% | 1.9% | **9.3%** |
+| new identity every 3 slices, saved | 15.1% | 0.0% | **6.6%** |
+| honest newcomers, cost (bound 4.74) | 4.21 | 1.14 | **1.75** |
+| real hold-out, 10 s, cost | 0.592 | 0.268 | **0.406** |
+
+(The slice-trigger variants track these: 10.8% and 6.6% saved, newcomer cost 1.82.)
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| I1 | certificate holds | 0 of 2520 attacker identity-runs above 27.1% (highest 26.51%); no honest cost above its bound (sim or real) | Yes |
+| I2 | `sybil6` 5% to 10% (slice variant 5% to 12%); `sybil3` 2% to 8% | 9.3% (10.8%); 6.6% | Yes |
+| I3 | persistent attacker within 1.5 points of 22.3% | 23.6% (1.3 points above round 19's figure; 1.5 above this round's `recommended_budget`) | Yes (barely) |
+| I4 | real hold-out cost at most 0.15 above the budget at 10 s; at most 0.10 pooled | +0.138 and +0.059 | Yes |
+| I5 | newcomers: at most half of `recommended`'s cost and within 0.5 points of `recommended_budget`'s | 1.75 against 4.21 (42%, half held); 0.61 above the budget's 1.14 (**missed by 0.11**) | Half |
+
+**What round 20 says.**
+- The provisional step recovers part of what round 19 lost to rotation: from 1.9% to 9.3% (every 6 slices) and from 0.0% to 6.6% (every 3). It does not restore it (20.5% and 15.1% without the budget). The ceiling is by design, one 10% step per identity-window.
+- The price is small and measured: honest newcomers pay 1.75 points instead of 1.14 (the plain budget) or 4.21 (no budget); real hold-out developers pay 0.06 points more than the plain budget on average and 0.14 at the tightest deadline.
+- The three settings now sit on one curve: no budget (most saving, most honest cost, one identity change costs the attacker little), plain budget (least honest cost, rotation nearly free for the attacker), provisional step (between the two on both). An operator picks by which side is hurting. Identity binding would still make the plain budget the better choice.
+- The certificate held throughout (I1).
+
+**Limits.** The provisional ratio (0.9) is one setting, not tuned. Newcomers are three simulated agents with one tail shape. Real data still has no runaway labels. The attacker takes identities for free.
