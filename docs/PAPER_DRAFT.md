@@ -29,7 +29,24 @@ Prototype scale; research-grade adjudication; no general AI alignment claim.
 
 ## 6. Related Work
 
-See `references.bib`: Goodhart, runtime verification, adaptive control, autonomic computing, AI governance.
+**One-way authority is old; the contribution is measuring it.** Process-level primitives already let authority shrink and never grow:
+OpenBSD `pledge` and `unveil` (`openbsd2015pledge`), Linux `seccomp` with `no_new_privs` (`linux2012seccomp`), and attenuating
+credentials such as macaroons (`birgisson2014macaroons`). Tighten-only control of AI agents has also been proposed, with
+monotonic restriction as a stated property (`marin2026governing`). This work does not claim the direction. It applies it to
+adaptive numeric limits (deadline, tokens, memory) and measures what the direction is worth.
+
+**Adaptive limits.** Production systems adapt limits in both directions: AIMD (`chiu1989aimd`), Netflix's concurrency-limits
+(`netflix2018concurrency`) and GitLab's Gitaly limit (`gitlab2023gitaly`). Rounds 9 to 16 compare against this family head to
+head and find that the breaker cap and the interpretation rules do most of the work; the direction is worth at most 3.3 points
+of hung time, and on real tool-call latencies the two-way limiter's honest-cost advantage did not reproduce.
+
+**Validating an action by a held-back canary.** Canary analysis (`netflix2018kayenta`) judges a release against a baseline;
+challenge insertion (`rehak2009challenge`) hides known inputs from an adaptive detector. The validation layer applies the
+comparison to a governance action and uses a keyed selection for the same reason as the hidden challenges.
+
+**Bounded automation.** Runtime assurance wraps an unverified controller in a verified envelope (`sha2001simplex`). The
+worst-case certificate (`docs/CERTIFICATE.md`) is the analogue here: the cap fixes in advance what the limiter can cost an honest
+agent and what it can save from a runaway. Background: `goodhart1975`, `manheim2018`, `aastrom2013`, `kephart2003`.
 
 ## 7. Conclusion
 

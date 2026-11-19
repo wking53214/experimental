@@ -935,3 +935,112 @@ Operator decisions summed over the roster and 20 seeds (32, 64, 128 slices): `re
 - The first referee experiment (longer runs, calm-share sweep) strengthens the saving and the decomposition (the direction is worth at most 3.3 points anywhere) and weakens the honest-agent claim: the drift hold's protection erodes with run length, 0.09 to 2.98 points on an honest regression, and only the two-way limiter recovers from it. Section 6 should not say honest regressions are held; it should say they are held for about 32 slices.
 - The second (net time against share) removes the idea of a breakeven share on this book: net time is negative at every share. State the per-program table instead, and state that the mix formula was checked against direct rosters to 0.02 points.
 - Limits of both: all durations are simulated; the honest pool contains one agent (slow-from-start) that dominates it; run length changed but not the positions of events inside the trace (the regression stays at task 4000); 20 seeds per cell, no intervals computed (the per-seed values are in the JSON files).
+
+## Round 16, pre-registered: real coding-agent latencies
+
+Written and committed before any replay of this data. Only the schema, the row counts and the pooled latency quantiles of the
+source were looked at to fix the protocol; no governed or static outcome has been computed.
+
+**Source.** TraceLab public coding-agent trace (uw-syfi/TraceLab, release v0.0.1, CC BY 4.0, sha256 9d265eae...da0b4e6b): 432,510 tool
+calls from 43 pseudonymous developers' real Claude and Codex sessions. Pooled latency: median 0.2 s, p90 8 s, p99 180 s.
+
+**Protocol.** One agent per user; a task is a tool call; duration is its measured latency; every call is treated as legitimate because
+the data has no runaway label; tokens and memory are held at nominal so only the deadline can bind. Populations: long (users with
+at least 8000 calls, first 8000, 9 agents) and wide (at least 2000 calls, first 2000, 23 agents). Deadlines 10 s, 60 s, 180 s.
+Policies: recommended, recommended_slice, twoway_h16. Runner: `experiments/real_trace_round16.py`.
+
+**Certificate under test.** For an agent with deadline D and the cap of three 10% steps, honest cost in points cannot exceed
+100 x (share of its calls with latency in (0.729 D, D]). Checked on simulated rosters (1,344 honest agent-runs, 0 violations,
+closest slack 0.012 points; scratch test, not committed).
+
+| # | Prediction |
+|---|---|
+| R1 | zero violations of the certificate in every cell (agent x deadline x policy x population). One violation falsifies it as stated. |
+| R2 | share of agents tightened by `recommended`: at least 80% at 10 s; between 20% and 60% at 180 s |
+| R3 | mean honest cost under `recommended`: at least 2.0 points at 10 s; below 1.0 point at 180 s |
+| R4 | `twoway_h16` costs less than `recommended_slice` in at least 75% of cells where `recommended_slice` costs more than 0.5 points |
+| R5 | Spearman correlation between the bound and measured cost across cells with a bound above 0.5 points is at least 0.8 |
+
+**Known limits, stated now.** Tool latency can include time a developer spent approving a prompt, so some long calls are human waiting,
+not tool work. There is no ground truth for runaways, so this round measures honest cost and tightening behavior only, not
+saving or net time. The tool is a coding assistant's tool calls, not the kernel's hang model.
+
+## Round 16, results: real coding-agent latencies
+
+Run once on the committed protocol (`python experiments/real_trace_round16.py`, then `python experiments/score_round16.py`); 288 cells
+(32 agents across both populations x 3 deadlines x 3 policies). Raw cells: `experiments/real_trace_round16.json`.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| R1 | zero certificate violations | **0 of 288**; in several cells honest cost equals the bound exactly (for example 0.275 against 0.275); no limit went below 72.9% of its start | Yes |
+| R2 | tightened by `recommended`: at least 80% at 10 s; 20% to 60% at 180 s | 87.5% at 10 s; 53.1% at 180 s | Yes |
+| R3 | mean cost under `recommended`: at least 2.0 points at 10 s; below 1.0 at 180 s | 1.26 at 10 s; 0.21 at 180 s | Half (the 180 s half) |
+| R4 | `twoway_h16` cheaper than `recommended_slice` in at least 75% of cells where the latter costs over 0.5 points | cheaper in 8 of 31 (25.8%); the two policies are within 0.05 points on average | No |
+| R5 | Spearman between bound and cost at least 0.8 | 0.924 over 120 cells | Yes |
+
+**What round 16 says.**
+- The certificate held on real durations, not only simulated ones, and it is nearly exact: where an agent is tightened to the cap, its honest cost is almost all of the bound.
+- With no runaway in the data at all, `recommended` tightened 87.5% of real agents at 10 s and 53.1% at 180 s. Real agents have natural tails above the 1% rate rule, so the limiter cries wolf on real traffic, as the trace rounds found in simulation. The certificate is what keeps this affordable: the cost is capped at the share of calls in the top 27.1% of the deadline (mean 1.26 points at 10 s, 0.21 at 180 s, worst agent 7.95).
+- The two-way limiter did not win on real durations (R4 missed). On simulated rosters it paid far less than the one-way limiter at long runs; here the policies are nearly the same, so that advantage depends on the simulated honest-agent shapes.
+- Mean static failure is 9.26% at 10 s and 1.47% at 180 s, so the deadline choice dominates the limiter's effect at the short deadline.
+
+**Limits.** No runaway labels, so nothing here measures saving or net time. Tool latency can include time spent waiting for a developer to approve a prompt. These are a coding assistant's tool calls, not the kernel's hang model. Deadlines were chosen as round numbers from pooled quantiles, not tuned.
+
+**Consequence for the claims.** The worst-case certificate is now supported on simulated and real durations. The claim that the two-way limiter is cheaper for honest agents is weakened. A labeled real-traffic test (shadow mode on live agents) is still missing.
+
+## Round 17, pre-registered: the cost budget
+
+Committed before any round 17 run (a one-seed smoke run was executed and deleted unread). Runner `experiments/real_trace_round17.py`,
+scorer `experiments/score_round17.py`.
+
+**The change.** `TrapPolicy(cost_budget=0.01)`: a deadline tightening never goes below the agent's own 99th percentile of completed
+durations, estimated as the larger of its long-run and recent per-slice means; nothing tightens until 5 slices are known
+(`docs/CERTIFICATE.md`). Policies compared: `recommended` against `recommended_budget`, and `recommended_slice` against
+`recommended_slice_budget`.
+
+**Honesty about the design.** The budget was designed after round 16's results, so round 16's 32 agents are diagnosis data (reported as
+in-sample). The tests that count are hold-out: later, unread stretches of the same developers (H1: users with at least 4000 calls,
+calls 2000 to 3999, 12 agents; H2: users with at least 16000 calls, calls 8000 to 15999, 6 agents; same people, not independent users),
+and 20 fresh simulation seeds (16000 to 16019) on rosters `v1` and `book_v1`, which no earlier round used for this change.
+
+| # | Prediction |
+|---|---|
+| F1 | zero certificate violations in every real cell, all four policies |
+| F2 | honest cost at or under 1.25 points under `recommended_budget` in at least 95% of in-sample cells and at least 90% of hold-out cells (H1 and H2 pooled) |
+| F3 | mean honest cost at 10 s under `recommended_budget`: at most 0.6 points in-sample (round 16, `recommended`: 1.26) and at most 0.8 on pooled hold-out |
+| F4 | on the same cells at 10 s, the budget cuts `recommended`'s mean honest cost by at least 40% in-sample and at least 30% on pooled hold-out |
+| F5 | simulated honest agents on `v1`: the largest mean honest cost of any agent under `recommended_budget` is at most 1.5 points (under `recommended` it is about 24, the slow-from-start agent) |
+| F6 | simulated sustained runaways (profile `runaway`, `v1`): mean saved share under `recommended_budget` within 4 points of `recommended`'s |
+| F7 | the price: on `book_v1`, at least one patient-pulser agent loses at least 10 points of saved share under `recommended_budget` against `recommended` (the 5-slice warm-up removes the early catch) |
+| F8 | the honest pool's mean net burn on `book_v1` (agents that should not be tightened, `recommended_slice`) moves at least half the way to zero under `recommended_slice_budget` |
+
+**What would falsify the change.** F5 or F6 missed by a wide margin (the fix costs more saving than it saves honest agents), or F1
+failing (the budget can only raise a floor, so a violation would mean a bug).
+
+**Limits, stated now.** No runaway labels in the real data, so the real half measures honest cost only. Hold-out agents are the same
+people as the diagnosis agents. The floor reads completed-duration quantiles that exclude tasks already killed, so it is
+conservative; the real-data cost can undershoot the budget.
+
+## Round 17, results: the cost budget
+
+Run once (`python experiments/real_trace_round17.py`, then `python experiments/score_round17.py`): 600 real cells and 40 simulated runs.
+Raw: `experiments/real_trace_round17_real.json`, `experiments/real_trace_round17_sim.json`.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| F1 | zero certificate violations, all four policies | 0 of 600 | Yes |
+| F2 | cost at or under 1.25 points in at least 95% of in-sample and 90% of hold-out cells | 97.9% in-sample; 98.1% hold-out (`recommended` alone: 83.3% and 96.3%) | Yes |
+| F3 | mean cost at 10 s at most 0.6 in-sample, 0.8 hold-out | 0.32 and 0.27 (`recommended`: 1.26 and 0.59) | Yes |
+| F4 | cost cut of at least 40% in-sample, 30% hold-out | 74% and 55% | Yes |
+| F5 | largest simulated honest cost at most 1.5 points on `v1` | 1.32 (slow-from-start; `recommended`: 18.51) | Yes |
+| F6 | sustained runaways lose at most 4 points of saved share | 25.3% to 21.0%: **4.3 points** | **No (by 0.3)** |
+| F7 | a patient pulser loses at least 10 points on `book_v1` | **none**: pulse-8 was 0.7% and 0.7% (20.3% and 20.3% under the slice trigger) | **No** |
+| F8 | honest pool net burn moves at least half way to zero | -14.24 s to -2.39 s per agent-run (83% of the way) | Yes |
+
+**What round 17 says.**
+- The budget does what it claims. Honest cost falls by 55% to 74% on real latencies, on held-out stretches as well as the diagnosis data, and pooled honest cost on the simulated `v1` roster falls from 1.99 to 0.19 points. The slow-from-start agents go from 18.5 and 12.3 points to 1.2 and 1.3. The worst real cell falls from 7.95 to 1.74.
+- The price is measured: 4.3 points of saved hung time on sustained runaways (F6 missed by 0.3 points, reported as missed), 7.3 points on the inflate-first attacker (25.9% to 18.6%) and 3.4 on the low-and-slow attacker (13.6% to 10.2%). Those two attackers' own legitimate cost also falls (8.55 to 6.35, 0.16 to 0.10).
+- F7 was wrong: I predicted the five-slice warm-up would cost the pulser its early catch. The period-8 pulser was not caught by `recommended` either way, and the slice trigger catches it at the same rate with and without the budget.
+- Not predicted, observed: the share of real agents tightened barely moves at 10 s (88% to 81% in-sample, 89% to 89% hold-out). The budget does not stop the limiter acting on a heavy-tailed agent; it stops the action from costing that agent more than about 1% of its tasks.
+
+**Limits.** Hold-out agents are the same developers as the diagnosis agents, read at later stretches. No runaway labels in the real data. The simulated rosters are the generator's; the budget was not tuned on seeds 16000 to 16019. The cost budget is off by default.

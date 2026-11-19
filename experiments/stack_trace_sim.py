@@ -63,6 +63,12 @@ for _k in (8, 16):
 # phase-7 catch of round 12 can be attributed to the trigger or to the direction (docs/TRACE_TEST_PLAN.md, round 14).
 POLICIES["recommended_slice"] = lambda: TrapPolicy(min_rate=0.01, min_traps=3, rate_window_tasks=250, drift_factor=1.5,
                                                    drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",))
+# Round 17: the cost budget (docs/CERTIFICATE.md). Never tighten below the agent's own (1 - budget) completed-duration quantile.
+POLICIES["recommended_budget"] = lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
+                                                    reasons=("deadline_exceeded",), cost_budget=0.01)
+POLICIES["recommended_slice_budget"] = lambda: TrapPolicy(min_rate=0.01, min_traps=3, rate_window_tasks=250, drift_factor=1.5,
+                                                          drift_recent_reports=1, drift_excess=True,
+                                                          reasons=("deadline_exceeded",), cost_budget=0.01)
 POLICIES["aimd_capped_drift"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02,
                                                                     floor=0.729, drift_factor=1.5)
 for _inc in (0.01, 0.02, 0.05, 0.10):

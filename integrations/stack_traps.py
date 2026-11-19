@@ -105,6 +105,25 @@ class TrapPolicy:
     # reads DEGRADED and a person is asked to undo it). With a key the kernel picks tasks by a keyed hash of
     # (key, agent, seq) that the agent cannot predict. Set one in production.
     canary_key: Optional[str] = None
+    # Cost budget (round 17; off by default). The worst-case certificate (docs/CERTIFICATE.md) says an honest agent can lose
+    # at most the share of its tasks that finish between the new deadline and the old one. With cost_budget set (a share
+    # of tasks: 0.01, 0.05, 0.10, 0.25 or 0.50) a deadline tightening is clamped so that, by the agent's own history of
+    # completed durations, that share stays under the budget: the new deadline never goes below the (1 - budget) quantile of
+    # what the agent completes. Until cost_budget_min_reports slices of completed quantiles are known, nothing tightens
+    # (fails safe, like the rate rule). Operator-visible trade-off: an agent that completes slowly keeps a deadline near its
+    # old one, so it also gives up most of the saving; its hung tasks are still killed at the old deadline.
+    cost_budget: Optional[float] = None
+    cost_budget_min_reports: int = 5
+    cost_budget_recent_reports: int = 8
+
+    def __post_init__(self):
+        if self.cost_budget is not None and self.cost_budget not in COST_BUDGET_POINT:
+            raise ValueError(f"cost_budget must be one of {sorted(COST_BUDGET_POINT)}, got {self.cost_budget!r}")
+
+
+# budget -> index into TrapBridge.QUANTILE_POINTS (0.50, 0.75, 0.90, 0.95, 0.99): the smallest point at or above 1 - budget,
+# so the floor is never lower than the budget needs. Budgets under 1% are not offered: the kernel reports no finer quantile.
+COST_BUDGET_POINT = {0.01: 4, 0.05: 3, 0.10: 2, 0.25: 1, 0.50: 0}
 
 
 def _agent_key(agent_id: Any) -> Optional[str]:
@@ -314,6 +333,22 @@ class TrapBridge:
             except (ValueError, KeyError):
                 self.counts["rejected_input"] += 1
 
+    def deadline_floor(self, agent_key: str) -> Optional[float]:
+        """The lowest deadline the cost budget allows for this agent, or None if no budget is set or too little is known.
+
+        Uses the agent's own per-slice completed-duration quantile at the budget's point: the larger of its mean over all
+        retained slices and its mean over the last cost_budget_recent_reports slices (so a slowdown raises the floor
+        quickly and a recovery lowers it slowly). Completed tasks exclude the ones already killed, so the true share of all
+        tasks above this floor is at most the budget."""
+        if self.policy.cost_budget is None:
+            return None
+        qs = self._quantiles.get(agent_key)
+        if not qs or len(qs) < self.policy.cost_budget_min_reports:
+            return None
+        i = COST_BUDGET_POINT[self.policy.cost_budget]
+        col = [q[i] for q in qs]
+        return max(statistics.fmean(col), statistics.fmean(col[-self.policy.cost_budget_recent_reports:]))
+
     def _min_rate_for(self, agent_id: Any) -> float:
         by_class = self.policy.min_rate_by_class
         if by_class and self.agent_class is not None:
@@ -517,10 +552,24 @@ class TrapBridge:
         evidence = {k: ev.get(k) for k in ("trap_id", "agent_id", "boundary_layer", "trap_reason", "trap_outcome",
                                             "tokens_deficit", "nanoseconds_since_deadline", "memory_requested_bytes")}
         evidence["traps_in_window"] = len(window)
+        factor = self.policy.factor
+        if self.policy.cost_budget is not None and suffix == "deadline_ns":
+            floor = self.deadline_floor(agent)
+            if floor is None:
+                self.counts["budget_unknown"] += 1
+                return None
+            current = float(self.gov.boundaries.get_boundary(self.boundary_id(agent, suffix)).current_limit)
+            if floor >= current:
+                self.counts["budget_held"] += 1
+                window.clear(); stamps.clear()
+                return None
+            factor = max(factor, floor / current)       # tighten by the policy step, but never below the floor
+            if factor > self.policy.factor:
+                self.counts["budget_clamped"] += 1
         try:
             reply = self.gov.propose_tightening(
                 self.boundary_id(agent, suffix), source=self.source, credential=self.credential,
-                factor=self.policy.factor, reason=f"{len(window)} {reason} traps for {agent}",
+                factor=factor, reason=f"{len(window)} {reason} traps for {agent}",
                 evidence=evidence, idempotency_key=f"trap-{trap_id}")
         except (ValueError, KeyError):
             self.counts["rejected_input"] += 1
