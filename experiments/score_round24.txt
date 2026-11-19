@@ -1,0 +1,50 @@
+pop D mode sigma saved% cost
+wide   10 base          0.0    9.28   1.11
+wide   10 nonstrategic  0.5   12.25   1.23
+wide   10 strategic     0.5    9.28   1.23
+wide   10 nonstrategic  1.0   16.30   2.27
+wide   10 strategic     1.0   10.25   2.27
+wide   10 nonstrategic  1.5   20.10   3.26
+wide   10 strategic     1.5   11.72   3.26
+wide   60 base          0.0   16.63   0.70
+wide   60 nonstrategic  0.5   20.52   0.74
+wide   60 strategic     0.5   16.64   0.74
+wide   60 nonstrategic  1.0   23.60   1.22
+wide   60 strategic     1.0   18.01   1.22
+wide   60 nonstrategic  1.5   25.85   1.61
+wide   60 strategic     1.5   18.49   1.61
+wide  180 base          0.0   24.48   0.55
+wide  180 nonstrategic  0.5   27.02   0.59
+wide  180 strategic     0.5   24.48   0.59
+wide  180 nonstrategic  1.0   28.55   0.90
+wide  180 strategic     1.0   24.79   0.90
+wide  180 nonstrategic  1.5   31.88   1.14
+wide  180 strategic     1.5   25.74   1.14
+long   10 base          0.0   13.03   0.93
+long   10 nonstrategic  0.5   15.67   1.03
+long   10 strategic     0.5   13.20   1.03
+long   10 nonstrategic  1.0   19.48   1.95
+long   10 strategic     1.0   13.89   1.95
+long   10 nonstrategic  1.5   21.92   2.72
+long   10 strategic     1.5   14.42   2.72
+long   60 base          0.0   30.98   1.47
+long   60 nonstrategic  0.5   33.21   1.49
+long   60 strategic     0.5   31.01   1.49
+long   60 nonstrategic  1.0   34.75   1.61
+long   60 strategic     1.0   30.30   1.61
+long   60 nonstrategic  1.5   35.38   1.70
+long   60 strategic     1.5   30.21   1.70
+long  180 base          0.0   39.63   1.34
+long  180 nonstrategic  0.5   40.45   1.34
+long  180 strategic     0.5   39.73   1.34
+long  180 nonstrategic  1.0   41.41   1.39
+long  180 strategic     1.0   39.62   1.39
+long  180 nonstrategic  1.5   42.43   1.42
+long  180 strategic     1.5   40.30   1.42
+
+N1 violations 0, lowest deadline/D 0.250 -> True
+N2 False (decl 28.0% vs base 25.0%)
+N3 False (strategic minus base: 0.02 to 1.78)
+N4 True (cost diff 0.04)
+N5 False (cost diff 0.69)
+N6 False (33.2%)
