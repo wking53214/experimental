@@ -1446,3 +1446,18 @@ Note on method: no new simulation. Arms come from runs on the same 960 agent-run
 - C3: paired by seed at 60 s, the kernel path saves more than `recommended` in at least 70% of seeds.
 - C4: no arm violates the certificate (honest cost above the bound).
 - C5: at 10 s the kernel path does not beat all adaptive arms on saving (I expect it to be mixed).
+
+### Round 23 comparative test: results
+
+Raw rows: experiments/compare_round23_arms.csv (2,880 rows); table: experiments/compare_round23_arms.txt. Saved = share of runaway time removed; cost = honest calls killed, in points. Static baseline saves 0 and costs 0.
+
+| pop, D | whole-agent adaptive (saved, cost) | adaptive budget (saved, cost) | class kernel path (saved, cost) |
+|---|---|---|---|
+| wide 10 | 16.6, 1.33 | 9.1, 0.52 | 8.1, 0.85 |
+| wide 60 | 12.7, 0.60 | 7.2, 0.29 | 12.1, 0.76 |
+| wide 180 | 9.6, 0.21 | 4.8, 0.12 | 16.0, 0.75 |
+| long 10 | 14.3, 0.78 | 12.2, 0.59 | 12.2, 0.87 |
+| long 60 | 9.1, 0.17 | 8.5, 0.16 | 28.9, 1.36 |
+| long 180 | 6.5, 0.09 | 6.3, 0.09 | 37.4, 1.27 |
+
+C1 to C5 all held (C3: 15 of 20 seeds, 75%). Honest reading: the class path wins clearly only where honest calls are long and varied (long population, 60 s and above). In the wide population at 60 s it ties the whole-agent policy (12.1 vs 12.7), and at 10 s the older policies save as much or more at lower cost. It costs more honest calls everywhere. Same data as earlier rounds, so this is a re-analysis, not independent evidence.
