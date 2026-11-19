@@ -1397,3 +1397,25 @@ Written before any run of either runner. Both use the round 22 data and class_on
 - **Q5 held.** At q=0.02 it was 0.09 above.
 
 **Reading.** If a tool's progress can be observed by the kernel, and runaways really stall while honest long calls mostly do not, a stall kill adds roughly 15 points of saving at small cost. That conclusion rests entirely on two assumed numbers: the share of runaways that stall (r) and the share of honest long calls that falsely stall (q). Saving scaled with r (39% at 0.9, 35% at 0.6) and hardly with q. Real progress data would have to supply both, so this identifies what to measure; it does not show the wall is broken.
+
+## Round 23 (kernel integration) pre-registration
+
+Written before any kernel code exists. Authorized scope as of 2026-11-19: add a class-aware deadline read and a kernel-side floor to `stack-p3-2` (class label supplied by the kernel's own tool wrapper, floor 0.25 of the default); the restart snapshot (F3) is deferred. Baseline recorded in docs/ROUND23_ARCHITECTURE_PROPOSAL_v2.md section 1a (36 Rust tests pass, live end-to-end passes, F2 and F3 confirmed by probe).
+
+Clarification of the floor rule: a governed deadline above the default is treated as the default (as today); one below 0.25 of the default is raised to 0.25 of the default; both are counted. (v1 and v2 of the proposal said "ignored" for the low side; this is the rule that will be implemented, because raising to the floor keeps the tightening intent.)
+
+**Protocol.** Rust unit and differential tests in `stack-p3-2`; a cross-language replay using round 22 data (seeds 22000 to 22009, wide and long, D = 10, 60, 180 s) in which the Python bridge writes per-slice class limits to a snapshot and a Rust harness makes the per-call kill decision from the snapshot with the kernel's own clamp, compared with the Python-side decision; an adversarial program covering the mission's categories (identity and class, deadline, governance, reliability).
+
+**Predictions.**
+- S1: the 36 existing Rust tests still pass.
+- S2: with no class passed, the effective deadline equals the pre-change function's result in 100% of 10,000 fuzzed inputs (differential test).
+- S3: the kernel never returns a deadline below 0.25 of the default or above the default in 100% of 10,000 fuzzed source values (including 0, 1, negatives, NaN strings, huge numbers, fractions).
+- S4: class names agree between Python and Rust on all 12 vector ids (safe, unsafe, empty, 65 characters, unicode, path-like).
+- S5: the kernel's per-call kill decisions equal the Python-side decisions on at least 99.9% of calls; saving is within 0.1 points and honest cost within 0.05 points of the bridge.
+- S6: in the replay, honest legitimate disruption through the kernel path averages at most 1.5 points at 60 s.
+- S7: every class decision in the replay (tightened, held, unknown, error) has an audit entry with its inputs: 100% completeness. This requires the logging change in the proposal; at present only tightenings are logged.
+- S8: of at least 200 adversarial attempts to loosen (no grant, expired, invalid, replayed, external signal, adaptive component editing policy, kernel bypass), 0 succeed.
+- S9: a restarted kernel with the service unreachable and no snapshot returns the default (documented limit F3), asserted by test, not fixed.
+- S10: the adversarial program finds at least one defect in the new code that I did not predict. (A suite that finds nothing is more likely weak than the code perfect.)
+
+Failed predictions will be recorded as failed.
