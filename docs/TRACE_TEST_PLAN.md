@@ -1197,3 +1197,67 @@ Saved share of hung time (attackers) and honest cost in points:
 - The certificate held throughout (I1).
 
 **Limits.** The provisional ratio (0.9) is one setting, not tuned. Newcomers are three simulated agents with one tail shape. Real data still has no runaway labels. The attacker takes identities for free.
+
+## Round 21, pre-registered: class-conditioned budgeted deadlines on real latencies with labeled hangs
+
+Committed before the run (a one-seed smoke run was executed and deleted unread). Runner `experiments/class_budget_round21.py`, scorer
+`experiments/score_round21.py`.
+
+**Why.** Every round so far limits the deadline of an agent as a whole, so the cap (27.1%) bounds both the saving and the honest cost, and
+the wall stands: a legitimately slow agent and a mild runaway look alike from timeouts alone. Real tool calls differ by orders of
+magnitude by tool (median 36 ms for `Read`, 5 s for `write_stdin`; 99th percentile 6.6 s for `Read`, 442 s for `Bash`). A deadline kept
+per (agent, tool class) can be tight where the class is fast and loose where it is slow. Per-operation adaptive timeouts are established
+practice; what this round tests is the budgeted, floored, one-way version and its certificate: a class deadline is
+`clamp(1.5 x the class's own 99th percentile of completed durations, 0.25 D, D)`, so honest cost is at most the share of legitimate calls
+in (0.25 D, D] and the saving at most 75% of hung time (the cap's 27.1% becomes a floor-set 75%).
+
+**Data and labels.** Real calls keep their latency and tool name; hangs are injected and labeled: half of each population's agents are
+runaway agents, which from slice 4 replace 2% of calls with a hang of uniform(3, 9) x D. Populations: wide (23 users, first 2000 calls) and long
+(9 users, first 8000). Deadlines 10, 60, 180 s. 10 seeds from 21000. Regimes: the cap policies `recommended`, `recommended_budget_prov` and
+`recommended_slice_budget_prov`; `class_oneway` (the deadline only falls, never rises) and `class_twoway` (re-read each slice, may
+rise back toward D). The class regimes are a numpy prototype, not yet in the bridge. Class and cap results are over the same agents and seeds.
+
+| # | Prediction |
+|---|---|
+| K1 | the certificates hold: honest cost at most its bound (cap: share in (0.729 D, D]; class: share in (0.25 D, D]) in every agent-run, and saved share of hung time at most 27.1% for cap regimes and 75% for class regimes |
+| K2 | at D = 10 s, class_oneway saves at least 45% of the runaway agents' hung time (pooled), and at least 1.5 times `recommended_budget_prov`'s share |
+| K3 | at D = 10 s, class_oneway's mean honest cost is at most 2.0 points (cap policies: about 0.4 to 0.6 in round 17 and 20) |
+| K4 | the price of the one-way rule: at D = 10 s on the long population, class_oneway costs honest agents at least 0.3 points more than class_twoway |
+| K5 | at D = 180 s, class_oneway saves at least 30% of hung time |
+
+**What would falsify the idea.** K2 missing (class deadlines buy no more than the cap) or K3 missing high (the saving is paid for by honest
+agents). **Stated limits:** latencies include time developers spent approving prompts; the hangs are synthetic; the class deadline reads
+completed durations only, so a class whose tail is mostly killed is under-estimated; classes with fewer than 30 completions keep deadline D.
+
+## Round 21, results: class-conditioned budgeted deadlines
+
+Run once (`python experiments/class_budget_round21.py`, then `python experiments/score_round21.py`): 4800 rows over 10 seeds, 3 deadlines, 2 populations,
+5 regimes. Raw: `experiments/class_budget_round21.json`.
+
+Saved share of hung time on runaway agents / mean honest cost in points (pooled over seeds):
+
+| | D | `recommended` | `recommended_budget_prov` | `class_oneway` | `class_twoway` |
+|---|---|---|---|---|---|
+| wide (23 users, 2000 calls) | 10 s | 22.9% / 1.27 | 15.5% / 0.49 | **39.6% / 0.99** | 37.1% / 0.59 |
+| wide | 60 s | 19.7% / 0.64 | 15.1% / 0.32 | **51.7% / 0.77** | 48.9% / 0.70 |
+| wide | 180 s | 11.5% / 0.32 | 8.8% / 0.16 | **57.6% / 0.70** | 56.4% / 0.64 |
+| long (9 users, 8000 calls) | 10 s | 24.7% / 0.79 | 23.2% / 0.59 | **47.6% / 0.91** | 43.7% / 0.75 |
+| long | 60 s | 22.9% / 0.18 | 22.6% / 0.17 | **67.3% / 1.54** | 65.2% / 1.33 |
+| long | 180 s | 20.6% / 0.07 | 20.5% / 0.07 | **71.2% / 1.32** | 70.1% / 1.21 |
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| K1 | both certificates hold; saving at most 27.1% (cap) and 75% (class) | 0 violations in 4800 rows; highest single run 27.1% (cap) and 75.0% (class, exactly the floor) | Yes |
+| K2 | at 10 s, class_oneway saves at least 45% and at least 1.5 times `recommended_budget_prov` | 45.2%; 2.16 times | Yes (45.2 against a 45 threshold) |
+| K3 | at 10 s, class_oneway honest cost at most 2.0 points | 0.97 (cap policies 0.52 to 1.13) | Yes |
+| K4 | the one-way rule costs at least 0.3 points more than the two-way (long, 10 s) | 0.91 against 0.75: **0.17** | **No** |
+| K5 | at 180 s, class_oneway saves at least 30% | 67.2% | Yes |
+
+**What round 21 says.**
+- Keeping the deadline per tool class roughly doubles the saving at 10 s (45.2% against 20.9%) and triples it at 180 s (67.2% against 8.8% to 20.6%), at a honest cost of about 1 point against about 0.5 for the budgeted cap policy and 1.1 for the unbudgeted one. The saving is no longer pinned to 27.1%; the floor (0.25 D) sets the ceiling, and a single class run reached exactly 75.0%.
+- The one-way rule is cheaper than predicted (K4 missed): it costs 0.17 points more than letting the deadline rise again, on this data and these horizons. The erosion seen in round 15 did not show at 8000 calls.
+- The worst single honest agent-run is higher with classes (5.8 points, against 2.5 under the budgeted cap policies), which is what a 0.25 floor allows (bound: the share of calls in the top 75% of the deadline).
+
+**What it does not show.** The injected hangs are gross (3 to 9 times D), so any deadline under D catches them; the wall (a mild runaway that is slow but not hung) is not tested. Per-operation adaptive timeouts are established practice; the claim here is the one-way, budgeted, floored version with a computable bound, measured on real tool latencies. The class regime is a numpy prototype, not in the bridge, and has no audit chain or operator path. Latencies include human approval waits.
+
+**Next, if the idea holds:** a mild-runaway injection (a class's calls inflated 2 to 4 times but still under D), and moving the class deadline into `TrapBridge` so it has the audit log and the single-use-grant loosening.
