@@ -1,0 +1,13 @@
+pop     D  static(saved 0, cost 0) | recommended            | recommended_budget_pro | class_kernel          
+wide   10  saved  16.6 cost 1.33 | saved   9.1 cost 0.52 | saved   8.1 cost 0.85
+wide   60  saved  12.7 cost 0.60 | saved   7.2 cost 0.29 | saved  12.1 cost 0.76
+wide  180  saved   9.6 cost 0.21 | saved   4.8 cost 0.12 | saved  16.0 cost 0.75
+long   10  saved  14.3 cost 0.78 | saved  12.2 cost 0.59 | saved  12.2 cost 0.87
+long   60  saved   9.1 cost 0.17 | saved   8.5 cost 0.16 | saved  28.9 cost 1.36
+long  180  saved   6.5 cost 0.09 | saved   6.3 cost 0.09 | saved  37.4 cost 1.27
+
+C1 True
+C2 True (kernel mean cost at 60 s 1.06)
+C3 True (kernel beats whole-agent adaptive in 15/20 seeds at 60 s = 75%)
+C4 True
+C5 True

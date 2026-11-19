@@ -1419,3 +1419,49 @@ Clarification of the floor rule: a governed deadline above the default is treate
 - S10: the adversarial program finds at least one defect in the new code that I did not predict. (A suite that finds nothing is more likely weak than the code perfect.)
 
 Failed predictions will be recorded as failed.
+
+## Round 23 kernel integration: results (recorded after the runs)
+
+Raw output: experiments/class_kernel_replay_round23.json, experiments/score_round23_kernel.txt, tests/test_round23_adversarial.py, STACK-Kernel PR #95 (tests/class_deadlines.rs).
+
+| ID | Prediction | Result | Evidence type |
+|----|-----------|--------|---------------|
+| S1 | Python bridge and Rust kernel decide the same | HELD: 3,540,000 calls, 0 mismatches, kernel clamp never fired | simulated on a public trace, real Rust code |
+| S2, S3, S4 | Kernel never loosens, falls back to default on error, keeps last good value | HELD (Rust tests) | observed in tests |
+| S5 | Mismatch share at most 0.1%, saving gap at most 0.1 | HELD: 0.0000%, gap 0.000 | simulated |
+| S6 | Honest cost at 60 s about 1 point | HELD: 0.76 and 1.36, mean 1.06 | simulated |
+| S7 | Every class decision audited | MISSED on first run: 98.1% (123,405 of 125,742). Cause: the governor logs a breaker hold once per episode, and ensure_boundary added noise. Fixed in the bridge (class_tighten_not_applied entries). Re-run: 100% (125,742 of 125,742). | simulated |
+| S8 | At least 200 loosening attempts, 0 succeed | HELD: the attempt counter and 12 tests pass (no grant, wrong or missing credentials, machine source approving itself, replayed grant, policy self-edit, direct store writes, boundary re-creation, tampered log) | observed in tests |
+| S9 | Restart with service down and no snapshot returns the default | HELD, asserted by Rust test; documented limit F3, not fixed | observed in test |
+| S10 | Adversarial program finds an unpredicted defect | HELD: (1) Rust did not reserve the h- id prefix as Python does, (2) breaker holds were not audited per request, (3) ensure_boundary log noise. All fixed. Also noted: my first tamper test did nothing, because the governor already verifies its hash chain at startup. | observed |
+
+Not shown: live process feeding TrapBridge, class label source, persisted kernel cache, any trace beyond the UW TraceLab public trace.
+
+## Round 23 comparative test (three arms), pre-registration
+
+Note on method: no new simulation. Arms come from runs on the same 960 agent-runs (same seeds from 22000, same injected runaways): static deadline (baseline, saves 0 by definition), existing whole-agent adaptive policy (`recommended`) and existing adaptive budget policy (`recommended_budget_prov`) from round 22, and the class-conditioned kernel path from the round 23 replay. This is a re-analysis, so it can show a relation, not a new effect. Predictions are written before the comparison script is run.
+
+- C1: at 60 s and 180 s in both populations, the kernel path saves more runaway time than the adaptive budget arm.
+- C2: kernel path honest cost is higher than the budget arm's at 60 s (it pays for the saving) and at most 1.5 points on average.
+- C3: paired by seed at 60 s, the kernel path saves more than `recommended` in at least 70% of seeds.
+- C4: no arm violates the certificate (honest cost above the bound).
+- C5: at 10 s the kernel path does not beat all adaptive arms on saving (I expect it to be mixed).
+
+### Round 23 comparative test: results
+
+Raw rows: experiments/compare_round23_arms.csv (2,880 rows); table: experiments/compare_round23_arms.txt. Saved = share of runaway time removed; cost = honest calls killed, in points. Static baseline saves 0 and costs 0.
+
+| pop, D | whole-agent adaptive (saved, cost) | adaptive budget (saved, cost) | class kernel path (saved, cost) |
+|---|---|---|---|
+| wide 10 | 16.6, 1.33 | 9.1, 0.52 | 8.1, 0.85 |
+| wide 60 | 12.7, 0.60 | 7.2, 0.29 | 12.1, 0.76 |
+| wide 180 | 9.6, 0.21 | 4.8, 0.12 | 16.0, 0.75 |
+| long 10 | 14.3, 0.78 | 12.2, 0.59 | 12.2, 0.87 |
+| long 60 | 9.1, 0.17 | 8.5, 0.16 | 28.9, 1.36 |
+| long 180 | 6.5, 0.09 | 6.3, 0.09 | 37.4, 1.27 |
+
+C1 to C5 all held (C3: 15 of 20 seeds, 75%). Honest reading: the class path wins clearly only where honest calls are long and varied (long population, 60 s and above). In the wide population at 60 s it ties the whole-agent policy (12.1 vs 12.7), and at 10 s the older policies save as much or more at lower cost. It costs more honest calls everywhere. Same data as earlier rounds, so this is a re-analysis, not independent evidence.
+
+### Restart snapshot (F3): built after William's "c" (STACK-Kernel PR #95, commit "opt-in restart snapshot")
+
+No pre-registered predictions for this one; the 8 tests were written with the code, so they show the design does what I intended, not that I predicted it. Observed in Rust tests: a restart with the service down keeps a tightened limit; without the snapshot it forgets (documented behavior kept); a larger service answer replaces the restored value; a "nothing governed" answer clears it; an edited file stays within floor and default and bad ids are rejected; corrupt or missing file is ignored; an unwritable path changes nothing but a counter; the file is written only when a value changes. Known cost: while the service is down a restored value can be stricter than the current governed one, and a file writer can tighten down to the floor (bounded denial of service). Opt-in, so default behavior is unchanged. Limit F3 is now closed in the kernel for opt-in users; the Python side already replays from its audit log. Not tested: crash during the file write (rename makes it atomic on POSIX, not exercised), concurrent processes sharing one file.
