@@ -964,3 +964,26 @@ closest slack 0.012 points; scratch test, not committed).
 **Known limits, stated now.** Tool latency can include time a developer spent approving a prompt, so some long calls are human waiting,
 not tool work. There is no ground truth for runaways, so this round measures honest cost and tightening behavior only, not
 saving or net time. The tool is a coding assistant's tool calls, not the kernel's hang model.
+
+## Round 16, results: real coding-agent latencies
+
+Run once on the committed protocol (`python experiments/real_trace_round16.py`, then `python experiments/score_round16.py`); 288 cells
+(32 agents across both populations x 3 deadlines x 3 policies). Raw cells: `experiments/real_trace_round16.json`.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| R1 | zero certificate violations | **0 of 288**; in several cells honest cost equals the bound exactly (for example 0.275 against 0.275); no limit went below 72.9% of its start | Yes |
+| R2 | tightened by `recommended`: at least 80% at 10 s; 20% to 60% at 180 s | 87.5% at 10 s; 53.1% at 180 s | Yes |
+| R3 | mean cost under `recommended`: at least 2.0 points at 10 s; below 1.0 at 180 s | 1.26 at 10 s; 0.21 at 180 s | Half (the 180 s half) |
+| R4 | `twoway_h16` cheaper than `recommended_slice` in at least 75% of cells where the latter costs over 0.5 points | cheaper in 8 of 31 (25.8%); the two policies are within 0.05 points on average | No |
+| R5 | Spearman between bound and cost at least 0.8 | 0.924 over 120 cells | Yes |
+
+**What round 16 says.**
+- The certificate held on real durations, not only simulated ones, and it is nearly exact: where an agent is tightened to the cap, its honest cost is almost all of the bound.
+- With no runaway in the data at all, `recommended` tightened 87.5% of real agents at 10 s and 53.1% at 180 s. Real agents have natural tails above the 1% rate rule, so the limiter cries wolf on real traffic, as the trace rounds found in simulation. The certificate is what keeps this affordable: the cost is capped at the share of calls in the top 27.1% of the deadline (mean 1.26 points at 10 s, 0.21 at 180 s, worst agent 7.95).
+- The two-way limiter did not win on real durations (R4 missed). On simulated rosters it paid far less than the one-way limiter at long runs; here the policies are nearly the same, so that advantage depends on the simulated honest-agent shapes.
+- Mean static failure is 9.26% at 10 s and 1.47% at 180 s, so the deadline choice dominates the limiter's effect at the short deadline.
+
+**Limits.** No runaway labels, so nothing here measures saving or net time. Tool latency can include time spent waiting for a developer to approve a prompt. These are a coding assistant's tool calls, not the kernel's hang model. Deadlines were chosen as round numbers from pooled quantiles, not tuned.
+
+**Consequence for the claims.** The worst-case certificate is now supported on simulated and real durations. The claim that the two-way limiter is cheaper for honest agents is weakened. A labeled real-traffic test (shadow mode on live agents) is still missing.
