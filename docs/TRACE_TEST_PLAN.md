@@ -1465,3 +1465,14 @@ C1 to C5 all held (C3: 15 of 20 seeds, 75%). Honest reading: the class path wins
 ### Restart snapshot (F3): built after William's "c" (STACK-Kernel PR #95, commit "opt-in restart snapshot")
 
 No pre-registered predictions for this one; the 8 tests were written with the code, so they show the design does what I intended, not that I predicted it. Observed in Rust tests: a restart with the service down keeps a tightened limit; without the snapshot it forgets (documented behavior kept); a larger service answer replaces the restored value; a "nothing governed" answer clears it; an edited file stays within floor and default and bad ids are rejected; corrupt or missing file is ignored; an unwritable path changes nothing but a counter; the file is written only when a value changes. Known cost: while the service is down a restored value can be stricter than the current governed one, and a file writer can tighten down to the floor (bounded denial of service). Opt-in, so default behavior is unchanged. Limit F3 is now closed in the kernel for opt-in users; the Python side already replays from its audit log. Not tested: crash during the file write (rename makes it atomic on POSIX, not exercised), concurrent processes sharing one file.
+
+## Round 23 outside-data replication: pre-registration (written before any new data is loaded)
+
+Source chosen: FreeInference Agentic Trace (Harvard MadSys; 12,002 sessions, 267 accounts, 1,213,347 tool calls, 2026-05-17 to 2026-09-05; each tool call has `name`, `category`, `latency_ms`; hosted on Hugging Face). Why: different people, harness and time period than UW TraceLab, so a result that repeats there is not a quirk of one trace. Licence is not stated on the project page; check before redistributing anything derived.
+Protocol: identical to round 22 and the round 23 replay (same population definitions, same mild-runaway injection of 3% of calls x2 to 4 capped at 0.95 D from slice 4, same arms), fresh seeds from 23000, class label = tool `name`, no tuning of any parameter on the new data.
+- R1: at 60 s the class kernel path removes at least 10% of runaway time, honest cost at most 1.5 points (mean over populations).
+- R2: zero certificate violations in every arm.
+- R3: at 60 s the class path saves more than the adaptive budget arm in both populations.
+- R4: Python and Rust kernel decisions match on at least 99.9% of calls (parity does not depend on the data).
+- R5: the saving is smaller than on TraceLab at 180 s long (37.4%), because I expect tool-name classes to be less varied than in the UW trace. If it is larger I will say my reading of why was wrong.
+Failed predictions will be recorded as failed. Status: not run. The shell in this session cannot reach huggingface.co.
