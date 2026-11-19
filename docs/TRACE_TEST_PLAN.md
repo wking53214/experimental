@@ -1044,3 +1044,27 @@ Raw: `experiments/real_trace_round17_real.json`, `experiments/real_trace_round17
 - Not predicted, observed: the share of real agents tightened barely moves at 10 s (88% to 81% in-sample, 89% to 89% hold-out). The budget does not stop the limiter acting on a heavy-tailed agent; it stops the action from costing that agent more than about 1% of its tasks.
 
 **Limits.** Hold-out agents are the same developers as the diagnosis agents, read at later stretches. No runaway labels in the real data. The simulated rosters are the generator's; the budget was not tuned on seeds 16000 to 16019. The cost budget is off by default.
+
+## Round 18, pre-registered: trying to break the certificate and the cost budget
+
+Committed before the run (a one-seed smoke run was executed and deleted unread). Runner `experiments/red_team_round18.py`,
+scorer `experiments/score_round18.py`. Four hand-built agents at a 100 ms deadline, 8000 tasks each, 20 seeds (18000 to 18019), four
+policies (`recommended`, `recommended_budget`, `recommended_slice`, `recommended_slice_budget`):
+
+- `stepchange-honest`: median 20 ms, jumping to 50 ms at task 3000 (a step inside one slice, which the budget's floor cannot see coming).
+- `bandstack-honest`: the certificate's worst case: 98.5% of tasks in the top 27.1% band (76 to 82 ms) and 1.5% natural overruns, which
+  trigger the rate rule.
+- `floorpump-attacker`: completes slowly (90 to 99 ms) for 6 slices so that its own budget floor sits near the deadline, then hangs 5%.
+- `sybil-0` to `sybil-5`: one attacker that takes a new agent identity every 6 slices, idle (1 ms tasks) outside its window, hanging 5% inside it.
+
+| # | Prediction |
+|---|---|
+| G1 | the certificate is not broken: for every agent, policy and seed, honest cost is at most its bound and an attacker's saved share of hung time is at most 27.1%. One violation falsifies it as stated. |
+| G2 | `bandstack-honest`: mean cost at least 90 points under `recommended` (the bound is about 98.5); at most 2 points under `recommended_budget` |
+| G3 | `stepchange-honest`: mean cost under `recommended_budget` exceeds 1.0 point (the step breaches the budget before the floor catches up); low confidence, the agent may never be tightened |
+| G4 | `floorpump-attacker`: mean saved share at least 15% under `recommended`; at most 3% under `recommended_budget` (the attacker switches off its own limiter) |
+| G5 | `sybil`: saved share of the attacker's hung time pooled over its identities: between 10% and 22% under `recommended`; at most 3% under `recommended_budget` |
+| G6 | under the budget, no attacker is ever worse than the static deadline (saved share never negative) |
+
+**Stated assumption under test in G5.** The certificate is per agent identity. An attacker that can mint identities starts each one at the
+default limits. If G5 holds, the certificate stands but the saving is only available to systems that bind identity.
