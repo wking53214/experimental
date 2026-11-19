@@ -935,3 +935,32 @@ Operator decisions summed over the roster and 20 seeds (32, 64, 128 slices): `re
 - The first referee experiment (longer runs, calm-share sweep) strengthens the saving and the decomposition (the direction is worth at most 3.3 points anywhere) and weakens the honest-agent claim: the drift hold's protection erodes with run length, 0.09 to 2.98 points on an honest regression, and only the two-way limiter recovers from it. Section 6 should not say honest regressions are held; it should say they are held for about 32 slices.
 - The second (net time against share) removes the idea of a breakeven share on this book: net time is negative at every share. State the per-program table instead, and state that the mix formula was checked against direct rosters to 0.02 points.
 - Limits of both: all durations are simulated; the honest pool contains one agent (slow-from-start) that dominates it; run length changed but not the positions of events inside the trace (the regression stays at task 4000); 20 seeds per cell, no intervals computed (the per-seed values are in the JSON files).
+
+## Round 16, pre-registered: real coding-agent latencies
+
+Written and committed before any replay of this data. Only the schema, the row counts and the pooled latency quantiles of the
+source were looked at to fix the protocol; no governed or static outcome has been computed.
+
+**Source.** TraceLab public coding-agent trace (uw-syfi/TraceLab, release v0.0.1, CC BY 4.0, sha256 9d265eae...da0b4e6b): 432,510 tool
+calls from 43 pseudonymous developers' real Claude and Codex sessions. Pooled latency: median 0.2 s, p90 8 s, p99 180 s.
+
+**Protocol.** One agent per user; a task is a tool call; duration is its measured latency; every call is treated as legitimate because
+the data has no runaway label; tokens and memory are held at nominal so only the deadline can bind. Populations: long (users with
+at least 8000 calls, first 8000, 9 agents) and wide (at least 2000 calls, first 2000, 23 agents). Deadlines 10 s, 60 s, 180 s.
+Policies: recommended, recommended_slice, twoway_h16. Runner: `experiments/real_trace_round16.py`.
+
+**Certificate under test.** For an agent with deadline D and the cap of three 10% steps, honest cost in points cannot exceed
+100 x (share of its calls with latency in (0.729 D, D]). Checked on simulated rosters (1,344 honest agent-runs, 0 violations,
+closest slack 0.012 points; scratch test, not committed).
+
+| # | Prediction |
+|---|---|
+| R1 | zero violations of the certificate in every cell (agent x deadline x policy x population). One violation falsifies it as stated. |
+| R2 | share of agents tightened by `recommended`: at least 80% at 10 s; between 20% and 60% at 180 s |
+| R3 | mean honest cost under `recommended`: at least 2.0 points at 10 s; below 1.0 point at 180 s |
+| R4 | `twoway_h16` costs less than `recommended_slice` in at least 75% of cells where `recommended_slice` costs more than 0.5 points |
+| R5 | Spearman correlation between the bound and measured cost across cells with a bound above 0.5 points is at least 0.8 |
+
+**Known limits, stated now.** Tool latency can include time a developer spent approving a prompt, so some long calls are human waiting,
+not tool work. There is no ground truth for runaways, so this round measures honest cost and tightening behavior only, not
+saving or net time. The tool is a coding assistant's tool calls, not the kernel's hang model.
