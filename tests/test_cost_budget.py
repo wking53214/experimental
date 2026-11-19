@@ -85,3 +85,21 @@ def test_budget_never_loosens_a_limit_and_never_goes_below_the_cap(tmp_path):
         cur = b.limit_for("a1", "deadline_exceeded")
         assert cur <= last + 1e-6 and cur >= 0.729 * D - 1e-6
         last = cur
+
+
+def test_provisional_floor_allows_one_step_for_a_new_identity_then_the_history_decides(tmp_path):
+    b = make(tmp_path, cost_budget=0.01, cost_budget_new_identity_ratio=0.9)
+    for _ in range(3):                                          # fewer than five slices of history
+        slice_(b, "a1", 10_000_000)
+    assert b.limit_for("a1", "deadline_exceeded") == pytest.approx(0.9 * D)       # one step, then held at the provisional floor
+    assert b.counts["budget_provisional"] >= 1
+    for _ in range(40):                                          # history now says the agent is fast
+        slice_(b, "a1", 10_000_000)
+    assert b.limit_for("a1", "deadline_exceeded") == pytest.approx(0.729 * D)
+
+
+def test_provisional_floor_needs_a_budget_and_a_sane_ratio():
+    with pytest.raises(ValueError):
+        TrapPolicy(cost_budget_new_identity_ratio=0.9)
+    with pytest.raises(ValueError):
+        TrapPolicy(cost_budget=0.01, cost_budget_new_identity_ratio=0.5)

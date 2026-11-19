@@ -69,6 +69,12 @@ POLICIES["recommended_budget"] = lambda: TrapPolicy(min_rate=0.01, drift_factor=
 POLICIES["recommended_slice_budget"] = lambda: TrapPolicy(min_rate=0.01, min_traps=3, rate_window_tasks=250, drift_factor=1.5,
                                                           drift_recent_reports=1, drift_excess=True,
                                                           reasons=("deadline_exceeded",), cost_budget=0.01)
+# Round 20: the cost budget with a provisional one-step floor for a new identity.
+POLICIES["recommended_budget_prov"] = lambda: TrapPolicy(min_rate=0.01, drift_factor=1.5, drift_recent_reports=1, drift_excess=True,
+                                                         reasons=("deadline_exceeded",), cost_budget=0.01, cost_budget_new_identity_ratio=0.9)
+POLICIES["recommended_slice_budget_prov"] = lambda: TrapPolicy(min_rate=0.01, min_traps=3, rate_window_tasks=250, drift_factor=1.5,
+                                                               drift_recent_reports=1, drift_excess=True, reasons=("deadline_exceeded",),
+                                                               cost_budget=0.01, cost_budget_new_identity_ratio=0.9)
 POLICIES["aimd_capped_drift"] = lambda defaults=None: AIMDController(defaults or {"deadline_ns": 100_000_000}, increase=0.02,
                                                                     floor=0.729, drift_factor=1.5)
 for _inc in (0.01, 0.02, 0.05, 0.10):
