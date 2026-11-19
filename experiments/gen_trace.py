@@ -127,13 +127,68 @@ ROSTER_PHASE = [
     ("healthy-0", "healthy", 0, "core", "steady", dict(median_ms=20, sigma=.5)),
     ("healthy-tail", "healthy_tail", 0, "core", "natural tail", dict(median_ms=22, sigma=.6)),
 ]
+# Fifteenth round (docs/TRACE_TEST_PLAN.md): the two experiments a referee still demands.
+# 15a, calm share: episodic misbehavers whose calm share (slices with no hangs) runs from 0 to 97%, beside three honest
+# programs, replayed for 32, 64 and 128 slices. The first active slice is period - width, so the first pulse comes
+# after the rate window has filled (the patient case of rounds 12 and 14).
+ROSTER_CALM = [
+    ("honest-healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
+    ("honest-tail", "healthy_tail", 0, "core", "natural 0.6% timeout tail", dict(median_ms=22, sigma=.6)),
+    ("honest-regressed", "regressed", 0, "web", "3x slower from task 4000, for good", dict(median_ms=20, sigma=.5, at=4000, until=None)),
+    ("calm-00", "runaway", 1, "batch", "calm share 0: 5% of tasks hang throughout", dict(median_ms=20, sigma=.5, p=0.05)),
+    ("calm-25", "attacker_pulse", 1, "ext", "calm share 25%: 3 of every 4 slices active, 5% hangs",
+     dict(median_ms=20, sigma=.5, p=0.05, period=4, width=3, slice_tasks=250, phase=1)),
+    ("calm-50", "attacker_pulse", 1, "ext", "calm share 50%: every other slice active",
+     dict(median_ms=20, sigma=.5, p=0.05, period=2, width=1, slice_tasks=250, phase=1)),
+    ("calm-75", "attacker_pulse", 1, "ext", "calm share 75%: one slice in 4 active",
+     dict(median_ms=20, sigma=.5, p=0.05, period=4, width=1, slice_tasks=250, phase=3)),
+    ("calm-88", "attacker_pulse", 1, "ext", "calm share 87.5%: one slice in 8 active",
+     dict(median_ms=20, sigma=.5, p=0.05, period=8, width=1, slice_tasks=250, phase=7)),
+    ("calm-94", "attacker_pulse", 1, "ext", "calm share 93.75%: one slice in 16 active",
+     dict(median_ms=20, sigma=.5, p=0.05, period=16, width=1, slice_tasks=250, phase=15)),
+    ("calm-97", "attacker_pulse", 1, "ext", "calm share 96.9%: one slice in 32 active",
+     dict(median_ms=20, sigma=.5, p=0.05, period=32, width=1, slice_tasks=250, phase=31)),
+]
+# 15b, net time against the misbehaving share: a program book of six honest and six misbehaving deadline programs, and
+# mixes of 24 agents at 25%, 50% and 75% misbehaving built from the same programs, repeated evenly.
+_H = [
+    ("healthy", "healthy", 0, "core", "inside its limits", dict(median_ms=15, sigma=.5)),
+    ("healthy-tail", "healthy_tail", 0, "core", "natural 0.6% timeout tail", dict(median_ms=22, sigma=.6)),
+    ("regressed", "regressed", 0, "web", "3x slower from task 4000, for good", dict(median_ms=20, sigma=.5, at=4000, until=None)),
+    ("drifting", "drifting", 0, "web", "median creeps up 2.5x over 4000 tasks from 1000", dict(median_ms=18, sigma=.5, start=1000)),
+    ("slowstart", "slow_from_start", 0, "ml", "legitimately slow from the first task", dict(median_ms=60, sigma=.5)),
+    ("batchjob", "scheduled_batch", 0, "data", "declared heavy jobs every 500 tasks", dict(median_ms=15, sigma=.4, every=500)),
+]
+_M = [
+    ("runaway-steady", "runaway", 1, "batch", "5% of tasks hang throughout", dict(median_ms=20, sigma=.5, p=0.05)),
+    ("runaway-mild", "runaway", 1, "batch", "2% of tasks hang", dict(median_ms=18, sigma=.5, p=0.02)),
+    ("runaway-episode", "runaway_episode", 1, "batch", "15% hang between tasks 2000 and 3000", dict(median_ms=20, sigma=.5, p=0.15, lo=2000, hi=3000)),
+    ("lowslow", "attacker_lowslow", 1, "ext", "hangs 0.8% of tasks", dict(median_ms=20, sigma=.5, p=0.008)),
+    ("inflate", "attacker_inflate", 1, "ext", "hangs 4% and doubles completed durations from task 1500", dict(median_ms=20, sigma=.5, p=0.04, start=1500)),
+    ("pulse-8", "attacker_pulse", 1, "ext", "period 8, first pulse in slice 7", dict(median_ms=20, sigma=.5, p=0.05, period=8, slice_tasks=250, phase=7)),
+]
+ROSTER_BOOK = list(_H) + list(_M)
+
+
+def _mix(k_bad, n=24):
+    out = []
+    for i in range(n - k_bad):
+        a = _H[i % len(_H)]; out.append((f"{a[0]}-r{i // len(_H)}",) + a[1:])
+    for i in range(k_bad):
+        a = _M[i % len(_M)]; out.append((f"{a[0]}-r{i // len(_M)}",) + a[1:])
+    return out
+
+
+ROSTER_MIX = {f"mix{q}_v1": _mix(24 * q // 100) for q in (25, 50, 75)}
 ROSTERS = {"v1": ROSTER, "inflate_v1": ROSTER_INFLATE, "holdout_v1": ROSTER_HOLDOUT, "canary_v1": ROSTER_CANARY,
            "pulse_v1": ROSTER_PULSE, "robust_v1": ROSTER_ROBUST, "pulse2_v1": ROSTER_PULSE2, "phase_v1": ROSTER_PHASE,
            # the v1 agents under a deadline with less headroom (the generator's durations are unchanged):
-           "headroom75_v1": ROSTER, "headroom60_v1": ROSTER}
+           "headroom75_v1": ROSTER, "headroom60_v1": ROSTER,
+           "calm_v1": ROSTER_CALM, "book_v1": ROSTER_BOOK, "book75_v1": ROSTER_BOOK, "book60_v1": ROSTER_BOOK, **ROSTER_MIX}
 # Per-roster deadline override, in ns. v1's 100 ms deadline sits 4 to 17x above every honest median; the red team
 # showed the honest-agent results depend on that headroom (docs/RED_TEAM.md T1).
-ROSTER_DEADLINE_NS = {"headroom75_v1": 75_000_000, "headroom60_v1": 60_000_000}
+ROSTER_DEADLINE_NS = {"headroom75_v1": 75_000_000, "headroom60_v1": 60_000_000,
+                      "book75_v1": 75_000_000, "book60_v1": 60_000_000}
 CAPS = ["read", "write", "net", "exec"]
 TEAM_HOSTS = {"core": 4, "batch": 3, "web": 6, "ml": 4, "data": 3, "ext": 1}
 
