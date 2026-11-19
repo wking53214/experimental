@@ -1373,3 +1373,27 @@ Written before any run of either runner. Both use the round 22 data and class_on
 - Q3: at q=0.3 the gain over class_oneway is at most 3 points (false stalls eat it).
 - Q4: at q=0.1 honest cost is at least 1.0 point above class_oneway.
 - Q5: at q=0.02 honest cost is at most 0.3 points above class_oneway.
+
+### Round 25 results (lagging floor)
+
+7,119 rows, scorer experiments/score_round25.py, table in experiments/score_round25.txt. Cost is measured after the shift, for shifter agents.
+
+- **P1 held.** 0 bound violations.
+- **P2 missed.** At 60 s, f=2 the one-way post-shift cost was 0.68 points above the same agents unshifted, not 2 or more. At 10 s the gap was larger (2.23 against 0.31 at f=2; 4.40 at f=3).
+- **P3 missed.** The two-way rule did not recover to the unshifted level (1.10 against 0.37 at 60 s). Every regime pays a shift cost while the deadline catches up, and the 0.25 D floor does not move.
+- **P4 held.** A one-time operator reset at slice 12 brought one-way within 0.5 points of two-way (0.69 against 1.10); it was in fact lower, because the reset restarts history from the new slow behavior.
+- **P5 held.** The price at f=3 was larger than at f=1.5.
+
+**Reading.** The one-way price of an honest slowdown is real but modest at 60 s and 180 s, and larger at 10 s where the floor is tight. A single operator approval removes most of it, which is the intended path for loosening. The test used one step change in speed, not gradual drift.
+
+### Round 26 results (simulated heartbeat)
+
+6,720 rows, scorer experiments/score_round26.py, table in experiments/score_round26.txt. Heartbeat behavior is assumed, not measured.
+
+- **Q1 held.** 0 bound violations.
+- **Q2 missed.** At 60 s, r=0.9, q=0.02 the heartbeat saved 39.4% of mild-runaway time (predicted at least 45%), against 23.9% for class_oneway.
+- **Q3 missed, and by a lot.** At q=0.3 the gain over class_oneway was still 15.7 points (predicted at most 3). False stalls are only possible on honest calls longer than 0.25 D, which are rare, so the false-stall rate barely moves the result in this model.
+- **Q4 missed.** Honest cost at q=0.1 was 0.36 points above class_oneway (predicted at least 1.0).
+- **Q5 held.** At q=0.02 it was 0.09 above.
+
+**Reading.** If a tool's progress can be observed by the kernel, and runaways really stall while honest long calls mostly do not, a stall kill adds roughly 15 points of saving at small cost. That conclusion rests entirely on two assumed numbers: the share of runaways that stall (r) and the share of honest long calls that falsely stall (q). Saving scaled with r (39% at 0.9, 35% at 0.6) and hardly with q. Real progress data would have to supply both, so this identifies what to measure; it does not show the wall is broken.

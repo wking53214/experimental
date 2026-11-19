@@ -1,0 +1,19 @@
+D f mode cost_post_shift (shifters; f=1 row = same agents, no shift)
+  10 1.0 oneway= 0.31  twoway= 0.26  reset= 0.33
+  10 1.5 oneway= 1.67  twoway= 0.73  reset= 0.74
+  10 2.0 oneway= 2.23  twoway= 0.96  reset= 0.84
+  10 3.0 oneway= 4.40  twoway= 1.19  reset= 1.26
+  60 1.0 oneway= 0.43  twoway= 0.37  reset= 0.40
+  60 1.5 oneway= 1.18  twoway= 1.00  reset= 0.80
+  60 2.0 oneway= 1.12  twoway= 1.10  reset= 0.69
+  60 3.0 oneway= 1.75  twoway= 1.28  reset= 0.82
+ 180 1.0 oneway= 0.39  twoway= 0.35  reset= 0.32
+ 180 1.5 oneway= 0.89  twoway= 0.73  reset= 0.64
+ 180 2.0 oneway= 0.94  twoway= 0.81  reset= 0.63
+ 180 3.0 oneway= 1.07  twoway= 0.98  reset= 0.72
+
+P1 bound violations (agent-runs) 0 -> True
+P2 0.68 pts above unshifted -> False
+P3 twoway 1.10 vs unshifted 0.37 -> False
+P4 reset 0.69 vs twoway 1.10 -> True
+P5 f3 price > f1.5 price -> True
