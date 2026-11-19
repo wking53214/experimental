@@ -1,0 +1,2 @@
+D= 60: bridge saved  19.1% cost(pooled) 1.27 | reference saved  22.0% cost(pooled) 1.74 | cost-bound max (bridge) 0.00
+D=180: bridge saved  26.3% cost(pooled) 1.30 | reference saved  29.4% cost(pooled) 1.75 | cost-bound max (bridge) 0.00

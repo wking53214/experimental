@@ -1619,3 +1619,12 @@ The bridge now has the purple team's pick (`observe_user_durations`, `refresh_us
 - V2: the bridge's honest cost is within 0.3 points of the reference (1.60 and 1.66).
 - V3: no certificate violation, and every decision is in the governor's audit log (decisions counted equal log entries).
 Any gap I expect comes from the governor's breaker (3 automatic tightenings per boundary), which the reference does not have. Failed predictions will be recorded as failed. Status: not run.
+
+### Supported design: fidelity check results
+Raw: experiments/user_deadline_fidelity.txt.
+| Pred | Result |
+|---|---|
+| V1 (saving within 3 points of reference) | 60 s: bridge 19.1% vs 22.0%, gap 2.9, HELD. 180 s: bridge 26.3% vs 29.4%, gap 3.1, narrowly MISSED. |
+| V2 (honest cost within 0.3 of reference) | MISSED as written, in the safe direction: bridge cost 1.27 vs 1.74 (60 s) and 1.30 vs 1.75 (180 s), so 0.47 and 0.45 points LOWER. I had expected a gap only from the breaker; it also lowers cost. |
+| V3 (no certificate violation; every decision audited) | HELD. Cost-bound max 0.00. 2,312 decisions and 2,312 independent audit-log entries (235 signal, 1,628 held, 449 tighten-not-applied), counted from the log itself, not from a counter. |
+Reading: the real implementation saves about 3 points less than the reference and costs about 0.5 points less honest time, which is the same exchange rate again. Predictions: 3 made, 1 held, 2 missed (one narrowly, one in the safe direction).
