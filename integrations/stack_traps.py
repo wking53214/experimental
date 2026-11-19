@@ -115,10 +115,20 @@ class TrapPolicy:
     cost_budget: Optional[float] = None
     cost_budget_min_reports: int = 5
     cost_budget_recent_reports: int = 8
+    # Provisional floor for a new identity (round 20; off by default, None). While the agent has fewer than
+    # cost_budget_min_reports slices of history, a deadline tightening may go no lower than this share of the configured
+    # deadline (for example 0.9: one policy step) instead of being refused. Round 19 found that refusing lets an attacker
+    # who takes a new identity every few slices escape the limiter entirely (2.1% saved against 22.3%); this caps what a
+    # new identity can cost an honest agent (the share of its tasks in the top (1 - ratio) of the deadline) without
+    # waiting for history.
+    cost_budget_new_identity_ratio: Optional[float] = None
 
     def __post_init__(self):
         if self.cost_budget is not None and self.cost_budget not in COST_BUDGET_POINT:
             raise ValueError(f"cost_budget must be one of {sorted(COST_BUDGET_POINT)}, got {self.cost_budget!r}")
+        r = self.cost_budget_new_identity_ratio
+        if r is not None and (self.cost_budget is None or not (0.729 <= r <= 1.0)):
+            raise ValueError("cost_budget_new_identity_ratio needs cost_budget and must lie in [0.729, 1.0]")
 
 
 # budget -> index into TrapBridge.QUANTILE_POINTS (0.50, 0.75, 0.90, 0.95, 0.99): the smallest point at or above 1 - budget,
@@ -555,6 +565,9 @@ class TrapBridge:
         factor = self.policy.factor
         if self.policy.cost_budget is not None and suffix == "deadline_ns":
             floor = self.deadline_floor(agent)
+            if floor is None and self.policy.cost_budget_new_identity_ratio is not None:
+                floor = self.policy.cost_budget_new_identity_ratio * float(self.defaults["deadline_ns"])
+                self.counts["budget_provisional"] += 1
             if floor is None:
                 self.counts["budget_unknown"] += 1
                 return None

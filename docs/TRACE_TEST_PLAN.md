@@ -1139,3 +1139,29 @@ Saved share of hung time, pooled over an attacker's identities:
 **Consequence.** The cost budget should be deployed with identity binding (an identity that costs something to create, or one that inherits a starting history from its operator, team or tooling class), or a new identity should start at a conservative deadline until its history is known. Neither is built or tested. The budget stays off by default.
 
 **Limits.** The harness gives the attacker free identities, which is the worst case. The attacker's behavior is fixed and fast; a real one would also pump its floor.
+
+## Round 20, pre-registered: a provisional floor for a new identity
+
+Committed before the run (a one-seed smoke run was executed and deleted unread). Round 19 found that the cost budget, which refuses to
+tighten until five slices of history exist, lets an attacker that takes a new identity every few slices escape the limiter (2.1% saved
+against 22.3% for one persistent identity). The change: `TrapPolicy(cost_budget_new_identity_ratio=0.9)` (off by default; two new
+tests; the full suite passes). While an identity has fewer than five slices of history, a deadline tightening may go to 0.9 of the
+configured deadline (one step) instead of being refused; with history, the budget's floor decides as before. This is designed after
+seeing round 19's numbers, so those numbers are diagnosis data; the tests below use fresh seeds (20000 to 20019) and the round 17
+hold-out stretches. Runner `experiments/red_team_round20.py`, scorer `experiments/score_round20.py`.
+
+Policies added: `recommended_budget_prov`, `recommended_slice_budget_prov`. Agents: round 19's persistent, `sybil6` and `sybil3` attackers,
+plus three honest newcomers (a fresh identity from slice 10, median 30 ms, natural tail about 2.3%).
+
+| # | Prediction |
+|---|---|
+| I1 | the certificate holds: no attacker identity saves more than 27.1%, and honest cost never exceeds its bound (sim and real) |
+| I2 | `sybil6`: pooled saved share 5% to 10% under `recommended_budget_prov`; 5% to 12% under `recommended_slice_budget_prov`. `sybil3`: 2% to 8% under `recommended_budget_prov` |
+| I3 | the persistent attacker under `recommended_budget_prov` stays within 1.5 points of its `recommended_budget` saving (22.3% in round 19) |
+| I4 | real hold-out stretches: mean honest cost at 10 s under `recommended_budget_prov` exceeds `recommended_budget`'s by at most 0.15 points; pooled over the three deadlines by at most 0.10 |
+| I5 | honest newcomers: mean cost under `recommended_budget_prov` is at most half of `recommended`'s and within 0.5 points of `recommended_budget`'s |
+
+**What would falsify the change.** I2 missing low (the provisional step buys no resistance to rotation) or I4/I5 missing high (it costs
+honest identities what the budget was meant to save them). **Stated limit:** one provisional step bounds, not removes, the gain from
+rotation: at most 10% of hung time per identity-window. An attacker that rotates every slice would still be held near zero by the
+rate rule's need for a pattern.
