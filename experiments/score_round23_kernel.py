@@ -2,7 +2,8 @@
 import json
 from pathlib import Path
 import numpy as np
-R = json.load(open(Path(__file__).with_name("class_kernel_replay_round23.json")))
+import sys
+R = json.load(open(Path(__file__).with_name(sys.argv[1] if len(sys.argv) > 1 else "class_kernel_replay_round23.json")))
 n = sum(r["n"] for r in R); mm = sum(r["mismatch"] for r in R)
 print(f"calls {n}, decision mismatches {mm} ({100*mm/n:.5f}%), runs with any mismatch {sum(1 for r in R if r['mismatch'])}/{len(R)}, below_floor hits {sum(r['below_floor'] for r in R)}")
 def agg(rows, key):

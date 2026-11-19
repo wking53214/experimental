@@ -94,14 +94,18 @@ def job(args):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--data", required=True); ap.add_argument("--seeds", type=int, default=10)
     ap.add_argument("--out", default=str(ROOT / "experiments" / "mild_runaway_round22.json"))
+    ap.add_argument("--source", default="tracelab", choices=["tracelab", "freeinference"]); ap.add_argument("--seed-base", type=int, default=SEED_BASE)
     a = ap.parse_args()
-    data = c21.load(a.data)
-    jobs = [(p, d, SEED_BASE + i, data) for p in c21.POPS for d in c21.DEADLINES_S for i in range(a.seeds)]
+    if a.source == "freeinference":
+        import freeinference_loader; data = freeinference_loader.load(a.data)
+    else:
+        data = c21.load(a.data)
+    jobs = [(p, d, a.seed_base + i, data) for p in c21.POPS for d in c21.DEADLINES_S for i in range(a.seeds)]
     rows = []
     with ProcessPoolExecutor() as ex:
         for r in ex.map(job, jobs):
             rows += r
-    json.dump({"seed_base": SEED_BASE, "rows": rows}, open(a.out, "w"))
+    json.dump({"seed_base": a.seed_base, "rows": rows}, open(a.out, "w"))
     print(len(rows), "rows written")
 
 

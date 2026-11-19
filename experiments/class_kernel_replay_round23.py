@@ -69,9 +69,13 @@ def job(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--data", required=True); ap.add_argument("--kernel", required=True)
-    ap.add_argument("--seeds", type=int, default=10); ap.add_argument("--out", default=str(ROOT / "experiments" / "class_kernel_replay_round23.json"))
-    a = ap.parse_args(); data = c21.load(a.data)
-    jobs = [(p, d, c22.SEED_BASE + i, data) for p in c21.POPS for d in c21.DEADLINES_S for i in range(a.seeds)]
+    ap.add_argument("--seeds", type=int, default=10); ap.add_argument("--source", default="tracelab", choices=["tracelab", "freeinference"]); ap.add_argument("--seed-base", type=int, default=c22.SEED_BASE); ap.add_argument("--out", default=str(ROOT / "experiments" / "class_kernel_replay_round23.json"))
+    a = ap.parse_args()
+    if a.source == "freeinference":
+        import freeinference_loader; data = freeinference_loader.load(a.data)
+    else:
+        data = c21.load(a.data)
+    jobs = [(p, d, a.seed_base + i, data) for p in c21.POPS for d in c21.DEADLINES_S for i in range(a.seeds)]
     meta = {}
     with tempfile.TemporaryDirectory() as td:
         runs_path = Path(td) / "runs.jsonl"

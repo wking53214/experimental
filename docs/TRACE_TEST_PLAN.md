@@ -1478,3 +1478,21 @@ Protocol: identical to round 22 and the round 23 replay (same population definit
 Failed predictions will be recorded as failed. Status: not run. The shell in this session cannot reach huggingface.co.
 
 Addendum to the outside-data pre-registration (written after downloading and profiling the FreeInference tables, before any replay): licence is CC-BY-4.0 (correcting the line above). Data cleaning rules, fixed now: drop calls with missing or negative latency (0.6% missing, a few negative); keep every other value as measured, including very long ones (max 4.3e8 ms); a user's calls are ordered by request start time, then step, then call index; class = tool `name` (660 names); populations use the same thresholds as before (wide: at least 2000 calls, first 2000; long: at least 8000, first 8000), which gives 100 and 43 users. Known caveat: calls issued in parallel within one step share one latency value, so some latencies describe a step, not a single call. Also run: the round 22 arms (whole-agent adaptive, adaptive budget) on the same data and seeds, so R3 can be scored.
+
+### Outside-data replication: results (FreeInference Agentic Trace, CC-BY-4.0)
+
+Raw: experiments/fi_class_kernel_replay_round23.json (4,290 agent-runs, 16,320,000 calls through the Rust kernel path), experiments/fi_mild_runaway_round23.json (21,450 rows, all five arms), score files fi_score_round23_kernel.txt and fi_score_round23_arms.txt. Seeds 23000 to 23009, nothing tuned. Loader: experiments/freeinference_loader.py. 100 wide and 43 long users, 660 tool names.
+
+| Pred | Result |
+|---|---|
+| R1 (60 s: saves at least 10%, honest cost at most 1.5) | HELD: saved 11.7% (wide) and 11.0% (long); honest cost 0.83 and 1.25, mean 1.04 |
+| R2 (no certificate violation, any arm) | HELD: none in any arm |
+| R3 (class path beats the adaptive budget arm at 60 s, both populations) | HELD: 11.7 vs 5.3 (wide), 11.6 vs 8.2 (long) |
+| R4 (Python and Rust decisions match at 99.9% or more) | HELD: 0 mismatches in 16.32M calls; every class decision audited (1,192,416 of 1,192,416) |
+| R5 (saving at 180 s long below TraceLab's 37.4%) | HELD: 17.3% (kernel path) |
+
+Honest reading of what changed against the UW trace:
+- The headline effect shrinks. At 60 s long the class path saved 28.9% on TraceLab and 11.0% here. At 180 s long, 37.4% became 17.3%. The ordering of arms at 60 s and 180 s holds, but the gap to the older whole-agent policy is small at 60 s (wide: 11.7 vs 9.3; long: 11.6 vs 9.4).
+- At 10 s the class path is the weakest arm on saving (wide 5.4% vs 14.7% for the whole-agent policy; long 6.4% vs 13.8%), and in the long population it costs 1.97 points. The older policies also cost much more at 10 s (3.8 and 3.25), so the safer choice at short deadlines is unclear from this data.
+- Round 22's own predictions L2 and L3 (class kill rate and a 3x saving over the budget arm) would not have held on this data (L3: 11.7 vs 6.8; L2 false). They were not re-registered here and are reported only for completeness.
+- Caveats: parallel calls share one latency value, which makes some latencies step-level; user ordering uses request start times; runaways are still injected, not observed; the kernel replay is simulation on recorded data, not a live system.

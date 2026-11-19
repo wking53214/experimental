@@ -3,7 +3,8 @@
 import json, sys
 from pathlib import Path
 import numpy as np
-R = json.load(open(Path(__file__).with_name("mild_runaway_round22.json")))["rows"]
+import sys
+R = json.load(open(Path(__file__).with_name(sys.argv[1] if len(sys.argv) > 1 else "mild_runaway_round22.json")))["rows"]
 REG = ["recommended", "recommended_budget_prov", "recommended_slice_budget_prov", "class_oneway", "class_twoway"]
 
 def sel(**k):
