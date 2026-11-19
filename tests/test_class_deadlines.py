@@ -91,3 +91,36 @@ def test_unsafe_class_names_are_hashed(tmp_path):
 def test_bad_config_rejected():
     with pytest.raises(ValueError):
         TrapPolicy(class_deadlines=True, class_floor=0.0)
+
+
+def test_every_class_decision_is_audited(tmp_path):
+    b, g = make(tmp_path)
+    b.observe_class_durations("a", "few", [10e6] * 5)                   # unknown (too little history)
+    b.observe_class_durations("a", "read", [40e6] * 40)
+    b.refresh_class_deadlines("a")                                      # read tightened, few unknown
+    b.refresh_class_deadlines("a")                                      # read held, few unknown
+    assert b.counts["class_decisions"] == 4
+    assert b.counts["class_audited"] == 4
+    kinds = [str(e) for e in g.audit.entries]
+    assert sum("class_deadline_unknown" in k for k in kinds) == 2 and sum("class_deadline_held" in k for k in kinds) == 1
+
+
+def test_audit_failure_changes_nothing_else(tmp_path):
+    b, g = make(tmp_path)
+    b.observe_class_durations("a", "few", [10e6] * 5)
+    def boom(*a, **k): raise OSError("disk full")
+    g.audit.append = boom
+    b.refresh_class_deadlines("a")
+    assert b.counts["audit_write_failed"] == 1 and b.class_deadline("a", "few") == D
+
+
+def test_breaker_held_class_requests_are_each_audited(tmp_path):
+    b, g = make(tmp_path, class_history=40)               # short memory, so the target follows the data down
+    for k in range(8):                                    # keeps lowering the target: the breaker holds after 3 tightenings
+        b.observe_class_durations("a", "read", [(80 - 7 * k) * 1e6] * 40)
+        b.refresh_class_deadlines("a")
+    n_decisions = b.counts["class_decisions"]
+    n_entries = sum(1 for e in g.audit.entries if e["kind"] in ("class_deadline_unknown", "class_deadline_held",
+                                                               "class_tighten_not_applied", "signal"))
+    assert b.counts.get("class_reply_held", 0) >= 1
+    assert n_entries == n_decisions

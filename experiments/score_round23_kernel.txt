@@ -1,0 +1,13 @@
+calls 3540000, decision mismatches 0 (0.00000%), runs with any mismatch 0/960, below_floor hits 0
+pop D  py_saved kernel_saved  py_cost kernel_cost
+wide   10     8.09         8.09     0.85        0.85
+wide   60    12.11        12.11     0.76        0.76
+wide  180    15.99        15.99     0.75        0.75
+long   10    12.22        12.22     0.87        0.87
+long   60    28.89        28.89     1.36        1.36
+long  180    37.35        37.35     1.27        1.27
+
+S5 mismatch share 0.0000% (need <= 0.1%) -> True; max saving gap 0.000 (<= 0.1) -> True; max cost gap 0.000 (<= 0.05) -> True
+S6 kernel honest cost at 60 s (wide, long): 0.76, 1.36; mean 1.06 -> True
+S7 class decisions 125742, audited 125742, audit failures 0 -> True
+certificate violations through the kernel path: 0

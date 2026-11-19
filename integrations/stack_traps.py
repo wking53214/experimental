@@ -197,6 +197,7 @@ class TrapBridge:
         self.verdicts: List[dict] = []             # every verdict issued, in order (also in the audit log)
         self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
+        self._class_ready: set = set()               # class boundaries already ensured
         self._class_obs: Dict[tuple, Deque[float]] = {}   # (agent key, class key) -> completed durations (ns)
         self._tightened_boundaries: set = set()   # boundaries this bridge has tightened: never evicted
         self._last_seen: Dict[str, int] = {}      # agent -> ingest sequence of its last event or report
@@ -439,13 +440,20 @@ class TrapBridge:
             return changed
         D, p = float(self.defaults["deadline_ns"]), self.policy
         for (a, ckey), obs in list(self._class_obs.items()):
-            if a != agent or len(obs) < p.class_min_completions:
+            if a != agent:
+                continue
+            bid = self._class_boundary(agent, ckey)
+            self.counts["class_decisions"] += 1
+            if len(obs) < p.class_min_completions:
+                self._class_audit("class_deadline_unknown", bid, {"completed": len(obs), "needed": p.class_min_completions})
                 continue
             target = min(D, max(p.class_floor * D, p.class_margin * _quantile(obs, 0.99)))
-            bid = self._class_boundary(agent, ckey)
-            self.gov.ensure_boundary(bid, "agent_limit", D)
+            if bid not in self._class_ready:        # once: ensure_boundary logs "configured_limit_ignored" on every later call
+                self.gov.ensure_boundary(bid, "agent_limit", D)
+                self._class_ready.add(bid)
             current = float(self.gov.boundaries.get_boundary(bid).current_limit)
             if not target < current:
+                self._class_audit("class_deadline_held", bid, {"completed": len(obs), "target_ns": target, "current_ns": current})
                 continue
             self._agents.add(agent); self._touch(agent)
             try:
@@ -457,11 +465,26 @@ class TrapBridge:
             except (ValueError, KeyError):
                 self.counts["rejected_input"] += 1
                 continue
+            self.counts["class_reply_" + str(reply.get("status"))] += 1
+            if reply.get("status") not in ("applied", "applied_clamped"):
+                # The governor logs a breaker hold once per hold episode, not per request, so the bridge records each
+                # refused request itself: every class decision is then in the log.
+                self._class_audit("class_tighten_not_applied", bid, {"status": reply.get("status"), "reason": reply.get("reason"),
+                                                                       "target_ns": target, "current_ns": current})
             if reply.get("status") in ("applied", "applied_clamped"):
                 self._tightened_boundaries.add(bid)
                 self.counts["class_tightened"] += 1
+                self.counts["class_audited"] += 1
                 changed[ckey] = float(reply.get("limit_after", target))
         return changed
+
+    def _class_audit(self, kind: str, bid: str, info: dict) -> None:
+        """Record a class decision that changed nothing. If the audit write fails nothing else changes and the failure is counted."""
+        try:
+            self.gov.audit.append(kind, {"boundary_id": bid, "source": self.source, **info})
+            self.counts["class_audited"] += 1
+        except Exception:
+            self.counts["audit_write_failed"] += 1
 
     def request_class_loosening(self, agent_id: str, tool_class: str, new_limit_ns: float, reason: str = "") -> dict:
         """Ask a named operator to raise one class deadline. Nothing changes until an operator approves it."""
