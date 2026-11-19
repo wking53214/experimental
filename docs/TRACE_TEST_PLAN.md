@@ -1350,3 +1350,26 @@ Written before any run. No smoke run.
 - **N6 missed.** Long population, 60 s, sigma 0.5: 33.2% (predicted at least 35%).
 
 **Reading.** A tighten-only declaration is safe (certificate intact, cannot be used to loosen) and cheap when forecasts are decent, but it adds only a few points against non-strategic runaways and nothing meaningful against a runaway that declares honestly about its own slowness. The wall is not broken by this signal. Anything that separates a slow honest agent from a mild runaway needs information the agent cannot cheaply fake, which timing and self-declaration do not supply.
+
+## Rounds 25 and 26 pre-registration: the lagging floor, and a progress heartbeat
+
+Written before any run of either runner. Both use the round 22 data and class_oneway (the governed class deadline) as the baseline. Seeds 25000 and 26000, 10 each, wide and long, D = 10, 60, 180 s.
+
+### Round 25: an honest agent that legitimately slows down after being tightened
+
+**Setup.** Half of the agents (seeded) are "shifters": from slice 8 on, every call takes f times as long (f = 1.5, 2, 3; capped at 0.95 D). No runaways. Cost is measured after slice 8 only, as extra kills of calls that would have finished before D. Regimes: class_oneway; class_twoway (deadline may rise); class_oneway_reset (one-way, but at slice 12 a named operator resets every class deadline to D and history restarts, a stand-in for approving a loosening request).
+- P1: the certificate holds for every regime (post-shift honest cost at most the share of calls in (0.25 D, D]).
+- P2: at D=60 s, f=2, class_oneway post-shift cost is at least 2 points above the unshifted agents' cost (a real price of one-way).
+- P3: class_twoway post-shift cost is within 0.5 points of the unshifted agents' (it recovers), the one-way price being that it does not.
+- P4: class_oneway_reset after slice 12 is within 0.5 points of class_twoway.
+- P5: at f=3 the one-way price is larger than at f=1.5.
+
+### Round 26: a progress heartbeat (simulated)
+
+**Idea.** The kernel watches whether a tool call is making progress (bytes or records), a signal the agent does not report. A call that has made no progress for w = 0.1 D is killed at max(0.25 D, stall start + w), earlier than its class deadline. This only tightens, and the 0.25 D floor keeps the certificate.
+**Honest limit.** The trace has no progress data. Runaway calls (3% of a runaway agent's calls, 2 to 4 times longer, round 22 injection) are detected as stalled with probability r (0.9 or 0.6), stalling at a uniform 20% to 60% of their time. Honest calls longer than 0.25 D (including human approval waits) show a false stall with probability q (0.02, 0.1, 0.3), at a uniform 20% to 60% of their time. Results show the break-even in q; they do not measure real heartbeats.
+- Q1: the certificate holds for every cell.
+- Q2: at D=60 s, r=0.9, q=0.02 the heartbeat saves at least 45% of mild-runaway time (class_oneway alone: about 25%, round 24).
+- Q3: at q=0.3 the gain over class_oneway is at most 3 points (false stalls eat it).
+- Q4: at q=0.1 honest cost is at least 1.0 point above class_oneway.
+- Q5: at q=0.02 honest cost is at most 0.3 points above class_oneway.
