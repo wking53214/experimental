@@ -1503,3 +1503,16 @@ Script experiments/diagnose_round23.py, output experiments/diagnose_round23.txt;
 - Breakdown of runaway time at 60 s (TraceLab / FreeInference): saved 24.9 / 13.2; calls in classes that never warmed up 8.1 / 7.2; calls in warm classes that were too short to catch 42.6 / 61.1; the rest ran below the 0.25 D floor and cannot be caught by design. A hypothetical kill at the floor would save 51 / 43, so the ceiling for this method is roughly twice the result on TraceLab and 3x on FreeInference.
 - Settings sweep: every tighter setting buys saving at a roughly constant price in honest calls (about 8 to 11 points of saving per point of honest cost on FreeInference). Margin 1.2 gave 18.4 saved at 1.45 cost; quantile 0.95 gave 25.7 at 2.49. No setting gave a clearly better trade than the shipped one; they move along one curve.
 - Faster warm-up (30 to 15 completions) added 1 to 1.5 points for 0.1 to 0.3 more cost; a 50-call slice added 4 points for 0.6 more cost on FreeInference. Both are cheap, small gains.
+
+## Round 23 class split by program: pre-registration (written before any run)
+
+Idea, from the diagnosis: 43% to 61% of runaway time sits in warm classes where the call is shorter than the class deadline, because one tool name mixes quick and slow calls (for example `bash` runs `grep` at a median 0.7 s and `sleep` at 6.8 s). A finer class label, known when the call is issued, should give tighter deadlines for the quick kinds without punishing the slow ones.
+Data: FreeInference only (the `programs` field exists there; TraceLab has none). Settings are the shipped ones, nothing tuned. Fresh seeds 24000 to 24009, same populations, deadlines 10, 60, 180 s, same mild-runaway injection.
+Label rule, fixed now: sub-class = `name|program`, where program is the first whitespace token of the first entry of `programs` that is not in {cd, echo, export, set, source, true, pwd}; no such entry means the class stays `name`.
+Arms: A0 = class by name (as shipped). A1 = class by name|program, a sub-class that has not warmed up gets the full deadline D. A2 = as A1, but a sub-class that has not warmed up inherits its name-level class deadline (one-way as before).
+- P1: at 60 s A1 saves more runaway time than A0 in both populations, with honest cost at most 0.5 points above A0.
+- P2: A2 saves at least as much as A1, with honest cost at most 0.3 points above A1.
+- P3: the share of runaway time in warm classes that were too short to catch falls below 55% under A1 at 60 s (it was 61.1% under A0 on seeds 23100 to 23102).
+- P4: no certificate violation in any arm (honest cost never above the bound).
+- P5: at least 20% of agents get more than 64 distinct classes under A1 (the bridge currently stops at 64 per agent, so this would mean the cap has to be raised or the label coarsened).
+Cost of the idea that these tests do not measure: someone has to parse each command at issue time to get the program name, and the label comes from the request, so an attacker who controls the command text could choose a favorable label (for example call a slow job `sleep`). Failed predictions will be recorded as failed. Status: not run.
