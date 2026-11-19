@@ -1308,3 +1308,14 @@ Written before the parity run. The bridge code and 11 unit tests (tests/test_cla
 - M4: no honest agent exceeds its bound (the certificate), and no class deadline is below 0.25 D.
 - M5: every class tightening has an audit entry (count of audit entries equals count of tightenings).
 - M6: the bridge costs under 5 ms per slice refresh per agent on average.
+
+### Round 23 results
+
+960 agent-runs (seeds 22000 to 22009), scorer experiments/score_round23.py, table in experiments/score_round23.txt. All six predictions held.
+
+- M1: largest saving gap between bridge and prototype 0.88 points (long, 10 s; the per-class history cap of the prototype versus unbounded here is the likely cause, not tested).
+- M2: largest honest-cost gap 0.02 points.
+- M3: 0 deadline rises. M4: 0 bound violations. M5: every tightening has an audit entry.
+- M6: refresh averages 0.41 ms per agent per slice.
+
+**Reading.** The governed version behaves like the prototype, so round 21 and 22 results carry over to the bridge. What the bridge adds is the audit trail and a loosening path that waits for a named operator. Still true: class deadlines do not solve the wall (round 22), and every run is simulation on one public trace.

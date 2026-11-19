@@ -1,0 +1,14 @@
+pop D  proto_saved bridge_saved  proto_cost bridge_cost
+wide   10       8.12         8.09        0.85        0.85
+wide   60      12.13        12.11        0.76        0.76
+wide  180      16.06        15.99        0.75        0.75
+long   10      13.11        12.22        0.89        0.87
+long   60      29.39        28.89        1.37        1.36
+long  180      37.35        37.35        1.27        1.27
+
+M1 max saving gap 0.88 pts -> True
+M2 max cost gap 0.02 pts -> True
+M3 deadline rises 0 -> True
+M4 bound violations 0 -> True
+M5 tightenings without audit entry (agent-runs) 0 -> True
+M6 mean refresh 0.41 ms -> True
