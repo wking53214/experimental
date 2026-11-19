@@ -1,0 +1,5 @@
+396 rows, 99 users, 1482 timeout calls
+D= 60 arm C: timeout time saved  10.4%  honest cost 1.33  cost-bound max -0.03
+D= 60 arm G: timeout time saved  16.8%  honest cost 1.06  cost-bound max 0.00
+D=180 arm C: timeout time saved  21.4%  honest cost 1.06  cost-bound max 0.00
+D=180 arm G: timeout time saved  26.2%  honest cost 1.26  cost-bound max 0.00

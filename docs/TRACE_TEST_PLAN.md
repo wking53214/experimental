@@ -1540,3 +1540,23 @@ Arms: C = class deadline by tool name (shipped). G = the same rule with one clas
 - T2: at 60 s, C removes at least 15% of timeout-call time.
 - T3: honest cost never exceeds the certificate bound (share of honest calls in (0.25 D, D]).
 Failed predictions will be recorded as failed. Status: not run.
+
+### Purple team stage 1: results (real timeouts, 99 users, 1,482 timeout calls)
+
+Raw: experiments/purple1_real_timeouts.json and .txt.
+| Pred | Result |
+|---|---|
+| T1 (C beats G, cost at most G + 0.5) | MISSED at both deadlines: 60 s: C saved 10.4%, G 16.8%; 180 s: C 21.4%, G 26.2%. C also cost more at 60 s (1.33 vs 1.06). |
+| T2 (C removes at least 15% at 60 s) | MISSED: 10.4% |
+| T3 (certificate) | HELD |
+Reading: on real stuck calls the per-tool split does not help; one deadline per user did better. All earlier class-deadline gains were measured against runaways that I injected; this is the first test on real ones, and it points the other way. Likely reasons (not tested): classes take longer to warm up, and real timeouts concentrate in tools with heavy tails (a loose class deadline). The injected-runaway results should not be quoted without this.
+
+## Purple team stage 2: pick a mechanism that works on real stuck calls. Pre-registration (written before any run)
+
+Honest design protocol, fixed now: users are split by a seeded draw into a DESIGN half and a TEST half (seed 25000). Candidates are compared on the design half only; the test half is scored once, for the pick.
+Candidates (all one-way, shipped margin 1.5, quantile 0.99, floor 0.25 D, 30 completions): G = one class per user. C = class by tool name (cold class gets D). H1 = min(G deadline, C deadline). H2 = the class deadline once the class is warm, else G's deadline. H3 = G with margin 1.2.
+Pick rule, fixed now: the candidate with the largest saved share of timeout time on the design half among those whose honest cost is at most G's cost + 0.3 and no certificate violation; G wins ties.
+- U1: the pick is not C.
+- U2: on the TEST half the pick saves more timeout time than G at both 60 s and 180 s, with honest cost at most G + 0.3.
+- U3: no certificate violation on the test half.
+Failed predictions will be recorded as failed. Status: not run.
