@@ -39,6 +39,10 @@ own deadline high by completing slowly, which leaves it exactly where the static
 - Cost budget, round 17: honest cost down 55% to 74% on real latencies (held-out stretches included), slow-from-start agents 18.5 to 1.2 points in simulation; the price is 4.3 points of saved hung time on sustained runaways and 7.3 on the inflate-first attacker (`docs/TRACE_TEST_PLAN.md`).
 - Attacker side: across all 15 trace rounds the largest saved share of hung time is 27.1% (round 15, a runaway episode).
 
+## A class-conditioned version (round 21, prototype)
+
+The same argument holds for any floor f: a per-(agent, tool) deadline clamped to [f D, D] costs an honest agent at most the share of its calls in (f D, D] and saves at most 1 - f of a hang's time. With f = 0.25 and a deadline of 1.5 times the class's own 99th percentile, real tool latencies gave 45% to 71% saved (against 9% to 25% for the whole-agent cap) at about 1 point of honest cost; 0 violations in 4800 rows. Not yet in the bridge.
+
 ## Limits
 
 - The certificate bounds tasks the limiter kills; it does not bound the work lost to a rerun (net time, `docs/RED_TEAM.md` T2).
