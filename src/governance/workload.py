@@ -106,7 +106,6 @@ class WorkloadClassifier:
         return ViolationClass.UNKNOWN
 
     def is_expected_violation(self, violation) -> bool:
-        context = getattr(violation, "context", None) or {}
         observed = getattr(violation, "observed_value", None)
         boundary_id = getattr(violation, "boundary_id", None)
         if observed is None:

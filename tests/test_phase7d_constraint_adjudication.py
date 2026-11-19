@@ -81,7 +81,7 @@ class TestPhase7dMeasurementIntegrity:
         if detected_at:
             print(f"\n✓ Slow-burn attack detected at iteration {detected_at}")
         else:
-            print(f"\n✗ Slow-burn attack NOT detected (all iterations normal)")
+            print("\n✗ Slow-burn attack NOT detected (all iterations normal)")
 
     def test_metric_injection_attack(self):
         """Detect when attacker injects false data into metric stream."""
@@ -116,7 +116,7 @@ class TestPhase7dMeasurementIntegrity:
 
         injection_detected = sum(detections[1:])  # Exclude first normal
         print(f"\nDetected {injection_detected}/4 injection attempts")
-        assert injection_detected >= 2, f"Should detect at least 2 injection attempts"
+        assert injection_detected >= 2, "Should detect at least 2 injection attempts"
 
 
 class TestPhase7dConstraintAdjudication:

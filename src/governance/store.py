@@ -6,10 +6,7 @@ only appended. This demonstrates that historical accuracy is preserved even
 as the system evolves.
 """
 import json
-import os
 from pathlib import Path
-from typing import Any, Optional
-import time
 
 
 class ImmutableFileStore:

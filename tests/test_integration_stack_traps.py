@@ -1,5 +1,4 @@
 """STACK trap events -> governed per-agent limits (integrations/stack_traps.py). Events follow the P3.2 schema."""
-import itertools
 import math
 import random
 import uuid

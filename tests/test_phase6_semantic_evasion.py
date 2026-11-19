@@ -13,12 +13,10 @@ with baseline reasoning and anomaly detection.
 
 import pytest
 from src.governance.governor import Governor
-from src.governance.adversary import AttackType, AttackOutcome
 from src.governance.workload import (
     WorkloadClassifier,
     ExpectedLoadPattern,
     WorkloadType,
-    ViolationClass,
 )
 
 
@@ -122,7 +120,7 @@ class TestPhase6SemanticEvasion:
 
         # Step 2: Test if semantic layer accepts the poison
         print("\nStep 2: Test semantic layer response")
-        boundary = gov.boundaries.get_boundary(adversary.target_boundary)
+        gov.boundaries.get_boundary(adversary.target_boundary)
         target_value = poisoned.expected_value_range[1]  # Use max of poisoned range
 
         execution, violation = gov.execute_against_boundary(
@@ -134,7 +132,7 @@ class TestPhase6SemanticEvasion:
         if violation:
             # Violation detected despite poisoned baseline
             violations = gov.events.get_violations_for_boundary(adversary.target_boundary)
-            print(f"  Violation created: YES (defense detected poison)")
+            print("  Violation created: YES (defense detected poison)")
             print(f"  Total violations: {len(violations)}")
 
             # Check if semantic layer correctly rejects the poison
@@ -179,13 +177,13 @@ class TestPhase6SemanticEvasion:
             else:
                 succeeded_attacks += 1
 
-        print(f"\nResults after 10 spoofed 'maintenance' attacks:")
+        print("\nResults after 10 spoofed 'maintenance' attacks:")
         print(f"  Detected: {detected_attacks}")
         print(f"  Succeeded: {succeeded_attacks}")
 
         # Defense should detect most attacks despite spoofing
         assert detected_attacks >= 2, "Spoofed maintenance too effective"
-        print(f"\n✓ Spoofed maintenance detected (defense not fooled)")
+        print("\n✓ Spoofed maintenance detected (defense not fooled)")
 
     def test_legitimate_variance_boundary(self, semantic_test_setup):
         """Test that semantic layer handles legitimate load variance."""
@@ -252,7 +250,7 @@ class TestPhase6SemanticEvasion:
 
         # Cascade attacks are harder to detect (legitimate load patterns similar)
         # Just verify the system doesn't crash and violations are tracked
-        print(f"\n✓ Cascade attacks handled gracefully (system resilient)")
+        print("\n✓ Cascade attacks handled gracefully (system resilient)")
 
 
 if __name__ == "__main__":

@@ -11,7 +11,6 @@ Test design: Adversary tries attack, observes outcome, adapts strategy,
 repeats. Measure: how many iterations until governor contains it?
 """
 import pytest
-import time
 from src.governance.adversary import AdversaryOracle, AttackType, AttackOutcome
 
 

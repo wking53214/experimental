@@ -16,9 +16,7 @@ cyclic FP reduction.
 
 from dataclasses import dataclass, field
 from collections import deque
-from typing import Optional
 import statistics
-import math
 
 
 @dataclass

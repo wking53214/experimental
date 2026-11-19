@@ -1,5 +1,4 @@
 """Phase 10B/10C: Hybrid pipeline default path + operator adjudication."""
-import time
 import pytest
 from src.governance.governor import Governor
 from src.governance.proposal import AdaptationDirection, ProposalStatus

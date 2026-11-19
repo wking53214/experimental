@@ -139,7 +139,7 @@ class TestLatencyUnderLoad:
         for i in range(500):
             gov.execute_against_boundary("throughput", 6000)
         adapt_start = time.time()
-        proposal = gov.detect_and_propose_adaptation("throughput")
+        gov.detect_and_propose_adaptation("throughput")
         adapt_latency = time.time() - adapt_start
         total_time = time.time() - start_time
         events_per_second = 1000 / total_time

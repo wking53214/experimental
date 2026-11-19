@@ -72,7 +72,7 @@ class TestPhase7cAnomalyScoring:
             print(f"  Value {value}: {status} (score={result.anomaly_score:.2f})")
             print(f"    Signals: {[s.signal_type for s in result.signals if s.exceeded]}")
 
-        print(f"\nPhase 7C Results:")
+        print("\nPhase 7C Results:")
         print(f"  Detected attacks: {detected_attacks}/3")
         print(f"  Missed attacks: {missed_attacks}/3")
         print(f"  False positives: {false_positives}/4")
@@ -81,7 +81,7 @@ class TestPhase7cAnomalyScoring:
         assert detected_attacks >= 2, f"Should detect at least 2/3 attacks, got {detected_attacks}"
         assert false_positives == 0, f"Should have no false positives, got {false_positives}"
 
-        print(f"\n✓ Anomaly scoring successfully detects attacks under variance")
+        print("\n✓ Anomaly scoring successfully detects attacks under variance")
 
     def test_anomaly_detector_legitimate_load_immunity(self):
         """Anomaly detector maintains false-positive immunity on legitimate load."""
@@ -100,7 +100,7 @@ class TestPhase7cAnomalyScoring:
             legitimate_sequence.append(value)
 
         anomalies_detected = 0
-        print(f"Processing 48 legitimate load observations...")
+        print("Processing 48 legitimate load observations...")
 
         for idx, value in enumerate(legitimate_sequence):
             result = detector.detect_anomaly(value, idx)
@@ -114,7 +114,7 @@ class TestPhase7cAnomalyScoring:
         # Should maintain <5% false-positive rate
         assert false_positive_rate < 0.05, f"False-positive rate too high: {false_positive_rate:.1%}"
 
-        print(f"\n✓ Anomaly detector maintains false-positive immunity")
+        print("\n✓ Anomaly detector maintains false-positive immunity")
 
     def test_anomaly_detector_signal_breakdown(self):
         """Verify which signals trigger on attacks vs legitimate load."""
@@ -129,9 +129,9 @@ class TestPhase7cAnomalyScoring:
         # Test: sudden spike (should trigger multiple signals)
         result = detector.detect_anomaly(70, 5)
 
-        print(f"Attack signal (value=70):")
+        print("Attack signal (value=70):")
         print(f"  Overall anomaly score: {result.anomaly_score:.2f}")
-        print(f"  Signals triggered:")
+        print("  Signals triggered:")
         for signal in result.signals:
             status = "✓" if signal.exceeded else "✗"
             print(f"    {status} {signal.signal_type}: {signal.score:.2f}")
@@ -139,9 +139,9 @@ class TestPhase7cAnomalyScoring:
         # Test: legitimate variance
         result2 = detector.detect_anomaly(43, 6)
 
-        print(f"\nLegitimate variance (value=43):")
+        print("\nLegitimate variance (value=43):")
         print(f"  Overall anomaly score: {result2.anomaly_score:.2f}")
-        print(f"  Signals triggered:")
+        print("  Signals triggered:")
         for signal in result2.signals:
             status = "✓" if signal.exceeded else "✗"
             print(f"    {status} {signal.signal_type}: {signal.score:.2f}")
@@ -152,7 +152,7 @@ class TestPhase7cAnomalyScoring:
 
         assert attack_signals_exceeded > legit_signals_exceeded, "Attack should trigger more signals"
 
-        print(f"\n✓ Signal breakdown shows multi-signal approach discriminates attacks")
+        print("\n✓ Signal breakdown shows multi-signal approach discriminates attacks")
 
 
 if __name__ == "__main__":

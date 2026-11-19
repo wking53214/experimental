@@ -7,7 +7,6 @@ Proposals → Adjudication across multiple boundaries with failure recovery.
 Target: 50+ integration tests demonstrating production-ready architecture.
 """
 
-import time
 from src.governance.metrics import (
     MetricStream, BaselineEstablisher, CorrelationAnalyzer,
     MetricsTracker, EffectivenessOutcome

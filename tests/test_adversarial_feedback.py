@@ -6,10 +6,8 @@ TEST 8: Adversarial feedback manipulation — attempt to influence governor thro
 
 These tests are designed to EXPOSE failures, not demonstrate success.
 """
-import pytest
 import time
 from src.governance.governor import Governor
-from src.governance.proposal import AdaptationDirection
 
 
 class TestFalsePositiveScenario:

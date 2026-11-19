@@ -1,5 +1,4 @@
 """Sprint 1: Semantic classification tests (anti-spoof hardened)."""
-import pytest
 from src.governance.workload import (
     WorkloadClassifier, ExpectedLoadPattern, WorkloadType, ViolationClass,
     SmartPatternDetector,

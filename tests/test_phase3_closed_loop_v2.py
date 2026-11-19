@@ -121,7 +121,6 @@ class TestPhase3Convergence:
             adversary.record_outcome(result.attack_type, result.outcome)
         early_range = results[:5]
         late_range = results[10:15]
-        early_succeeded = len([r for r in early_range if r.outcome == AttackOutcome.SUCCEEDED])
         late_succeeded = len([r for r in late_range if r.outcome == AttackOutcome.SUCCEEDED])
         early_damage = sum(r.damage_score for r in early_range) / len(early_range)
         late_damage = sum(r.damage_score for r in late_range) / min(5, len(results) - 10)

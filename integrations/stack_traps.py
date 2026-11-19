@@ -27,7 +27,7 @@ import math
 import statistics
 import re
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Deque, Dict, Iterable, List, Optional
 
 from src.governance.validation import ValidationOutcome

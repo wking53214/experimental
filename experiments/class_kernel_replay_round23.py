@@ -87,7 +87,7 @@ if __name__ == "__main__":
         assert len(kk) == len(m["py"]), r["id"]
         D_ms = m["deadline_s"] * 1000.0
         def side(kills):
-            extra = legit = nbad = kb = 0; bg = bs = 0.0
+            extra = legit = nbad = kb = 0; bs = 0.0
             for x, b, k in zip(m["lat"], m["bad"], kills):
                 if b:
                     nbad += 1; bs += min(x, D_ms); kb += k

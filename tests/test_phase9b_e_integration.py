@@ -3,8 +3,6 @@ import numpy as np
 import pytest
 from src.governance.phase9_integration import HybridDetectorPipeline
 from src.governance.phase9c_evolutionary import EvolutionaryAdversary
-from src.governance.phase9d_concept_drift import ConceptDriftDetector, OnlineAdaptiveBaseline, AdaptiveDetector
-from src.governance.phase9e_precursors import AttackPrecursorLearner, EarlyWarningSystem
 
 
 class TestPhase9B:

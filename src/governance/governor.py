@@ -20,7 +20,7 @@ from .grant import is_loosening
 from .validation import ValidatorOracle, ValidationStore, ValidationOutcome
 from .store import ImmutableFileStore
 from .workload import WorkloadClassifier, SmartPatternDetector
-from .metrics import MetricsTracker, DetectorPipeline
+from .metrics import MetricsTracker
 from .baseline import BaselineComparator
 from .anomaly_detector import AdaptiveAnomalyDetector
 from .phase9_integration import HybridDetectorPipeline, GenerativePipeline

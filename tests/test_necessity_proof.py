@@ -1,6 +1,5 @@
 """Necessity proofs: semantic layer and metrics are required for correct governance."""
 import time
-import pytest
 from src.governance.governor import Governor
 from src.governance.workload import ExpectedLoadPattern, WorkloadType
 

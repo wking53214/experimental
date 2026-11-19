@@ -21,7 +21,6 @@ Key questions:
 5. Does isolation prevent failure cascade?
 """
 import pytest
-import time
 from src.governance.governor import Governor
 from src.governance.proposal import AdaptationDirection
 from src.governance.authority import AuthorizationResult
@@ -188,7 +187,7 @@ class TestCrossDomainAdaptation:
 
         # Step 3: After API tightens, DB should see less pressure
         # Record DB violations before and after
-        db_boundary_before = gov.boundaries.get_boundary("db_connection_pool")
+        gov.boundaries.get_boundary("db_connection_pool")
 
         # Simulate load after API rate limit applied
         post_limit_violations = 0
@@ -270,7 +269,7 @@ class TestKnowledgeTransfer:
         assert len(violations) >= 5, "Similar pattern should be recorded"
 
         # Pattern detection should work
-        proposal = gov.detect_and_propose_adaptation("secondary_latency")
+        gov.detect_and_propose_adaptation("secondary_latency")
         # Whether proposal or not, system recognizes the pattern
 
 

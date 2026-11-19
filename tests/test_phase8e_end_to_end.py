@@ -284,7 +284,7 @@ class TestFaultTolerance:
         for i in range(20):
             pipeline.ingest_metrics(1002.0 + i, {"value": 1.5})
 
-        detection2 = pipeline.detect_anomalies()
+        pipeline.detect_anomalies()
         # Should now have baseline
         assert pipeline.baseline_locked
 
@@ -464,7 +464,7 @@ class TestMetricsAtScale:
                     "explanation": f"Anomaly {j}",
                 }
 
-                proposal = gen.generate_proposal(detection, [f"evt_{j}"])
+                gen.generate_proposal(detection, [f"evt_{j}"])
 
         # All generators should have proposals
         assert len(generators) == 50

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Score round 22 predictions L1 to L6 from mild_runaway_round22.json."""
-import json, sys
+import json
 from pathlib import Path
 import numpy as np
 R = json.load(open(Path(__file__).with_name("mild_runaway_round22.json")))["rows"]

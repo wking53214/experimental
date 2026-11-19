@@ -7,10 +7,8 @@ import pytest
 import time
 from src.governance.governor import Governor
 from src.governance.principle import GovernancePrinciple, PrincipleType
-from src.governance.boundary import BoundaryStatus
 from src.governance.proposal import AdaptationDirection
 from src.governance.authority import AuthorizationResult
-from src.governance.validation import ValidationOutcome
 
 
 @pytest.fixture

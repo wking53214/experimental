@@ -55,7 +55,6 @@ def run(system, scenario, seed, delay=None):
     g.boundaries.create_boundary("key", "usage", LIMIT0)
     limit = LIMIT0
     damage = shed = tight = 0
-    first_alarm_in_attack = None
     alarms_in_attack = 0
     human_acts_at = None
     first_tighten = None

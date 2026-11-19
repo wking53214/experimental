@@ -9,9 +9,7 @@ import pytest
 
 dgk = pytest.importorskip("dgk")
 
-from integrations.dgk_governed import (GovernedHealthLimitCheck, GovernedKernel, SustainedStressPolicy,
-                                       HEALTH_LIMITS)
-from src.governance.audit_log import AuditLog
+from integrations.dgk_governed import (GovernedHealthLimitCheck, GovernedKernel, SustainedStressPolicy)
 from src.governance.governor import Governor
 from src.governance.operators import OperatorRegistry
 from src.governance.proposal import AdaptationDirection

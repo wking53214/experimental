@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.adjudication_server import Handler, GOV
+from scripts.adjudication_server import Handler
 import scripts.adjudication_server as srv
 
 

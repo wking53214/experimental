@@ -194,7 +194,7 @@ class TestPhase3StressAdversary:
                       f"Proposals={executor.proposals_created}, "
                       f"Boundaries tightened: {len([b for b in executor.boundaries if executor.governor.boundaries.get_boundary(b).current_limit < 100])}")
 
-        print(f"\n=== Results (100 iterations) ===")
+        print("\n=== Results (100 iterations) ===")
         print(f"SUCCEEDED:     {outcomes['succeeded']:3d}")
         print(f"DETECTED:      {outcomes['detected']:3d}")
         print(f"Total violations: {executor.violations_triggered}")
@@ -205,7 +205,7 @@ class TestPhase3StressAdversary:
         assert outcomes['succeeded'] < 60, f"Too many successes: {outcomes['succeeded']}"
         assert executor.proposals_created > 15, f"Too few proposals: {executor.proposals_created}"
 
-        print(f"\n✓ Survived 100 attacks")
+        print("\n✓ Survived 100 attacks")
 
 
 if __name__ == "__main__":

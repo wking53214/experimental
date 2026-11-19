@@ -4,11 +4,10 @@ Phase 2 Sprint 3: Automatic Rollback & Recovery Tests
 Test automatic reversion when adaptations degrade outcomes.
 Prevent rollback loops and escalate persistent failures.
 """
-import pytest
 import time
 import uuid
 from src.governance.rollback import (
-    RollbackManager, RollbackExecutor, RollbackReason, RollbackPreventionRule
+    RollbackManager, RollbackExecutor, RollbackReason
 )
 from src.governance.governor import Governor
 
@@ -137,7 +136,7 @@ class TestRollbackExecution:
         executor = RollbackExecutor(governor)
 
         # Create initial boundary
-        v1 = governor.boundaries.create_boundary(
+        governor.boundaries.create_boundary(
             boundary_id="monitored",
             resource_or_action="cpu",
             initial_limit=80,

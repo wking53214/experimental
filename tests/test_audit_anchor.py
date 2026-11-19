@@ -1,7 +1,6 @@
 """Anchor store (src/governance/anchor.py; docs/THREAT_MODEL.md, T8): the audit log's head is published somewhere
 else after every append, and startup verifies the log against the latest published head. What it catches, what it
 does not, and that it fails closed."""
-import hashlib
 import json
 
 import pytest

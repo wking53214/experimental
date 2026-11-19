@@ -16,7 +16,7 @@ import math
 from fractions import Fraction
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 _ISSUER_KEY = object()  # only AuthorityModel imports this
 
