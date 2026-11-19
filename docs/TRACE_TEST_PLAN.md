@@ -1594,3 +1594,21 @@ Patch: the deadline target uses the 99th percentile of the most recent W = 1000 
 - B2: on the real stream (all users with 2000 or more calls, D = 60 and 180 s) the patched G saves at least as much timeout time as G minus 2 points, with honest cost at most G + 0.3.
 - B3: no certificate violation.
 Failed predictions will be recorded as failed. Status: not run.
+
+### Purple team stage 4: results (blue patch: window of 1,000 recent completions)
+
+Raw: experiments/purple4_patch.txt.
+| Pred | Result |
+|---|---|
+| B1 (poison stops blocking: tightens within 1,100 calls) | MISSED as written: of the 3 poisoned users that tighten on the clean stream, 1 tightened at call 1,220 and 2 did not within 3,000. Check afterwards: on the clean stream they tighten at calls 250 to 500; once the poison ages out, their recent behaviour no longer supports a tighter deadline, so the deadline stays at D. The attack did succeed in erasing their early protection; the window only stops it lasting forever. |
+| B2 (windowed saves at least G minus 2 points, cost at most G + 0.3) | Saving clause HELD (60 s: 22.0% vs 16.8%; 180 s: 29.4% vs 26.2%). Cost clause MISSED: +0.54 and +0.40 points. |
+| B3 (no certificate violation) | HELD |
+The window gives 3 to 5 more points of saving for 0.4 to 0.5 more points of honest cost: about 8 to 10 points per point, the same exchange rate as every earlier change. It also limits how long a poisoning lasts. It is a defensible hardening, not a new trade-off.
+
+### Purple team: summary (written after all four stages)
+- Injected-runaway results overstated what the class split buys. On real timeouts (1,482 calls, 99 users) one adaptive one-way deadline per user is better than a deadline per tool name.
+- Real timeout savings are modest and uneven: roughly 10% to 30% of timeout-call time at about 1 point of honest cost, with large swings between user halves (about plus or minus 10 points).
+- At D = 60 s most users' own 99th-percentile call exceeds D, so most deadlines never tighten; the saving comes from a few users.
+- Attack results: evasion is bounded per call but not cheap for the defender; a 30-call poisoning blocks tightening for thousands of calls (a window of 1,000 limits that); starvation is harmless inside the certificate bound.
+- Nothing tried beat the single exchange rate of about 8 to 11 points of saving per point of honest cost. A different kind of signal (progress, not duration) is the remaining untested lever, and it needs real sessions (the shadow test).
+- Predictions this stage: 12 made, 5 held, 7 missed. Misses are listed above.

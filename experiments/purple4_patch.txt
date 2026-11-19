@@ -1,0 +1,3 @@
+B1 poisoned users that tighten on the clean stream: 3 | first tightening index with window: [1220, None, None] | without window: [None, None, None]
+D= 60: G saved  16.8% cost 1.06 | Gw saved  22.0% cost 1.60 | cost-bound max G 0.00, Gw 0.00
+D=180: G saved  26.2% cost 1.26 | Gw saved  29.4% cost 1.66 | cost-bound max G 0.00, Gw 0.00
