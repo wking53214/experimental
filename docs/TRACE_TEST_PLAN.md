@@ -1044,3 +1044,25 @@ Raw: `experiments/real_trace_round17_real.json`, `experiments/real_trace_round17
 - Not predicted, observed: the share of real agents tightened barely moves at 10 s (88% to 81% in-sample, 89% to 89% hold-out). The budget does not stop the limiter acting on a heavy-tailed agent; it stops the action from costing that agent more than about 1% of its tasks.
 
 **Limits.** Hold-out agents are the same developers as the diagnosis agents, read at later stretches. No runaway labels in the real data. The simulated rosters are the generator's; the budget was not tuned on seeds 16000 to 16019. The cost budget is off by default.
+
+## Round 19, pre-registered: a fresh identity has no history
+
+Committed before the run (a one-seed smoke run was executed and deleted unread). Round 18's identity test was confounded because each
+identity reported idle slices before its window. The simulator now accepts an optional `active` trace column; a slice with no active
+task is skipped for that agent, so an identity exists only from its first task and leaves silently (new test `tests/test_idle_slices.py`;
+traces without the column behave exactly as before and the existing suite passes). Runner `experiments/red_team_round19.py`, scorer
+`experiments/score_round19.py`. Agents, all attackers (fast tasks of 20 to 60 ms, 5% hangs): `persistent` (one identity, 32 slices,
+the control), `sybil6-k` (a new identity every 6 slices) and `sybil3-k` (every 3 slices). 20 seeds from 19000; four policies as in round 18.
+Saved share is pooled over an attacker's identities.
+
+| # | Prediction |
+|---|---|
+| H1 | the certificate holds: no identity in any run saves more than 27.1% of its hung time |
+| H2 | the persistent attacker (fast, so its budget floor is low) is saved from at least 20% under `recommended` and at least 15% under `recommended_budget` |
+| H3 | `sybil6`, `recommended`: pooled saved share between 10% and 25% |
+| H4 | `sybil6`, `recommended_budget` and `recommended_slice_budget`: at most 3% (a new identity has no history, so nothing tightens for its first five slices) |
+| H5 | `sybil3`: `recommended` between 5% and 20%; the budget policies at most 1% |
+| H6 | binding identity is worth at least 15 points of saved share under the budget: persistent minus `sybil6` |
+
+**Stated limits.** The harness lets the attacker take a new identity for free; a deployed system may charge for identities. The attacker here
+is not trying to defeat the limiter any other way. The honest-cost bound does not depend on identity and is not tested again here.

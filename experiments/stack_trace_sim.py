@@ -400,6 +400,21 @@ def kernel_quantiles(values, points) -> list:
     return [float(v[int(math.floor((n - 1) * (p / 100.0) + 0.5))]) for p in points]
 
 
+def _slice_active(rows, start, stop):
+    """Round 19: a trace may carry an optional boolean "active" column. A slice with no active task is skipped for that agent
+    (it reports nothing, so a fresh identity has no history before its first task and none after it leaves)."""
+    act = rows.get("active")
+    return True if act is None else bool(act[start:stop].any())
+
+
+def _idle_summary(n_tasks):
+    z = {k: 0 for k in ("tasks", "legit", "legit_failed", "expected_trapped", "bad", "bad_caught", "deadline_traps", "token_traps",
+                        "memory_traps", "bad_ns", "total_ns", "legit_killed_burn_ns", "legit_killed_dur_ns", "canary_tasks",
+                        "canary_deadline_traps", "bad_in_slice")}
+    z.update({"completed_median_ns": None, "completed_q": None})
+    return z
+
+
 def totals(rows):
     keys = ("tasks", "legit", "legit_failed", "expected_trapped", "bad", "bad_caught", "deadline_traps", "token_traps",
             "memory_traps", "bad_ns", "total_ns", "legit_killed_burn_ns", "legit_killed_dur_ns")
@@ -413,7 +428,9 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
     team_of = {ag["agent_id"]: ag.get("team") for ag in agents}
     n_tasks = tasks_per_agent or len(trace[names[0]]["seq"])
     n_slices = n_tasks // slice_n
-    static = {n: [run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, defaults)[1] for r in range(n_slices)] for n in names}
+    static = {n: [run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, defaults)[1]
+                  if _slice_active(trace[n], r * slice_n, (r + 1) * slice_n) else _idle_summary(slice_n)
+                  for r in range(n_slices)] for n in names}
     results = {"slices": n_slices, "slice_tasks": slice_n, "defaults": defaults, "policies": {}}
     for pname, factory in policies.items():
         try:
@@ -435,6 +452,9 @@ def replay(trace, agents, defaults, policies, slice_n=250, tasks_per_agent=None)
                     cur = bridge.limit_for(n, LIMIT_TO_REASON[x])
                     limits[x] = float(defaults[x]) if cur is None else cur
                 trajectory[n].append(limits["deadline_ns"])
+                if not _slice_active(trace[n], r * slice_n, (r + 1) * slice_n):
+                    governed[n].append(_idle_summary(slice_n))
+                    continue
                 plan = bridge.canary_plan(n)
                 traps, s = run_slice(n, trace[n], r * slice_n, (r + 1) * slice_n, limits, canary=plan)
                 governed[n].append(s)
