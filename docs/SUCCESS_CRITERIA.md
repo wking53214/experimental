@@ -58,3 +58,8 @@ Deliberately not claimed by this criterion: that the policy's thresholds transfe
 ### Criterion 10, result (2026-10-14)
 
 **FAIL**, scored on `experiments/stack_trace_multiseed_results_validated_bounded.json` (seeds 4001-4020, the bounded validator; the first run on seeds 3001-3020 also failed, worse, and is kept as `..._validated.json`). (a) 280 of 280 should-tighten agent-seeds tightened: pass. (b) hung time saved 19% after the canary's share: pass. (c) audit chain and governance integrity intact in every run: pass. (d) wrong tightenings given a DEGRADED verdict with a restore request within 6 slices: 54 of 128 (need 80%): **fail**; runaways DEGRADED while hanging 8 of 100 (need at most 10%): pass. (e) quiet healthy agents tightened or restore-requested 0 of 179: pass. What (d) measures and why it fails is in `docs/TRACE_TEST_PLAN.md`, round 5: the canary volume resolves gross harm in about 7 slices and marginal harm in 20 or more, and the bar asked for 6.
+
+
+## Round 23 acceptance criteria (mission of 2026-11-19) and results
+
+Twelve criteria, each with its result, are in `docs/ROUND23_FINAL_REPORT_v1.md` (section "Acceptance criteria"). Summary: met 7 (criteria 2, 3, 4, 5, 9, 10, 12), partly met 4 (1, 6, 7 as live evidence, 11), not met 1 (criterion 8 for the class split on real stuck calls; met for a per-user one-way deadline). Predictions and misses: `docs/TRACE_TEST_PLAN.md`.
