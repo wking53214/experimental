@@ -1560,3 +1560,20 @@ Pick rule, fixed now: the candidate with the largest saved share of timeout time
 - U2: on the TEST half the pick saves more timeout time than G at both 60 s and 180 s, with honest cost at most G + 0.3.
 - U3: no certificate violation on the test half.
 Failed predictions will be recorded as failed. Status: not run.
+
+### Purple team stage 2: results (design 44 users / test 55 users, seed 25000)
+
+Raw: experiments/purple2_pick.json and .txt.
+| Pred | Result |
+|---|---|
+| U1 (the pick is not C) | HELD, trivially: no candidate was eligible (all cost more than G + 0.3 at one deadline or the other), so the rule picked G. |
+| U2 (the pick beats G on the test half) | MISSED: the pick is G itself. Nothing tried beat one deadline per user within the cost limit. Candidates H1 to H3 saved more on the design half (36% to 39% vs 29% at 60 s) but cost 0.8 to 1.0 points more. |
+| U3 (no certificate violation) | HELD |
+What is solid: on real timeouts, one adaptive one-way deadline per user (G) is as good as anything tried, and better than splitting by tool name. What is weak: the saving swings a lot between halves (G at 60 s: 28.6% design, 9.9% test) because 1,482 timeout calls come from few users, so any single figure here is roughly plus or minus 10 points.
+
+## Purple team stage 3: red team against G. Pre-registration (written before any run)
+G = one adaptive one-way deadline per user (the pick). Three attacks, 20 seeded runs each on real honest streams (users with 2000 or more calls), D = 60 s, shipped settings:
+- X1 evasion: after 1000 honest calls the agent issues 1000 calls, each at 95% of the current deadline. Prediction: burn per attack call is at most 0.95 x the deadline at that moment, and the deadline never rises during the attack, so total burn stays at most 75% below what a static D would allow if every call ran to D... in plain terms: attack burn is at most 0.95 x current deadline x 1000, never more.
+- X2 poisoning: the first 30 calls are 0.9 D long, then the real stream follows. Prediction: the deadline stays at D until the poison drops below 1% of the history, then tightens; the delay is at most 3000 calls. (If it is longer I will say the history window needs a cap.)
+- X3 starvation: after 1000 honest calls the agent issues 2000 calls of 10 ms, then the honest stream resumes. Prediction: the deadline falls to the floor (0.25 D) and honest cost stays within the certificate bound; the harm is limited to that agent.
+Failed predictions will be recorded as failed. Status: not run.

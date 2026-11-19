@@ -1,0 +1,18 @@
+users 99: design 44, test 55; timeout calls design 464, test 1018
+DESIGN half
+D= 60 G   saved  28.6%  cost 1.12  cost-bound max 0.00
+D= 60 C   saved  12.2%  cost 1.60  cost-bound max -0.03
+D= 60 H1  saved  36.0%  cost 2.12  cost-bound max 0.00
+D= 60 H2  saved  35.3%  cost 1.98  cost-bound max 0.00
+D= 60 H3  saved  39.4%  cost 1.89  cost-bound max 0.00
+D=180 G   saved  32.2%  cost 1.30  cost-bound max 0.00
+D=180 C   saved  23.7%  cost 1.10  cost-bound max 0.00
+D=180 H1  saved  36.1%  cost 1.54  cost-bound max 0.00
+D=180 H2  saved  30.1%  cost 1.41  cost-bound max 0.00
+D=180 H3  saved  39.4%  cost 1.73  cost-bound max 0.00
+eligible: [] -> pick: G
+TEST half (scored once)
+D= 60 C   saved   9.3%  cost 1.12  cost-bound max -0.22
+D= 60 G   saved   9.9%  cost 1.01  cost-bound max 0.00
+D=180 C   saved  19.8%  cost 1.02  cost-bound max -0.01
+D=180 G   saved  22.0%  cost 1.22  cost-bound max 0.00
