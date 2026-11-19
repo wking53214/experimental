@@ -279,6 +279,10 @@ Authority is testable:
 
 The bridge watches completed call durations per agent and proposes tighter deadlines through the governor, so the one-way rule and breaker apply as for any automatic change. Supported: one windowed deadline per agent (`user_deadline`). Experimental: per-class deadlines. See INTEGRATION.md for settings and the test plan for evidence.
 
+## Kernel restart snapshot (opt in)
+
+The kernel can keep its last good governed limits in a file so a restart does not forget them. Restored values are stale and pass the same floor and ceiling checks as live ones; the service answer always wins. See INTEGRATION.md for the limits of this.
+
 ## Known Limitations
 
 See `LIMITATIONS.md` for complete analysis.

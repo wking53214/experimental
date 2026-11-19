@@ -98,7 +98,7 @@ Reproduce: `python -m pytest tests/`, `cargo test -p stack-p3-2`, and the script
 
 ## G. Documentation
 
-Updated in this change: `README.md` (Round 23 pointer), `docs/STATUS.md` (Round 23 section), `docs/SUCCESS_CRITERIA.md` (Round 23 criteria and results), `docs/TRACE_TEST_PLAN.md` (everything), this report, and `docs/SHADOW_TEST_SETUP_v1.md`. `docs/INTEGRATION.md` and `docs/ARCHITECTURE.md` now describe the per-agent deadline (supported) and mark the class path experimental. The kernel snapshot is still not described there.
+Updated in this change: `README.md` (Round 23 pointer), `docs/STATUS.md` (Round 23 section), `docs/SUCCESS_CRITERIA.md` (Round 23 criteria and results), `docs/TRACE_TEST_PLAN.md` (everything), this report, and `docs/SHADOW_TEST_SETUP_v1.md`. `docs/INTEGRATION.md` and `docs/ARCHITECTURE.md` now describe the per-agent deadline (supported) and mark the class path experimental. The kernel snapshot is described there too.
 Role in ≡TACK: a bounded governor for execution limits. It proposes only tightenings, keeps an audit trail, and leaves loosening to a named person. It is not an authorizer and does not touch admission, issuing or receipts.
 
 ## H. Outstanding work, risks, production blockers
@@ -111,7 +111,7 @@ Role in ≡TACK: a bounded governor for execution limits. It proposes only tight
 6. HTTP without TLS between kernel and service; loopback or trusted network only.
 7. The Python bridge does not use the snapshot; the bridge's own history is not persisted.
 8. Token and memory limits are still not enforced by the kernel; C++ headers read nothing.
-9. `INTEGRATION.md` and `ARCHITECTURE.md` still need the kernel snapshot added.
+9. (Closed in v2.) `INTEGRATION.md` and `ARCHITECTURE.md` cover the class path and the snapshot.
 10. CI: one flaky wall-clock test in an unrelated crate (`anc-wall-clock`) failed once on PR #95 and passed on re-run; it should be tightened separately.
 11. The merge order of stacked PRs and the kernel PR is a decision for William.
 
@@ -144,11 +144,11 @@ A simulation passing these criteria does not count as runtime integration; a tes
 | Adversarial robustness | 6 | Strong against loosening and forged state; weak to cheap poisoning (30 calls block tightening for thousands of calls) until windowed; evasion is bounded but not made cheap. |
 | Integration maturity | 3 | Real kernel code, replay-level only; no live loop; snapshot unproven under crashes; docs for the class path partly missing. |
 | Experimental rigor | 7 | Predictions committed before runs; 7 misses on this stage and the S7 miss recorded; fresh seeds; raw rows published; outside data and real labels used. Not higher because most runaways were injected, and the real labels are few and ambiguous. |
-| Documentation quality | 6 | Plan, proposal, results and guide are complete and honest about misses; `INTEGRATION.md` and `ARCHITECTURE.md` now updated except for the snapshot. |
+| Documentation quality | 6 | Plan, proposal, results and guide are complete and honest about misses; `INTEGRATION.md` and `ARCHITECTURE.md` now updated. |
 | Production readiness | 2 | No live use, thin real evidence, unresolved label trust, no TLS, opt-in unproven snapshot. |
 
 ## J. Recommendation
 
 **Remain experimental.** Evidence for: governance properties hold and are well tested; the kernel enforces independently; a bounded one-way deadline per user removes a modest, repeatable share of real stuck-call time at about 1 point of honest cost, with the certificate intact in every run. Evidence against moving on: the class-conditioned design, which is what this round set out to integrate, did not beat a simpler per-user deadline on real stuck calls; no live integration exists; the remaining lever (a progress signal) is unmeasured. Rejecting the approach is not warranted: the governance machinery is sound and the simpler design is supported.
 
-Next steps in order of value: run the shadow test for two weeks; add the kernel snapshot to `INTEGRATION.md` and `ARCHITECTURE.md`; run a live loop against one real agent. (Done since v1: per-agent deadline made the supported design, class path marked experimental.)
+Next steps in order of value: run the shadow test for two weeks; run a live loop against one real agent. (Done since v1: per-agent deadline made the supported design, class path marked experimental.)

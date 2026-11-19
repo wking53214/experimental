@@ -81,3 +81,13 @@ Not covered:
 - Real-data check (FreeInference, 60 s and 180 s limits): saves about 19% and 26% of timeout time at about 1.3 points of honest cost. The certificate bound held in every run.
 
 The per-tool-class deadline (`observe_class_durations` and related) is **experimental only**. On real timeouts it did not beat the per-agent deadline. Do not rely on it.
+
+## Kernel restart snapshot (opt in, experimental)
+
+By default the Rust kernel forgets its governed limits when it restarts and goes back to its defaults until the service answers. `GovernedLimits::new(...).with_snapshot(path)` keeps the last good values in a file so a restart does not briefly run looser than before.
+
+- The file is written only when a value changes (temp file, then rename).
+- On restart the values are loaded as stale and checked like live ones: positive, at most the default, at least the floor. A hand-edited file can only produce a limit between the floor and the default.
+- The service always wins: a larger answer (a person loosened it) replaces the restored value, and "nothing governed" clears it. Only an unreachable service leaves the restored value in force.
+- A corrupt or missing file is ignored and counted.
+- Not covered: the file is not encrypted or signed. Anyone who can write it can only tighten, down to the floor, which is a bounded denial of service. Crashes mid-write are not tested. The Python bridge does not use the snapshot.
