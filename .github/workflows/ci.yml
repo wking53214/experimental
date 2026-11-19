@@ -57,7 +57,8 @@ jobs:
 
   integration-dgk:
     # Two pins: the stock commit (defects present, adapter must work around them) and the commit with the
-    # telemetry-validation fix (branch ccr-e916ef52-wh7751 of DGK; adapter must still behave the same).
+    # telemetry-validation fix (4a0ecd2, now on DGK main; adapter must still behave the same). The pins do not
+    # move; the integration-dgk-main job below follows DGK main.
     strategy:
       matrix:
         dgk: ["da256f314d0b80cb79a3b4652a89dea1cf60ca3d", "4a0ecd29b34e772c06f77cce977bb7c89e96442f"]
@@ -76,4 +77,24 @@ jobs:
           pip install -r requirements.txt
           pip install "git+https://github.com/wking53214/DGK.git@${{ matrix.dgk }}"
       - name: DGK integration tests
+        run: python -m pytest tests/test_integration_dgk.py -q --tb=short
+
+  integration-dgk-main:
+    # Follows the current DGK main, which the two pins above never see. It is allowed to fail: a red run here means
+    # DGK changed under the adapter, to be read and then either fixed here or re-pinned, not a failure of this
+    # repository's own code. The pinned job stays the blocking one.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies and the current DGK main
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install "git+https://github.com/wking53214/DGK.git@main"
+      - name: DGK integration tests against DGK main
         run: python -m pytest tests/test_integration_dgk.py -q --tb=short
