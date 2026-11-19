@@ -1020,3 +1020,27 @@ failing (the budget can only raise a floor, so a violation would mean a bug).
 **Limits, stated now.** No runaway labels in the real data, so the real half measures honest cost only. Hold-out agents are the same
 people as the diagnosis agents. The floor reads completed-duration quantiles that exclude tasks already killed, so it is
 conservative; the real-data cost can undershoot the budget.
+
+## Round 17, results: the cost budget
+
+Run once (`python experiments/real_trace_round17.py`, then `python experiments/score_round17.py`): 600 real cells and 40 simulated runs.
+Raw: `experiments/real_trace_round17_real.json`, `experiments/real_trace_round17_sim.json`.
+
+| # | Prediction | Result | Held? |
+|---|---|---|---|
+| F1 | zero certificate violations, all four policies | 0 of 600 | Yes |
+| F2 | cost at or under 1.25 points in at least 95% of in-sample and 90% of hold-out cells | 97.9% in-sample; 98.1% hold-out (`recommended` alone: 83.3% and 96.3%) | Yes |
+| F3 | mean cost at 10 s at most 0.6 in-sample, 0.8 hold-out | 0.32 and 0.27 (`recommended`: 1.26 and 0.59) | Yes |
+| F4 | cost cut of at least 40% in-sample, 30% hold-out | 74% and 55% | Yes |
+| F5 | largest simulated honest cost at most 1.5 points on `v1` | 1.32 (slow-from-start; `recommended`: 18.51) | Yes |
+| F6 | sustained runaways lose at most 4 points of saved share | 25.3% to 21.0%: **4.3 points** | **No (by 0.3)** |
+| F7 | a patient pulser loses at least 10 points on `book_v1` | **none**: pulse-8 was 0.7% and 0.7% (20.3% and 20.3% under the slice trigger) | **No** |
+| F8 | honest pool net burn moves at least half way to zero | -14.24 s to -2.39 s per agent-run (83% of the way) | Yes |
+
+**What round 17 says.**
+- The budget does what it claims. Honest cost falls by 55% to 74% on real latencies, on held-out stretches as well as the diagnosis data, and pooled honest cost on the simulated `v1` roster falls from 1.99 to 0.19 points. The slow-from-start agents go from 18.5 and 12.3 points to 1.2 and 1.3. The worst real cell falls from 7.95 to 1.74.
+- The price is measured: 4.3 points of saved hung time on sustained runaways (F6 missed by 0.3 points, reported as missed), 7.3 points on the inflate-first attacker (25.9% to 18.6%) and 3.4 on the low-and-slow attacker (13.6% to 10.2%). Those two attackers' own legitimate cost also falls (8.55 to 6.35, 0.16 to 0.10).
+- F7 was wrong: I predicted the five-slice warm-up would cost the pulser its early catch. The period-8 pulser was not caught by `recommended` either way, and the slice trigger catches it at the same rate with and without the budget.
+- Not predicted, observed: the share of real agents tightened barely moves at 10 s (88% to 81% in-sample, 89% to 89% hold-out). The budget does not stop the limiter acting on a heavy-tailed agent; it stops the action from costing that agent more than about 1% of its tasks.
+
+**Limits.** Hold-out agents are the same developers as the diagnosis agents, read at later stretches. No runaway labels in the real data. The simulated rosters are the generator's; the budget was not tuned on seeds 16000 to 16019. The cost budget is off by default.

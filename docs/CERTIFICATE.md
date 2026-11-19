@@ -36,6 +36,7 @@ own deadline high by completing slowly, which leaves it exactly where the static
 - Simulated rosters, six, 1,344 honest agent-runs: 0 violations; closest slack 0.012 points (round 16 scratch test).
 - Real tool-call latencies, TraceLab release v0.0.1, 288 cells: 0 violations; honest cost equals the bound in several cells
   (`docs/TRACE_TEST_PLAN.md`, round 16). Spearman 0.92 between bound and cost.
+- Cost budget, round 17: honest cost down 55% to 74% on real latencies (held-out stretches included), slow-from-start agents 18.5 to 1.2 points in simulation; the price is 4.3 points of saved hung time on sustained runaways and 7.3 on the inflate-first attacker (`docs/TRACE_TEST_PLAN.md`).
 - Attacker side: across all 15 trace rounds the largest saved share of hung time is 27.1% (round 15, a runaway episode).
 
 ## Limits
