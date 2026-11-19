@@ -10,10 +10,12 @@
 
 **Labels.** Weekly review list: every long call (over 0.25 of the deadline, default 60 s) plus a 3% random sample of others. Each is labeled stuck or working by a person. Outcome clues (cancelled, immediately retried) may be used to help.
 
-**Pre-registered pass rule (before any real data).** Heartbeat supported only if the 95% Wilson interval for r lies entirely at or above 0.6 and the interval for q lies entirely at or below 0.1. NOT SUPPORTED if r's interval lies below 0.6 or q's lies above 0.1. Otherwise UNDECIDED and collection continues. The scorer (`shadow_report.py score`) prints this verdict.
+**Two definitions of "no progress" (added before any real data).** (1) CPU idle: the call's processes used under 2% of one CPU over a window of 0.1 of the deadline. (2) Quiet: they read and wrote no bytes at all over that window (from /proc io counters), which also catches a silent busy loop. A drop in a counter (a child process ended) counts as activity. Both are scored; because two are tried, the intervals below use z = 2.24 (about 97.5% each side) instead of 1.96.
+
+**Pre-registered pass rule (before any real data).** Heartbeat supported only if the Wilson interval (z = 2.24) for r lies entirely at or above 0.6 and the interval for q lies entirely at or below 0.1. NOT SUPPORTED if r's interval lies below 0.6 or q's lies above 0.1. Otherwise UNDECIDED and collection continues. The scorer (`shadow_report.py score`) prints this verdict.
 
 **Known limits, stated now.**
-1. CPU idleness detects hangs and waits. A busy loop burns CPU and looks like progress, so this signal cannot see loops. Output growth would be needed and is not collected in v1. The pilot should tell us how much that matters.
+1. CPU idleness detects hangs and waits but not loops. The quiet definition adds loops that read and write nothing. A loop that prints or touches files still looks like progress under both, and an honest long silent computation looks like a loop under the quiet definition, so q for that definition may be high. The pilot shows which effect dominates.
 2. A waiting-on-network honest call is also CPU idle, so q may be high for exactly the calls that matter. That would be a result, not a failure of the test.
 3. Parallel tool calls are excluded because CPU cannot be attributed to one call.
 4. The hook's parent process is assumed to be the Claude process. If that is wrong on the Chromebook setup, the pilot will show zero samples.

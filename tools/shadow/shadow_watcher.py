@@ -5,6 +5,14 @@ import json, os, sys, time
 LOG = os.environ.get("STACK_SHADOW_LOG", os.path.expanduser("~/.stack_shadow/calls.jsonl"))
 SAMPLES = os.environ.get("STACK_SHADOW_SAMPLES", os.path.expanduser("~/.stack_shadow/samples.jsonl"))
 
+def io_bytes(pid):
+    """rchar + wchar of a process: bytes it asked to read or write (files, pipes, terminal). 0 if unreadable."""
+    try:
+        d = dict(l.split(": ") for l in open(f"/proc/{pid}/io").read().strip().splitlines())
+        return int(d["rchar"]) + int(d["wchar"])
+    except (OSError, ValueError, KeyError):
+        return 0
+
 def children_map():
     m = {}
     for p in os.listdir("/proc"):
@@ -12,18 +20,18 @@ def children_map():
             try:
                 st = open(f"/proc/{p}/stat").read()
                 rest = st[st.rindex(")") + 2:].split()
-                m.setdefault(int(rest[1]), []).append((int(p), int(rest[11]) + int(rest[12])))   # ppid -> (pid, utime+stime)
+                m.setdefault(int(rest[1]), []).append((int(p), int(rest[11]) + int(rest[12]), io_bytes(p)))   # ppid -> (pid, cpu ticks, io bytes)
             except (OSError, ValueError, IndexError):
                 continue
     return m
 
 def descendants_cpu(root, m):
-    total, n, stack = 0, 0, [root]
+    total, io, n, stack = 0, 0, 0, [root]
     while stack:
-        for pid, ticks in m.get(stack.pop(), []):
+        for pid, ticks, b in m.get(stack.pop(), []):
             if pid == os.getpid(): continue
-            total += ticks; n += 1; stack.append(pid)
-    return total, n
+            total += ticks; io += b; n += 1; stack.append(pid)
+    return total, io, n
 
 def open_calls(offset):
     active, ended = {}, set()
@@ -47,8 +55,8 @@ def main():
             m = children_map(); now = time.time()
             with open(SAMPLES, "a") as out:
                 for i, r in live.items():
-                    ticks, n = descendants_cpu(r["ppid"], m)
-                    out.write(json.dumps({"id": i, "ts": now, "cpu": ticks, "nproc": n, "concurrent": len(live) > 1}) + "\n")
+                    ticks, io, n = descendants_cpu(r["ppid"], m)
+                    out.write(json.dumps({"id": i, "ts": now, "cpu": ticks, "io": io, "nproc": n, "concurrent": len(live) > 1}) + "\n")
         time.sleep(1.0)
 
 if __name__ == "__main__":

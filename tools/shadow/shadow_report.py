@@ -27,26 +27,36 @@ def build(deadline, calls_path=LOG, samples_path=SAMPLES):
         if i not in ends: continue
         dur = ends[i]["ts"] - st["ts"]; sm = sorted(samples.get(i, []), key=lambda s: s["ts"])
         calls.append({"id": i, "tool": st["tool"], "dur": dur, "long": dur > 0.25 * deadline,
-                      "concurrent": any(s["concurrent"] for s in sm), "stalled": stalled(sm, 0.1 * deadline), "n": len(sm)})
+                      "concurrent": any(s["concurrent"] for s in sm), "stalled": stalled(sm, 0.1 * deadline),
+                      "quiet": stalled(sm, 0.1 * deadline, "io"), "n": len(sm)})
     return calls
 
-def stalled(sm, window):
+def stalled(sm, window, kind="cpu"):
+    """kind 'cpu': over some window the call's processes used under 2% of one CPU (idle). kind 'io': over some window
+    they read or wrote no bytes at all (quiet; catches silent busy loops that CPU idleness cannot). A drop in a total
+    (a child process ended) counts as activity."""
     for a in range(len(sm)):
         for b in range(a + 1, len(sm)):
             if sm[b]["ts"] - sm[a]["ts"] >= window:
-                if (sm[b]["cpu"] - sm[a]["cpu"]) / HZ < 0.02 * (sm[b]["ts"] - sm[a]["ts"]): return True
+                if kind == "cpu":
+                    d = sm[b]["cpu"] - sm[a]["cpu"]
+                    if 0 <= d / HZ < 0.02 * (sm[b]["ts"] - sm[a]["ts"]): return True
+                elif sm[b].get("io", 0) - sm[a].get("io", 0) == 0:
+                    return True
                 break
     return False
 
-def wilson(k, n, z=1.96):
+Z = 2.24   # 97.5% each side: two definitions are scored, so the interval is widened (about 97.5% two-sided each)
+
+def wilson(k, n, z=Z):
     if n == 0: return (0.0, 1.0)
     p = k / n; d = 1 + z * z / n; c = p + z * z / (2 * n); h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
     return ((c - h) / d, (c + h) / d)
 
-def score(rows):
-    """rows: dicts with label ('stuck'/'working') and stalled (bool). r = stuck calls that stalled; q = working long calls that stalled."""
+def score(rows, key="stalled"):
+    """rows: dicts with label ('stuck'/'working') and the flag named by key. r = stuck calls flagged; q = working long calls flagged."""
     stuck = [x for x in rows if x["label"] == "stuck"]; work = [x for x in rows if x["label"] == "working"]
-    r_k, q_k = sum(x["stalled"] for x in stuck), sum(x["stalled"] for x in work)
+    r_k, q_k = sum(x[key] for x in stuck), sum(x[key] for x in work)
     return {"r": (r_k, len(stuck), wilson(r_k, len(stuck))), "q": (q_k, len(work), wilson(q_k, len(work)))}
 
 def verdict(s):
@@ -68,11 +78,13 @@ def main():
         by = {c["id"]: c for c in calls}; rows = []
         for r in csv.DictReader(open(a.labels)):
             if r["label"] in ("stuck", "working") and r["id"] in by and by[r["id"]]["long"]:
-                rows.append({"label": r["label"], "stalled": by[r["id"]]["stalled"]})
-        s = score(rows)
-        print("r (stuck calls that stalled): %d/%d, 95%% interval %.2f to %.2f" % (s["r"][0], s["r"][1], *s["r"][2]))
-        print("q (working long calls that stalled): %d/%d, 95%% interval %.2f to %.2f" % (s["q"][0], s["q"][1], *s["q"][2]))
-        print("verdict:", verdict(s))
+                rows.append({"label": r["label"], "stalled": by[r["id"]]["stalled"], "quiet": by[r["id"]]["quiet"]})
+        for key, name in (("stalled", "CPU idle"), ("quiet", "no bytes read or written")):
+            s = score(rows, key)
+            print(f"[{name}]")
+            print("  r (stuck calls flagged): %d/%d, interval %.2f to %.2f" % (s["r"][0], s["r"][1], *s["r"][2]))
+            print("  q (working long calls flagged): %d/%d, interval %.2f to %.2f" % (s["q"][0], s["q"][1], *s["q"][2]))
+            print("  verdict:", verdict(s))
 
 if __name__ == "__main__":
     main()

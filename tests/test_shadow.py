@@ -60,4 +60,25 @@ def test_watcher_samples_a_running_call(tmp_path):
     w = subprocess.Popen([sys.executable, WATCH], env={**os.environ, "STACK_SHADOW_LOG": str(log), "STACK_SHADOW_SAMPLES": str(sam)})
     time.sleep(3.2); w.kill(); parent.kill(); w.wait(); parent.wait()
     rows = [json.loads(l) for l in sam.read_text().splitlines()]
-    assert len(rows) >= 2 and rows[0]["id"] == "x" and rows[0]["nproc"] >= 1
+    assert len(rows) >= 2 and rows[0]["id"] == "x" and rows[0]["nproc"] >= 1 and "io" in rows[0]
+
+
+def test_quiet_catches_silent_spin_that_idle_misses(tmp_path):
+    calls = [{"t": "start", "id": "a", "ts": 0, "tool": "Bash", "ppid": 1}, {"t": "end", "id": "a", "ts": 40, "tool": "Bash"}]
+    sam = [{"id": "a", "ts": t, "cpu": 100 * t, "io": 5000, "nproc": 1, "concurrent": False} for t in range(0, 40)]   # burning CPU, no I/O
+    c = mk(tmp_path, calls, sam)[0]
+    assert not c["stalled"] and c["quiet"]
+
+
+def test_busy_with_io_is_neither(tmp_path):
+    calls = [{"t": "start", "id": "a", "ts": 0, "tool": "Bash", "ppid": 1}, {"t": "end", "id": "a", "ts": 40, "tool": "Bash"}]
+    sam = [{"id": "a", "ts": t, "cpu": 100 * t, "io": 5000 + 900 * t, "nproc": 1, "concurrent": False} for t in range(0, 40)]
+    c = mk(tmp_path, calls, sam)[0]
+    assert not c["stalled"] and not c["quiet"]
+
+
+def test_child_exit_counts_as_activity(tmp_path):
+    calls = [{"t": "start", "id": "a", "ts": 0, "tool": "Bash", "ppid": 1}, {"t": "end", "id": "a", "ts": 40, "tool": "Bash"}]
+    sam = [{"id": "a", "ts": t, "cpu": 500 - 10 * t, "io": 9000 - 100 * t, "nproc": 1, "concurrent": False} for t in range(0, 40)]
+    c = mk(tmp_path, calls, sam)[0]
+    assert not c["stalled"] and not c["quiet"]
