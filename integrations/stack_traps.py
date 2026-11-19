@@ -122,8 +122,22 @@ class TrapPolicy:
     # new identity can cost an honest agent (the share of its tasks in the top (1 - ratio) of the deadline) without
     # waiting for history.
     cost_budget_new_identity_ratio: Optional[float] = None
+    # Class-conditioned deadlines (round 23; off by default). A separate deadline per (agent, tool class), kept as a governed
+    # boundary stack.agent.<agent>.class.<class>.deadline_ns. Each time the kernel calls refresh_class_deadlines, a class with at
+    # least class_min_completions completed durations gets the target class_margin x its own 99th percentile, clamped to
+    # [class_floor x D, D], and the boundary moves there ONLY if that is lower (one way: a rise needs a named operator through
+    # request_loosening). The floor makes the certificate's saving ceiling 1 - class_floor (docs/CERTIFICATE.md, class section).
+    class_deadlines: bool = False
+    class_margin: float = 1.5
+    class_floor: float = 0.25
+    class_min_completions: int = 30
+    class_history: int = 5000          # completed durations kept per class (oldest dropped)
+    class_max_per_agent: int = 64      # classes tracked per agent (a flood of invented class names is ignored past this)
 
     def __post_init__(self):
+        if self.class_deadlines and not (0.0 < self.class_floor <= 1.0 and self.class_margin >= 1.0
+                                         and self.class_min_completions >= 1):
+            raise ValueError("class_deadlines needs 0 < class_floor <= 1, class_margin >= 1, class_min_completions >= 1")
         if self.cost_budget is not None and self.cost_budget not in COST_BUDGET_POINT:
             raise ValueError(f"cost_budget must be one of {sorted(COST_BUDGET_POINT)}, got {self.cost_budget!r}")
         r = self.cost_budget_new_identity_ratio
@@ -134,6 +148,15 @@ class TrapPolicy:
 # budget -> index into TrapBridge.QUANTILE_POINTS (0.50, 0.75, 0.90, 0.95, 0.99): the smallest point at or above 1 - budget,
 # so the floor is never lower than the budget needs. Budgets under 1% are not offered: the kernel reports no finer quantile.
 COST_BUDGET_POINT = {0.01: 4, 0.05: 3, 0.10: 2, 0.25: 1, 0.50: 0}
+
+
+def _quantile(obs, q: float) -> float:
+    """Linear-interpolated quantile (same convention as numpy's default)."""
+    xs = sorted(obs); n = len(xs)
+    if n == 1:
+        return xs[0]
+    pos = q * (n - 1); lo = int(math.floor(pos)); hi = min(lo + 1, n - 1)
+    return xs[lo] + (xs[hi] - xs[lo]) * (pos - lo)
 
 
 def _agent_key(agent_id: Any) -> Optional[str]:
@@ -174,6 +197,7 @@ class TrapBridge:
         self.verdicts: List[dict] = []             # every verdict issued, in order (also in the audit log)
         self._tasks: Dict[str, int] = defaultdict(int)   # transactions reported per agent (see observe_transactions)
         self._agents: set = set()
+        self._class_obs: Dict[tuple, Deque[float]] = {}   # (agent key, class key) -> completed durations (ns)
         self._tightened_boundaries: set = set()   # boundaries this bridge has tightened: never evicted
         self._last_seen: Dict[str, int] = {}      # agent -> ingest sequence of its last event or report
         self._seen_seq = 0
@@ -358,6 +382,96 @@ class TrapBridge:
         i = COST_BUDGET_POINT[self.policy.cost_budget]
         col = [q[i] for q in qs]
         return max(statistics.fmean(col), statistics.fmean(col[-self.policy.cost_budget_recent_reports:]))
+
+    # ---------- class-conditioned deadlines (round 23) ----------
+
+    def _class_boundary(self, agent: str, ckey: str) -> str:
+        return f"stack.agent.{agent}.class.{ckey}.deadline_ns"
+
+    def _class_keys(self, agent_id: Any, tool_class: Any):
+        agent, ckey = _agent_key(agent_id), _agent_key(tool_class)
+        return (agent, ckey) if agent is not None and ckey is not None else (None, None)
+
+    def observe_class_durations(self, agent_id: str, tool_class: str, completed_ns: Iterable[float]) -> int:
+        """Record durations of calls of this class that COMPLETED (were not killed). Returns how many were kept. Does not
+        change any limit; refresh_class_deadlines does."""
+        if not self.policy.class_deadlines:
+            return 0
+        agent, ckey = self._class_keys(agent_id, tool_class)
+        if agent is None:
+            self.counts["class_malformed"] += 1
+            return 0
+        key = (agent, ckey)
+        if key not in self._class_obs:
+            if sum(1 for a, _c in self._class_obs if a == agent) >= self.policy.class_max_per_agent:
+                self.counts["class_cap"] += 1
+                return 0
+            if agent not in self._agents and len(self._agents) >= self.max_agents and not self._evict_idle_agent():
+                self.counts["agent_cap"] += 1
+                return 0
+            self._class_obs[key] = deque(maxlen=self.policy.class_history)
+        kept = 0
+        for x in completed_ns:
+            if isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and x > 0:
+                self._class_obs[key].append(float(x)); kept += 1
+        return kept
+
+    def class_deadline(self, agent_id: str, tool_class: str) -> float:
+        """What the kernel should enforce for this agent's calls of this class: the governed class deadline, or the configured
+        deadline_ns if the class has none yet."""
+        agent, ckey = self._class_keys(agent_id, tool_class)
+        if agent is not None and (agent, ckey) in self._class_obs:
+            bid = self._class_boundary(agent, ckey)
+            try:
+                return float(self.gov.boundaries.get_boundary(bid).current_limit)
+            except (KeyError, ValueError):
+                pass
+        return float(self.defaults["deadline_ns"])
+
+    def refresh_class_deadlines(self, agent_id: str) -> Dict[str, float]:
+        """Re-read this agent's class histories and tighten any class whose target is below its current deadline. Call at
+        the start of each reporting slice. Returns {class key: new deadline} for classes that changed. Never loosens."""
+        changed: Dict[str, float] = {}
+        if not self.policy.class_deadlines:
+            return changed
+        agent = _agent_key(agent_id)
+        if agent is None:
+            return changed
+        D, p = float(self.defaults["deadline_ns"]), self.policy
+        for (a, ckey), obs in list(self._class_obs.items()):
+            if a != agent or len(obs) < p.class_min_completions:
+                continue
+            target = min(D, max(p.class_floor * D, p.class_margin * _quantile(obs, 0.99)))
+            bid = self._class_boundary(agent, ckey)
+            self.gov.ensure_boundary(bid, "agent_limit", D)
+            current = float(self.gov.boundaries.get_boundary(bid).current_limit)
+            if not target < current:
+                continue
+            self._agents.add(agent); self._touch(agent)
+            try:
+                reply = self.gov.propose_tightening(
+                    bid, source=self.source, credential=self.credential, new_limit=target,
+                    reason=f"class deadline {p.class_margin} x p99 of {len(obs)} completed calls",
+                    evidence={"agent": agent, "class": ckey, "completed": len(obs), "target_ns": target},
+                    idempotency_key=f"class-{bid}-{int(target)}")
+            except (ValueError, KeyError):
+                self.counts["rejected_input"] += 1
+                continue
+            if reply.get("status") in ("applied", "applied_clamped"):
+                self._tightened_boundaries.add(bid)
+                self.counts["class_tightened"] += 1
+                changed[ckey] = float(reply.get("limit_after", target))
+        return changed
+
+    def request_class_loosening(self, agent_id: str, tool_class: str, new_limit_ns: float, reason: str = "") -> dict:
+        """Ask a named operator to raise one class deadline. Nothing changes until an operator approves it."""
+        agent, ckey = self._class_keys(agent_id, tool_class)
+        if agent is None or (agent, ckey) not in self._class_obs:
+            return {"status": "rejected", "reason": "unknown agent or class"}
+        bid = self._class_boundary(agent, ckey)
+        self.gov.ensure_boundary(bid, "agent_limit", float(self.defaults["deadline_ns"]))
+        return self.gov.request_loosening(bid, requested_by=self.source, credential=self.credential,
+                                          new_limit=float(new_limit_ns), reason=reason or "class deadline too tight")
 
     def _min_rate_for(self, agent_id: Any) -> float:
         by_class = self.policy.min_rate_by_class
