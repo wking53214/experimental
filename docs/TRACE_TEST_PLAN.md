@@ -1530,3 +1530,13 @@ Raw: experiments/split_class_round23.json (12,870 rows), table experiments/split
 | P5 (at least 20% of agents above 64 classes under A1) | HELD: 63.7% (46% wide, 81% long). The bridge's 64-class cap would bind for most agents. |
 
 Reading: the useful arm is A2 (finer label with a fallback to the name-level deadline): +2.6 points (wide) and +3.4 points (long) of saving over A0 at 60 s, for +0.24 and +0.40 points of honest cost. That is about 8 to 11 points of saving per point of cost, the same exchange rate as the settings sweep, so the finer label does not beat the existing tradeoff curve; it just moves along it. The fallback to a parent class is the part that works. The label also adds a command-parsing step and gives a caller who writes the command a way to pick a label.
+
+## Round 23 purple team, stage 1: real stuck calls (no injection). Pre-registration (written before any run)
+
+New evidence source: the FreeInference `outcome` field marks 2,841 tool calls as `timeout` (median 33 s, 90th percentile 424 s): real calls that the harness or user gave up on. Until now every runaway in this project was injected by me. This stage uses these real ones, with no injected calls. Caveat fixed now: a timeout call is a stuck-or-slow call that someone ended, which is not proof of a runaway, and the data does not say what limit ended it.
+Setup: all users with at least 2000 calls, whole stream (up to 8000 calls) in real order; "bad" = outcome timeout, "honest" = outcome ok or error (both complete); calls with missing outcome are dropped. D = 60 s and 180 s. Static burn of a bad call = min(duration, D); governed burn = min(duration, deadline). Honest cost = share of honest calls with deadline < duration <= D. Shipped settings, one-way, class = tool name.
+Arms: C = class deadline by tool name (shipped). G = the same rule with one class per user (no tool-name split). S = static deadline D.
+- T1: at 60 s and 180 s, C saves more timeout time than G, with honest cost at most 0.5 points above G.
+- T2: at 60 s, C removes at least 15% of timeout-call time.
+- T3: honest cost never exceeds the certificate bound (share of honest calls in (0.25 D, D]).
+Failed predictions will be recorded as failed. Status: not run.
