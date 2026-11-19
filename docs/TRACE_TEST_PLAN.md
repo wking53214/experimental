@@ -1577,3 +1577,20 @@ G = one adaptive one-way deadline per user (the pick). Three attacks, 20 seeded 
 - X2 poisoning: the first 30 calls are 0.9 D long, then the real stream follows. Prediction: the deadline stays at D until the poison drops below 1% of the history, then tightens; the delay is at most 3000 calls. (If it is longer I will say the history window needs a cap.)
 - X3 starvation: after 1000 honest calls the agent issues 2000 calls of 10 ms, then the honest stream resumes. Prediction: the deadline falls to the floor (0.25 D) and honest cost stays within the certificate bound; the harm is limited to that agent.
 Failed predictions will be recorded as failed. Status: not run.
+
+### Purple team stage 3: results (red team against G)
+
+Raw: experiments/purple3_red.txt.
+| Pred | Result |
+|---|---|
+| X1 evasion (burn per attack call at most 0.95 x deadline, deadline never rises) | HELD: max 0.95, deadline never rose in 20 of 20. Mean attack burn was 92.5% of 1000 x the deadline: the attack is bounded per call, not made cheap. |
+| X2 poisoning (tightens within 3000 calls) | MISSED: 30 slow calls at the start kept the deadline from tightening for the whole 3,030-call stream for all 3 users whose clean deadline tightens at all. History is unbounded, so 30 calls stay above the 1% mark until the history passes 3,000 calls. |
+| X3 starvation (deadline falls to floor) | MISSED: it only fell to 0.82 D on average (the earlier honest slow calls stay in the history). Honest cost 1.64%, under the certificate bound of 11.76%; none above the bound. A weaker attack than I predicted, and harmless beyond the bound. |
+A larger finding: at D = 60 s only 3 of 20 users' deadlines tighten at all on their own honest stream, and the average deadline before the attack was 0.93 D. Most real users' own 99th-percentile call is longer than 60 s, so there is little to tighten. This explains why the real-timeout savings are modest and uneven (stage 2), and it means the saving is concentrated in few users.
+
+## Purple team stage 4: blue patch for X2. Pre-registration (written before any run)
+Patch: the deadline target uses the 99th percentile of the most recent W = 1000 completed calls instead of the whole history (one-way rule unchanged, floor unchanged).
+- B1: with the patch, poisoning X2 stops blocking: for the 3 affected users the deadline tightens within 1,100 calls after the poison.
+- B2: on the real stream (all users with 2000 or more calls, D = 60 and 180 s) the patched G saves at least as much timeout time as G minus 2 points, with honest cost at most G + 0.3.
+- B3: no certificate violation.
+Failed predictions will be recorded as failed. Status: not run.

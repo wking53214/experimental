@@ -1,0 +1,6 @@
+X1 evasion: users 20
+  deadline never rose: True | max single attack call / deadline before: 0.95 | mean attack burn / (1000 x deadline before): 0.925
+X2 users whose deadline tightens at all on the clean stream: 3 of 20; X1 mean deadline before attack / D: 0.930
+X2 poisoning: first call index (after the 30 poison calls) where the deadline had tightened: [] | never tightened: 3
+  final deadline vs clean-run deadline equal: 0 of 3
+X3 starvation: deadline at end of the fast burst / D: 0.817 | honest calls killed after, %: 1.64 | certificate bound %: 11.76 | killed above bound: 0
