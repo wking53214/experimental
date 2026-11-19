@@ -1,6 +1,6 @@
 # Defects found in DGK while integrating (fixed on a DGK branch, not yet merged)
 
-Found by running DGK's real code (commit `da256f314d0b80cb79a3b4652a89dea1cf60ca3d`, Python 3.11) with hostile telemetry. The defects below were fixed in DGK on branch `ccr-e916ef52-wh7751` (commit `4a0ecd29b34e772c06f77cce977bb7c89e96442f`: telemetry is validated at the door, refused with cause `TELEMETRY_INVALID`, and `HealthLimitCheck` fails closed on NaN; 41 regression tests, 37 of which fail on the old code). It is not merged into DGK's `main`; CI here tests the adapter against both commits. `integrations/dgk_governed.py` works around all of these; stock DGK still has them.
+Found by running DGK's real code (commit `da256f314d0b80cb79a3b4652a89dea1cf60ca3d`, Python 3.11) with hostile telemetry. The defects below were fixed in DGK (first on branch `ccr-e916ef52-wh7751`, now on DGK's `main`; commit `4a0ecd29b34e772c06f77cce977bb7c89e96442f`: telemetry is validated at the door, refused with cause `TELEMETRY_INVALID`, and `HealthLimitCheck` fails closed on NaN; 41 regression tests, 37 of which fail on the old code). CI here tests the adapter against both commits and, without blocking, against the current DGK `main`. `integrations/dgk_governed.py` works around all of these; stock DGK still has them.
 
 ## Results (one fresh kernel per cell, an authorized caller, otherwise calm telemetry)
 

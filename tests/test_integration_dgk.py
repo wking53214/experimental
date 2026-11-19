@@ -32,8 +32,14 @@ def _stock_has_defects():
 
 
 STOCK_HAS_DEFECTS = _stock_has_defects()
-needs_unfixed_dgk = pytest.mark.skipif(
-    not STOCK_HAS_DEFECTS, reason="this DGK already validates telemetry (4a0ecd2 or later)")
+
+
+def assert_refused_as_invalid_telemetry(r):
+    """The fixed DGK refuses bad telemetry. The result carries `refusal_cause` only from DGK 17ad01b on, and the
+    fix commit 4a0ecd2 (which CI pins) returns the rejection without it, so the cause is checked where it exists."""
+    assert r["transaction_status"] == "REJECTED"
+    if "refusal_cause" in r:
+        assert r["refusal_cause"] == "TELEMETRY_INVALID"
 
 
 def kernel(tmp_path, name="k"):
@@ -115,29 +121,41 @@ class TestGovernedLimits:
 
 
 class TestFailClosedTelemetry:
-    @needs_unfixed_dgk
     def test_stock_dgk_commits_a_nan_and_crashes_on_negatives_and_infinities(self, tmp_path):
-        """Documents the defects in DGK itself (integrations/DGK_FINDINGS.md). Separate kernels, because
-        the NaN corrupts the one it touches."""
+        """Documents the defects in DGK itself (integrations/DGK_FINDINGS.md), or, once DGK validates telemetry
+        (4a0ecd2 or later), asserts the fix. Never skips: the branch taken is whichever DGK is installed.
+        Separate kernels, because the NaN corrupts the one it touches."""
         stock, tok = kernel(tmp_path, "nan")
-        assert stock.process_transaction("p1", {**CALM, "latency": float("nan")}, "hi", "ops", tok)["transaction_status"] == "COMMITTED"
+        r = stock.process_transaction("p1", {**CALM, "latency": float("nan")}, "hi", "ops", tok)
+        if STOCK_HAS_DEFECTS:
+            assert r["transaction_status"] == "COMMITTED"
+        else:
+            assert_refused_as_invalid_telemetry(r)
         for i, bad in enumerate((-1e9, float("inf"))):
             fresh, t2 = kernel(tmp_path, f"bad{i}")
-            with pytest.raises(ValueError):
-                fresh.process_transaction("p1", {**CALM, "latency": bad}, "hi", "ops", t2)
+            if STOCK_HAS_DEFECTS:
+                with pytest.raises(ValueError):
+                    fresh.process_transaction("p1", {**CALM, "latency": bad}, "hi", "ops", t2)
+            else:
+                r = fresh.process_transaction("p1", {**CALM, "latency": bad}, "hi", "ops", t2)
+                assert_refused_as_invalid_telemetry(r)
 
-    @needs_unfixed_dgk
     def test_stock_dgk_commits_small_negative_readings_as_if_valid(self, tmp_path):
         stock, tok = kernel(tmp_path, "neg")
         r = stock.process_transaction("p1", {**CALM, "latency": -600.0}, "hi", "ops", tok)
-        assert r["transaction_status"] == "COMMITTED"      # a latency of minus 600 passes a "> 500" limit
+        if STOCK_HAS_DEFECTS:
+            assert r["transaction_status"] == "COMMITTED"      # a latency of minus 600 passes a "> 500" limit
+        else:
+            assert_refused_as_invalid_telemetry(r)
 
-    @needs_unfixed_dgk
     def test_one_nan_permanently_corrupts_stock_dgks_statistics(self, tmp_path):
         stock, tok = kernel(tmp_path, "poisoned")
         stock.process_transaction("p1", {**CALM, "latency": float("nan")}, "hi", "ops", tok)
         r = stock.process_transaction("p1", CALM, "hi", "ops", tok)
-        assert math.isnan(r["stability_profile"]["lyapunov_energy"])
+        if STOCK_HAS_DEFECTS:
+            assert math.isnan(r["stability_profile"]["lyapunov_energy"])
+        else:
+            assert math.isfinite(r["stability_profile"]["lyapunov_energy"])
 
     def test_the_governed_kernel_keeps_the_statistics_clean(self, tmp_path):
         gk, g, k, tok = governed(tmp_path)
