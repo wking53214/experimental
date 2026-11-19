@@ -1292,3 +1292,30 @@ Misses will be recorded as misses.
 - **L6 missed.** The wall was breached on the long-tailed population: class_oneway saved 29.4% at 60 s and 37.4% at 180 s. On the wide population it stayed at 8% to 16%.
 
 **Reading.** Class deadlines help against mild runaways only where an agent's normal calls are far shorter than D, so a 2 to 4 times slowdown is still far below the cap. Where the class's own normal tail is long, they save little. Honest cost stays near 1 point. This is a partial win, not a solution to the wall: a slow-but-legitimate class and a mild runaway still cannot be told apart by timing alone.
+
+## Round 23 pre-registration: class deadlines inside TrapBridge
+
+Written before the parity run. The bridge code and 11 unit tests (tests/test_class_deadlines.py) exist and pass; the full suite passes.
+
+**Question.** Does the governed implementation (a boundary per agent and class, tightening only through the governor, loosening only through a named operator, every change audited) behave like the round 21 and 22 prototype?
+
+**Protocol.** Round 22's mild-runaway data (same seeds 22000 to 22009, wide and long, D = 10, 60, 180 s). The prototype regime class_oneway is compared with the bridge regime on identical calls, per agent. The bridge is refreshed at each 250-call slice start, as the prototype re-reads.
+
+**Predictions.**
+- M1: aggregate saving of mild-runaway time matches the prototype within 1.0 point in every population and deadline.
+- M2: honest cost matches within 0.2 points.
+- M3: no class deadline ever rises in any run (checked on every boundary after every slice).
+- M4: no honest agent exceeds its bound (the certificate), and no class deadline is below 0.25 D.
+- M5: every class tightening has an audit entry (count of audit entries equals count of tightenings).
+- M6: the bridge costs under 5 ms per slice refresh per agent on average.
+
+### Round 23 results
+
+960 agent-runs (seeds 22000 to 22009), scorer experiments/score_round23.py, table in experiments/score_round23.txt. All six predictions held.
+
+- M1: largest saving gap between bridge and prototype 0.88 points (long, 10 s; the per-class history cap of the prototype versus unbounded here is the likely cause, not tested).
+- M2: largest honest-cost gap 0.02 points.
+- M3: 0 deadline rises. M4: 0 bound violations. M5: every tightening has an audit entry.
+- M6: refresh averages 0.41 ms per agent per slice.
+
+**Reading.** The governed version behaves like the prototype, so round 21 and 22 results carry over to the bridge. What the bridge adds is the audit trail and a loosening path that waits for a named operator. Still true: class deadlines do not solve the wall (round 22), and every run is simulation on one public trace.
