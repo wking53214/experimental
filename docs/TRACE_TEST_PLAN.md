@@ -987,3 +987,36 @@ Run once on the committed protocol (`python experiments/real_trace_round16.py`, 
 **Limits.** No runaway labels, so nothing here measures saving or net time. Tool latency can include time spent waiting for a developer to approve a prompt. These are a coding assistant's tool calls, not the kernel's hang model. Deadlines were chosen as round numbers from pooled quantiles, not tuned.
 
 **Consequence for the claims.** The worst-case certificate is now supported on simulated and real durations. The claim that the two-way limiter is cheaper for honest agents is weakened. A labeled real-traffic test (shadow mode on live agents) is still missing.
+
+## Round 17, pre-registered: the cost budget
+
+Committed before any round 17 run (a one-seed smoke run was executed and deleted unread). Runner `experiments/real_trace_round17.py`,
+scorer `experiments/score_round17.py`.
+
+**The change.** `TrapPolicy(cost_budget=0.01)`: a deadline tightening never goes below the agent's own 99th percentile of completed
+durations, estimated as the larger of its long-run and recent per-slice means; nothing tightens until 5 slices are known
+(`docs/CERTIFICATE.md`). Policies compared: `recommended` against `recommended_budget`, and `recommended_slice` against
+`recommended_slice_budget`.
+
+**Honesty about the design.** The budget was designed after round 16's results, so round 16's 32 agents are diagnosis data (reported as
+in-sample). The tests that count are hold-out: later, unread stretches of the same developers (H1: users with at least 4000 calls,
+calls 2000 to 3999, 12 agents; H2: users with at least 16000 calls, calls 8000 to 15999, 6 agents; same people, not independent users),
+and 20 fresh simulation seeds (16000 to 16019) on rosters `v1` and `book_v1`, which no earlier round used for this change.
+
+| # | Prediction |
+|---|---|
+| F1 | zero certificate violations in every real cell, all four policies |
+| F2 | honest cost at or under 1.25 points under `recommended_budget` in at least 95% of in-sample cells and at least 90% of hold-out cells (H1 and H2 pooled) |
+| F3 | mean honest cost at 10 s under `recommended_budget`: at most 0.6 points in-sample (round 16, `recommended`: 1.26) and at most 0.8 on pooled hold-out |
+| F4 | on the same cells at 10 s, the budget cuts `recommended`'s mean honest cost by at least 40% in-sample and at least 30% on pooled hold-out |
+| F5 | simulated honest agents on `v1`: the largest mean honest cost of any agent under `recommended_budget` is at most 1.5 points (under `recommended` it is about 24, the slow-from-start agent) |
+| F6 | simulated sustained runaways (profile `runaway`, `v1`): mean saved share under `recommended_budget` within 4 points of `recommended`'s |
+| F7 | the price: on `book_v1`, at least one patient-pulser agent loses at least 10 points of saved share under `recommended_budget` against `recommended` (the 5-slice warm-up removes the early catch) |
+| F8 | the honest pool's mean net burn on `book_v1` (agents that should not be tightened, `recommended_slice`) moves at least half the way to zero under `recommended_slice_budget` |
+
+**What would falsify the change.** F5 or F6 missed by a wide margin (the fix costs more saving than it saves honest agents), or F1
+failing (the budget can only raise a floor, so a violation would mean a bug).
+
+**Limits, stated now.** No runaway labels in the real data, so the real half measures honest cost only. Hold-out agents are the same
+people as the diagnosis agents. The floor reads completed-duration quantiles that exclude tasks already killed, so it is
+conservative; the real-data cost can undershoot the budget.
