@@ -319,3 +319,42 @@ def test_the_example_monitor_works_end_to_end_against_a_live_server(port, monkey
     # the monitor can ask as often as it likes: the breaker, not the monitor, decides how far this goes
     assert GOV.boundaries.get_boundary("ex_api").current_limit >= 72.9 - 1e-9
     assert GOV.verify_governance_integrity()[0]
+
+
+class TestSecureMode:
+    """ADJUDICATION_SECURE_MODE=1 refuses to start unless the deployment settings are complete."""
+
+    FULL = {"ADJUDICATION_OPERATOR_TOKENS": "alice=tokenAlice,bob=tokenBobby",
+            "ADJUDICATION_AUDIT_LOG": "/var/audit/log.jsonl",
+            "ADJUDICATION_ANCHOR_FILE": "/mnt/anchor/head.jsonl"}
+
+    def test_complete_settings_have_no_problems(self):
+        assert srv.secure_mode_problems(self.FULL) == []
+
+    @pytest.mark.parametrize("missing", ["ADJUDICATION_OPERATOR_TOKENS", "ADJUDICATION_AUDIT_LOG", "ADJUDICATION_ANCHOR_FILE"])
+    def test_each_missing_setting_is_named(self, missing):
+        env = {k: v for k, v in self.FULL.items() if k != missing}
+        problems = srv.secure_mode_problems(env)
+        assert len(problems) >= 1 and any(missing in p for p in problems)
+
+    def test_an_anchor_in_the_audit_log_file_is_refused(self):
+        env = dict(self.FULL, ADJUDICATION_ANCHOR_FILE=self.FULL["ADJUDICATION_AUDIT_LOG"])
+        assert any("same file" in p for p in srv.secure_mode_problems(env))
+
+    def test_a_too_short_operator_token_is_named_at_startup(self):
+        env = dict(self.FULL, ADJUDICATION_OPERATOR_TOKENS="alice=abc")
+        assert any("alice" in p and "too short" in p for p in srv.secure_mode_problems(env))
+
+    def test_a_shared_token_alone_is_not_enough(self):
+        assert srv.secure_mode_problems({"ADJUDICATION_TOKEN": "shared"})
+
+    def test_the_server_script_refuses_to_start_in_secure_mode_with_nothing_set(self):
+        import os
+        import subprocess
+        env = {k: v for k, v in os.environ.items() if not k.startswith("ADJUDICATION_")}
+        env["ADJUDICATION_SECURE_MODE"] = "1"
+        root = Path(__file__).resolve().parents[1]
+        done = subprocess.run([sys.executable, str(root / "scripts" / "adjudication_server.py")],
+                              env=env, cwd=root, capture_output=True, text=True, timeout=30)
+        assert done.returncode == 2
+        assert "REFUSING to start in secure mode" in done.stderr

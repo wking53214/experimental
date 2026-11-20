@@ -22,8 +22,42 @@ from src.governance.proposal import AdaptationDirection
 # Without ADJUDICATION_OPERATOR_TOKENS the server has no way to authenticate a person, so operator
 # decisions are bare claims (identity_verified=false in the audit log). The governor refuses such
 # claims by default; the server opts in explicitly so the demo still works (docs/RED_TEAM.md S2).
+from src.governance.anchor import FileAnchorStore
+
+
+def secure_mode_problems(environ=os.environ) -> list:
+    """What stops a secure-mode start (ADJUDICATION_SECURE_MODE=1); empty when the settings are complete.
+
+    Secure mode is the opposite of the demo defaults: it refuses to start unless every decision is tied to one
+    person's own credential and the audit log is anchored somewhere the server's own writes cannot rewrite.
+    """
+    def get(name):
+        return (environ.get(name) or "").strip()
+
+    problems = []
+    if not get("ADJUDICATION_OPERATOR_TOKENS"):
+        problems.append("ADJUDICATION_OPERATOR_TOKENS is not set (per-operator tokens: alice=tok,bob=tok)")
+    else:
+        short = [name for token, name in _parse_operator_tokens(get("ADJUDICATION_OPERATOR_TOKENS")).items()
+                 if len(token) < OperatorRegistry().min_length]
+        if short:
+            problems.append("operator token too short for " + ", ".join(sorted(short))
+                            + " (the registry refuses credentials under %d characters)" % OperatorRegistry().min_length)
+    if not get("ADJUDICATION_AUDIT_LOG"):
+        problems.append("ADJUDICATION_AUDIT_LOG is not set (the hash-chained audit log file)")
+    if not get("ADJUDICATION_ANCHOR_FILE"):
+        problems.append("ADJUDICATION_ANCHOR_FILE is not set (the anchor store: a file the server cannot rewrite the log through)")
+    elif get("ADJUDICATION_ANCHOR_FILE") == get("ADJUDICATION_AUDIT_LOG"):
+        problems.append("ADJUDICATION_ANCHOR_FILE is the same file as the audit log; an anchor beside the log protects nothing")
+    return problems
+
+
+SECURE_MODE = (os.environ.get("ADJUDICATION_SECURE_MODE") or "").strip() == "1"
 GOV = Governor(store_path="/tmp/phase11_http_gov", use_semantic=True,  # nosec B108 - demo server, event store only; durable state is ADJUDICATION_AUDIT_LOG
                audit_path=os.environ.get("ADJUDICATION_AUDIT_LOG") or None,
+               anchor_store=(FileAnchorStore(os.environ["ADJUDICATION_ANCHOR_FILE"])
+                             if (os.environ.get("ADJUDICATION_ANCHOR_FILE") or "").strip()
+                             and (os.environ.get("ADJUDICATION_AUDIT_LOG") or "").strip() else None),
                unverified_operators=not os.environ.get("ADJUDICATION_OPERATOR_TOKENS", "").strip())
 ADJUDICATION_TOKEN = os.environ.get("ADJUDICATION_TOKEN", "").strip()
 MAX_BODY_BYTES = 1_000_000
@@ -360,6 +394,17 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    if SECURE_MODE:
+        problems = secure_mode_problems()
+        if problems:
+            print("REFUSING to start in secure mode (ADJUDICATION_SECURE_MODE=1):", file=sys.stderr)
+            for problem in problems:
+                print("  - " + problem, file=sys.stderr)
+            sys.exit(2)
+        print("Secure mode: per-operator tokens, audit log and anchor store are configured.", file=sys.stderr)
+    else:
+        print("DEMO MODE: ADJUDICATION_SECURE_MODE=1 turns on the checks a deployment needs "
+              "(per-operator tokens, audit log, anchor store).", file=sys.stderr)
     host = os.environ.get("ADJUDICATION_HOST", "127.0.0.1")
     port = int(os.environ.get("ADJUDICATION_PORT", sys.argv[1] if len(sys.argv) > 1 else "8765"))
     public = host in ("0.0.0.0", "::", "[::]")  # nosec B104 - this only detects a public bind in order to refuse it; the server binds to host
