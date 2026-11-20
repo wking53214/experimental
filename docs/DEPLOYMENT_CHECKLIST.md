@@ -4,6 +4,8 @@ What someone has to decide or set up before this runs anywhere but a research la
 
 ## 1. Put the audit anchor out of the governor's reach (T8)
 
+For the demo HTTP server, start it with `ADJUDICATION_SECURE_MODE=1`: it refuses to start without per-operator tokens, an audit log and an anchor file (`ADJUDICATION_ANCHOR_FILE`). The location of that file is still your decision, as below.
+
 `Governor(anchor_store=FileAnchorStore(path))` publishes the log's head after every write and refuses to start if the log was rewritten, truncated or deleted. It only means something if `path` is somewhere the governor's process can append to but cannot rewrite:
 
 - a file owned by a different user, `chattr +a` set, the governor's user granted append through a group or a setgid directory; or
